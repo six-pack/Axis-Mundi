@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+{% set active_page = "Contacts" %}
+
+{% block content %}
+
+<h4>New Contact</h4>
+    <div class="datagrid">
+    <table width="100%" cellpadding="10">
+        <form method="post" action="{{ url_for('new_contact') }}">
+        <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+        <tr>
+          <td width="150px"><b>Display Name</b></td>
+          <td colspan="2"><input type="text" class="inputs" name="name" size="75" placeholder="Type in a display name for this contact (this value will change if the contact updates their name)"></td>
+        </tr>
+        <tr>
+            <td colspan="3"><div id="container">
+                <div class="twrap"><textarea class="inputs" name="pgpkey_block" cols="80" rows="10" placeholder="Paste the contacts public PGP key block here"></textarea></div>
+            </div></td>
+        </tr>
+
+        <tr><td colspan="3">
+            <div style="btn"><a href="{{ url_for('contacts') }}"><input type="button" style="float:right" class = "btn" value="Cancel"></a></div>
+            <div style="btn"><button type="submit" style="float:right" class = "btn">Create Contact</button></div></td></tr>
+        </form>
+    </table>
+    </div>
+
+{% endblock %}

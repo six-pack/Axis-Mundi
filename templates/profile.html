@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% set active_page = "Profile" %}
+
+{% block content %}
+  <h2>View Profile</h2>
+    <br>
+        <table cellpadding="10">
+            <tr><td width="200"><label>Name :</label></td>
+               <td width="400">xxxx</td>
+               <td width="200"><a class="btn" href="{{ url_for('contacts') }}">Add Contact</a></td></tr>
+            <tr><td colspan="3"><label>Public Profile :</label></td> </tr>
+            <tr><td colspan="3">xxxxxxxxxx</td></tr>
+            <tr><td><label>PGP Key :</label></td>
+            <td><label>xxx</label></td></tr>
+        </table>
+
+{% endblock %}

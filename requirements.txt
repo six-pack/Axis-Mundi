@@ -1,0 +1,8 @@
+flask
+flask-login
+paginate
+sqlalchemy
+python-gnupg>=0.3.7
+pysocks>=1.5.4
+paho-mqtt
+

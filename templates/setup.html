@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% set active_page = "Setup" %}
+
+{% block content %}
+  <h2>Configuration</h2>
+  <p>You may configure various options here. To ensure new settings take effect, please log off and log back in.</p>
+ <!--   <h1>Configure</h1> -->
+        <table cellpadding="10">
+            <tr><td><a href="/setup/identity">Identity</a></td><td><label>You can view and modify your identity settings here including display name, public profile and trader status</label></td></tr>
+            <tr><td><a href="/setup/network">Network</a></td> <td>You can view and modify your network settings here including proxy settings and entry point addresses</td></tr>
+            <tr><td><a href="/setup/security">Security</a></td> <td><label>You can view modify your security settings here including message purging/retention, message signing and DoS protection</label></td></tr>
+            <tr><td><a href="/setup/trading">Trading</a></td> <td><label>You can view and modify your trading settings including Bitcoin settings, helpers addresses (vendor directories, vendor listings and user feedback) and notary addresses</label></td></tr>
+        </table>
+{% endblock %}

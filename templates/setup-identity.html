@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% set active_page = "Setup" %}
+
+{% block content %}
+  <h2>Configuration - Identity</h2>
+  <p>You may configure various options here. To ensure new settings take effect, please log off and log back in.</p>
+ <!--   <h1>Configure</h1> -->
+    <form method="post" action="{{ url_for('setup') }}/identity">
+    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+        <table cellpadding="10">
+            <tr><td><label>Name :</label></td> <td><input type="text" name="displayname" size="44" class="inputs" placeholder="Display Name" required value="{{ displayname[0] }}"></td></tr>
+            <tr><td><label>PGP Key :</label></td> <td><label>{{ pgpkeyid[0] }}</label></td></tr>
+            <tr><td><label>Public Profile :</label></td> <td><textarea name="profile" cols="80" rows = "8" class="inputs" placeholder="Optionally you may provide some publicly viewable profile">{{profile[0]}}</textarea></td></tr>
+            <tr><td><div style="btn"><button type="submit" class = "btn">Update</button></div></td></tr>
+        </table></form>
+
+{% endblock %}

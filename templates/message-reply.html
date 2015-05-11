@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+{% set active_page = "Messages" %}
+
+{% block content %}
+<h4>Compose Reply</h4>
+    <div class="datagrid">
+    <table width="100%" cellpadding="10">
+        <form method="post" action="{{ url_for('reply_message', id = message.id) }}">
+        <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+        <tr>
+          <td width="100px"><b>To</b></td>
+           <td><input type="text" class="inputs" size="55" name="recipient" value="{{ message.sender_key }}" readonly="True"></td>
+            <td style="float:right cellpadding:5px"><input type="checkbox"  name="sign-message" value="sign-message" checked>Sign My Message </td>
+        </tr>
+        <tr>
+          <td width="100px"><b>Subject</b></td>
+          <td colspan="2"><input type="text" class="inputs full-width" name="subject" value="re: {{ message.subject }}" required></td>
+        </tr>
+        <tr>
+            <td colspan="3"><div id="container">
+                <div class="twrap"><textarea id="ta" class="inputs" name="body" cols="80" rows="10" placeholder="Type your reply here"></textarea></div>
+            </div></td>
+        </tr>
+        <tr>
+          <td>In reply to:</td>
+          <td colspan="2">
+            <div style="btn"><a href="{{ url_for('messages') }}"><input type="button" style="float:right" class = "btn" value="Cancel"></a></div>
+            <div style="btn"><button type="submit" style="float:right" class = "btn">Send Message</button></div></td>
+        </tr>
+        </form>
+        <tr>
+          <td width="100px"><b>Date</b></td>
+          <td colspan="2">{{ message.message_date }}</td>
+        </tr>
+
+        <tr>
+          <td colspan="3" style="white-space:pre-wrap">{{ message.body }}</td>
+        </tr>
+    </table>
+    </div>
+
+
+{% endblock %}
+
+
+
+

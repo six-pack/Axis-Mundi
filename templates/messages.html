@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% set active_page = "Messages" %}
+
+{% block content %}
+  <h2>Message Inbox</h2>
+
+    <div class="datagrid">
+    <table cellpadding="10">
+        <tr>
+        <th width="200px"><strong>From</strong></th>
+        <th width="400px"><strong>Subject</strong></th>
+        <th width="200px"><strong>Date Received</strong></th>
+        <th width="150px"><strong>Actions</strong></th>
+        </tr>
+        {% for o in inbox_messages %}
+        <tr>
+        <td width="200px">{{ o.sender_key }}</td>
+        <td width="400px"><a href="/messages/view/{{ o.id }}">{{ o.subject }}</a></td>
+        <td width="200px">{{ o.message_date }}</td>
+        <td>
+             <a href="{{ url_for('reply_message', id = o.id) }}">Reply</a>  -
+             <a href="{{ url_for('delete_message', id = o.id) }}">Delete</a>
+        </td>
+        </tr>
+        {% endfor %}
+        <tr>
+        <td align="left">
+        {% if inbox_messages.previous_page %}
+            <a href="/messages/{{inbox_messages.previous_page}}"><b>&lt;Previous</b></a>
+        {% endif %}
+        </td>
+        <td colspan="2"></td></td>
+        <td align="right">
+        {% if inbox_messages.next_page %}
+            <a href="/messages/{{inbox_messages.next_page}}"><b>Next&gt;</b></a>
+        {% endif %}
+        </td>
+        </tr>
+    </table>
+    </div>
+
+
+{% endblock %}

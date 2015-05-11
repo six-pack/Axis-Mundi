@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% set active_page = "Setup" %}
+
+{% block content %}
+  <h2>Configuration - Security</h2>
+  <p>You may configure various options here. To ensure new settings take effect, please log off and log back in.</p>
+ <!--   <h1>Configure</h1> -->
+    <form method="post" action="{{ url_for('setup') }}/security">
+    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+        <table cellpadding="10">
+            <tr><td><label>Private Message Auto-Purge Period :</label></td> <td><input type="text" name="message_retention" size="10" class="inputs" placeholder="# Days" required value="{{ message_retention[0] }}"></td></tr>
+            <tr><td><label>Allow Un-signed Private Messages :</label></td> <td><input type="checkbox" name="allow_unsigned" value="True" {% if accept_unsigned == 'True' %}checked{% endif %}></td></tr>
+            <tr><td><div style="btn"><button type="submit" class = "btn">Update</button></div></td></tr>
+        </table></form>
+
+{% endblock %}

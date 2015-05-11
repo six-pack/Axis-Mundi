@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+{% set active_page = "Messages" %}
+
+{% block content %}
+  <h3>View Message</h3>
+    <div class="datagrid">
+    <table width="100%">
+        <tr>
+          <td width="100px"><b>Date</b></td>
+          <td>{{ message.message_date }}</td>
+        </tr>
+        <tr>
+          <td width="100px"><b>From</b></td>
+          <td>{{ message.sender_key }}</td>
+        </tr>
+        <tr>
+          <td width="100px"><b>To</b></td>
+          <td>{{ message.recipient_key }}</td>
+        </tr>
+        <tr>
+          <td width="100px"><b>Subject</b></td>
+          <td>{{ message.subject }}</td>
+        </tr>
+        <tr><td></td></tr>
+        <tr>
+          <td colspan="2" style="white-space:pre-wrap">
+              <div class="boxed">{{ message.body }}</div></td>
+        </tr>
+        <tr>
+            <td colspan="2">
+
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+            <div style="float:right;padding:1px"><a class="btn"  href="{{ url_for('reply_message', id = message.id) }}">Reply</a></div>
+            <div style="float:right;padding:1px"><a class="btn"  href="{{ url_for('delete_message', id = message.id) }}">Delete</a></div>
+
+            </td>
+        </tr>
+
+    </table>
+    </div>
+
+
+{% endblock %}
+

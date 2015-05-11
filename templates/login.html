@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% set active_page = "" %}
+
+{% block content %}
+  <h2>Login</h2>
+  <p>Please select a PGP key and supply the correct passphrase</p>
+    <form method="post" action="{{ url_for('login') }}" autocomplete="Off">
+    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+        <table cellpadding="10">
+
+            <tr><td><label>PGP Key: </label></td><td><div class = "select_style"><select name="keyid">
+            {% for key in key_list %}
+                <option value="{{ key.keyid }}">({{ key.keyid}}) &nbsp; {{ key.uids[0] }}</option>
+            {% endfor %}
+            </select></div></td></tr>
+            <tr><td><label>PGP Passphrase:</label></td> <td><input type="password" name="pgppassphrase" size="44" class="inputs" placeholder="PGP Passphrase (will not be saved)"  required></td></tr>
+
+            <tr><td><div style="btn"><button type="submit" class = "btn">Login</button></div></td><td><input type="checkbox" name="offline" value="yes">Work Offline</td></tr>
+        </table></form>
+
+{% endblock %}

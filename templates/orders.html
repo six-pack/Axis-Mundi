@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+{% set active_page = "Orders" %}
+
+  
+{% block content %}
+  <h2>Orders</h2>
+    <div class="datagrid">
+    <table cellpadding="5">
+        <tr>
+        {% if view == 'buying' %}
+            <th width="200px"><strong>Seller</strong></th>
+        {% elif view == 'selling' %}
+            <th width="200px"><strong>Buyer</strong></th>
+        {% endif %}
+        <th width="150px"><strong>Order ID</strong></th>
+        <th width="200px"><strong>Date Created</strong></th>
+        <th width="200px"><strong>Status</strong></th>
+        <th width="150px"><strong>Actions</strong></th>
+        </tr>
+        {% for o in orders %}
+        <tr>
+        <td width="200px">{{ o.seller_key }}</td>
+        <td width="400px"><a href="/orders/view/{{ o.id }}">{{ o.orderid }}</a></td>
+        <td width="200px">{{ o.order_date.strftime('%Y-%m-%d') }}</td>
+        <td width="200px">{{ o.order_status }}</td>
+        <td>
+             <a href="{{ url_for('reply_message', id = o.id) }}">Some Action</a>  -
+        </td>
+        </tr>
+        {% endfor %}
+        <tr>
+        <td align="left">
+        {% if orders.previous_page %}
+            <a href="/orders/{{view}}/{{orders.previous_page}}"><b>&lt;Previous</b></a>
+        {% endif %}
+        </td>
+        <td colspan="2"></td>
+        <td align="right">
+        {% if orders.next_page %}
+            <a href="/orders/{{view}}/{{orders.next_page}}"><b>Next&gt;</b></a>
+        {% endif %}
+        </td>
+        </tr>
+    </table>
+    </div>
+
+{% endblock %}

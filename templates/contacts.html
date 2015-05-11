@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+{% set active_page = "Contacts" %}
+
+{% block content %}
+  <h2>Contacts</h2>
+
+    <div class="datagrid">
+               <a class="btn" href="{{ url_for('new_contact') }}">New Contact</a>
+               <a class="btn" href="{{ url_for('contacts') }}refresh">Refresh Contacts</a>
+    <br>
+    <br>
+    <table cellpadding="10" width="100%">
+        <tr>
+        <th width="350px" align="left"><strong>Name</strong></th>
+        <th width="170px"><strong>PGP Key</strong></th>
+        <th ><strong>Actions</strong></th>
+        </tr>
+        {% for contact in contacts %}
+        <tr>
+        <td width="350px">{{contact.contact_name}}</td>
+        <td width="170px">{{contact.contact_key}}</td>
+        <td align="center">
+             <a href="{{ url_for('new_message')}}{{contact.contact_key}}">Send Message</a>
+        </td>
+        </tr>
+        {% endfor %}
+        <tr>
+        <td align="left">
+        {% if contacts.previous_page %}
+            <a href="/contacts/{{contacts.previous_page}}"><b>&lt;Previous</b></a>
+        {% endif %}
+        </td>
+        <td colspan="2"></td></td>
+        <td align="right">
+        {% if contacts.next_page %}
+            <a href="/contacts/{{contact.next_page}}"><b>Next&gt;</b></a>
+        {% endif %}
+        </td>
+        </tr>
+    </table>
+    </div>
+
+
+{% endblock %}

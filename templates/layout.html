@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Untitled</title>
+    <strong><link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"></strong>
+  </head>
+  <body>
+
+{% set active_page = active_page|default('Home') %}
+
+<header>
+  <div class="container">
+    <h1 class="logo">{{ g.connection_status }}</h1>
+
+    <strong><nav id="primary_nav_wrap" class="primary_nav_menu">
+      <ul>
+        <li{% if active_page == 'Home' %} class="current-menu-item" {% endif %}><a href="{{ url_for('home') }}">Home</a></li>
+        <li><a href="{{ url_for('orders') }}">Trade</a>
+          <ul>
+            <li><a href="{{ url_for('orders') }}/buying">Buying</a></li>
+            <li><a href="{{ url_for('orders') }}/selling">Selling</a></li>
+            <li><a href="{{ url_for('listings') }}">My Listings</a></li>
+          </ul>
+        </li>
+        <li><a href="{{ url_for('messages') }}">Messages</a>
+          <ul>
+            <li><a href="{{ url_for('new_message') }}">Create New Message</a></li>
+            <li><a href="{{ url_for('messages') }}">Inbox</a></li>
+            <li><a href="{{ url_for('messages_sent') }}">Sent Messages</a></li>
+          </ul>
+        </li>
+        <li><a href="{{ url_for('contacts') }}">Contacts</a></li>
+        <li><a href="{{ url_for('setup') }}">Setup</a>
+          <ul>
+            <li><a href="{{ url_for('setup') }}/identity">Identity</a></li>
+            <li><a href="{{ url_for('setup') }}/network">Network</a></li>
+            <li><a href="{{ url_for('setup') }}/security">Security</a></li>
+            <li><a href="{{ url_for('setup') }}/trading">Trading</a></li>
+          </ul>
+        </li>
+        <li><a href="{{ url_for('about') }}">About</a></li>
+        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+      </ul>
+    </nav></strong>
+  </div>
+
+
+</header>
+<div align="center">
+    {% with messages = get_flashed_messages(with_categories=true, category_filter=['error']) %}
+      {% if messages %}
+        <ul class="flashes-error flashes">
+        {% for category, message in messages %}
+          <li style="float:left">{{ message }}</li><br>
+        {% endfor %}
+        </ul>
+       {% endif %}
+    {% endwith %}
+    {% with messages = get_flashed_messages(with_categories=true, category_filter=['message']) %}
+      {% if messages %}
+        <ul class="flashes-message flashes">
+        {% for category, message in messages %}
+          <li style="float:left">{{ message }}</li><br>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+</div>
+    <div class="container">
+      {% block content %}
+      {% endblock %}
+    </div>
+     
+  </body>
+</html>

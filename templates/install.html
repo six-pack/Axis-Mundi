@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% set active_page = "" %}
+
+{% block content %}
+  <h2>Initial Configuration</h2>
+  <p>This appears to be the first time I have been run. I am going to create a database but first you need to let me
+      know which PGP key you want to use as your identity. Below you will find a list of one or more PGP keys, please
+      select one. If no keys are displayed then you need to create a PGP key before you can continue.</p>
+  <p>Your PGP passphrase will be cached in memory whilst this application is running but will not be saved.</p>
+  <p>WARNING: If you forget your PGP passphrase you will be completely unable to access your market account.</p>
+    <h1>Configure Identity</h1>
+    <form method="post" action="{{ url_for('createidentity') }}">
+    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+        <table cellpadding="10">
+
+            <tr><td><label>PGP Key: </label></td><td><div class = "select_style"><select name="keyid">
+            {% for key in key_list %}
+                <option value="{{ key.keyid }}">({{ key.keyid}}) &nbsp; {{ key.uids[0] }}</option>
+            {% endfor %}
+            </select></div></td></tr>
+            <tr><td><label>Display Name :</label></td> <td><input type="text" name="displayname" size="44" class="inputs" placeholder="Display Name" required></td></tr>
+            <tr><td><label>PGP Passphrase:</label></td> <td><input type="password" name="pgppassphrase" size="44" class="inputs" placeholder="PGP Passphrase (will not be saved)"  required></td></tr>
+
+            <tr><td><div style="btn"><button type="submit" class = "btn">Create Identity</button></div></td></tr>
+        </table></form>
+
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% set active_page = "Listings" %}
+
+{% block content %}
+  <h2>Listings</h2>
+
+    <div class="datagrid">
+               <a class="btn" href="{{ url_for('listings') }}">New Listing</a>
+    <br>
+    <br>
+
+    <table cellpadding="10">
+        <tr>
+        <th width="400px" align="left"><strong>Title</strong></th>
+        <th width="100px"><strong>Price</strong></th>
+        <th width="80px"><strong>Quantity</strong></th>
+        <th width="80px"><strong>Public</strong></th>
+        <th width="200px"><strong>Actions</strong></th>
+        </tr>
+        {% for listing in listings %}
+        <tr>
+        <td>{{listing.title}}</td>
+        <td>{{listing.price}}</td>
+        <td>{{listing.quantity}}</td>
+        <td>{{listing.public}}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+        <td align="left">
+        {% if listings.previous_page %}
+            <a href="/listings/{{listings.previous_page}}"><b>&lt;Previous</b></a>
+        {% endif %}
+        </td>
+        <td colspan="2"></td></td>
+        <td align="right">
+        {% if listings.next_page %}
+            <a href="/listings/{{listings.next_page}}"><b>Next&gt;</b></a>
+        {% endif %}
+        </td>
+        </tr>
+    </table>
+    </div>
+
+
+{% endblock %}
