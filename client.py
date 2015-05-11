@@ -3,7 +3,8 @@
 from flask import Flask, render_template, request, redirect, url_for, abort, session, flash, g
 from flask_login import LoginManager,UserMixin,login_user,current_user,logout_user,login_required
 import gnupg
-from os.path import expanduser, isfile
+from os.path import expanduser, isfile, isdir
+from os import makedirs
 import string
 import random
 from storage import Storage, SqlalchemyOrmPage
@@ -113,7 +114,6 @@ def contacts(page=1):
   session = app.roStorageDB.DBSession()
   contacts = session.query(app.roStorageDB.Contacts)
   page_results = SqlalchemyOrmPage(contacts, page=page, items_per_page=pager_items)
-  print page_results.items[1].contact_key
   return render_template('contacts.html', contacts=page_results)
 
 @app.route('/contacts/new/',methods=["GET","POST"])
@@ -236,6 +236,12 @@ def createidentity():
   app.display_name = request.form['displayname']
   app.pgp_passphrase = request.form['pgppassphrase']
   # Now attempt to create secret file
+  if not isdir(app.appdir):
+      try:
+        makedirs(app.appdir,mode=0700)
+      except:
+        flash("Error creating identity - client folder not created",category="error")
+        return redirect(url_for('install'))
   app.dbsecretkey = ''.join(random.SystemRandom().choice(string.digits) for _ in range(128))
   try:
      file = open(app.appdir+'/secret', 'w')
@@ -245,6 +251,7 @@ def createidentity():
      app.SetupDone = True
   except:
      flash("Error creating identity - secret file not created",category="error")
+     return redirect(url_for('install'))
   ## Now create & populate DB with initial values
   installStorageDB = Storage(app.dbsecretkey,"storage.db",app.appdir)
   if not installStorageDB.Start():
@@ -254,11 +261,9 @@ def createidentity():
   defaults = create_defaults(installStorageDB,session,app.pgp_keyid,app.display_name,app.publish_id)
   session.close()
   installStorageDB.Stop()
-  print "closed install db"
   if not defaults:
     flash('There was a problem creating the initial configuration in the storage database '+ 'storage.db',category="error")
     #return False
-  print "Setup redirection"
   return redirect(url_for('setup'))
 
 

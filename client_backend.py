@@ -177,8 +177,6 @@ class messaging_loop(threading.Thread):
             flash_msg = queue_task(0,'flash_error','Contact not added: unable to extract PGP key ID for ' + contact.displayname)
             self.q_res.put(flash_msg)
             return False
-        print contact.pgpkeyid
-        print contact.displayname
         flash_msg = queue_task(0,'flash_message','Added contact ' + contact.displayname + '(' + contact.pgpkeyid + ')')
         self.q_res.put(flash_msg)
         session = self.storageDB.DBSession()
@@ -199,9 +197,15 @@ class messaging_loop(threading.Thread):
             flash_msg = queue_task(0,'flash_error','Unable to start storage database ' + 'storage.db') #' self.targetbroker)
             self.q_res.put(flash_msg)
             raise ()
+        # read configuration from database
+        session = self.storageDB.DBSession()
+        socks_proxy = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "proxy").first()
+        socks_proxy_port = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "proxy_port").first()
+        self.proxy = socks_proxy.value
+        self.proxy_port = socks_proxy_port.value
         # make mqtt connection
 #        socket.socket = socks.socksocket
-        client = mqtt(self.mypgpkeyid,False,proxy='127.0.0.1',proxy_port=9050)
+        client = mqtt(self.mypgpkeyid,False,proxy=self.proxy,proxy_port=int(self.proxy_port))
         # client = mqtt.Client(self.mypgpkeyid,False) # before custom mqtt client
         client.on_connect= self.on_connect
         client.on_message = self.on_message
