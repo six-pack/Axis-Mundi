@@ -1,7 +1,7 @@
 Installation
 ============
 
-1) Download client files from http://github.com/six-pack/client/
+1) Download client files from https://github.com/six-pack/client/archive/master.zip
 2) Extract to your chosen location
 3) Open a terminal and change directory to the location you extracted the client to
 4) If you have not already installed the pre-requisite dependencies do so now using the commands:
