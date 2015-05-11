@@ -4,8 +4,9 @@ Installation
 1) Download client files from http://github.com/six-pack/client/
 2) Extract to your chosen location
 3) Open a terminal and change directory to the location you extracted the client to
-4) If you have not already installed the pre-requisite dependencies do so now using the command
-    sudo pip install -r requirements.txt
+4) If you have not already installed the pre-requisite dependencies do so now using the commands:
+    $ sudo apt-get install python-pip
+    $ sudo pip install -r requirements.txt
 
 Running for First Time
 ======================
