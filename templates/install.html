@@ -6,8 +6,17 @@
   <p>This appears to be the first time I have been run. I am going to create a database but first you need to let me
       know which PGP key you want to use as your identity. Below you will find a list of one or more PGP keys, please
       select one. If no keys are displayed then you need to create a PGP key before you can continue.</p>
-  <p>Your PGP passphrase will be cached in memory whilst this application is running but will not be saved.</p>
-  <p>WARNING: If you forget your PGP passphrase you will be completely unable to access your market account.</p>
+
+  <p>
+    <table hidden>
+    <form method="post" action="{{ url_for('loadidentity') }}">
+    <tr><td><b> Existing Users: </b>If you already have application data saved to a non-default location then select the file location here and hit
+      the load button</td>
+        <td width="33%"><input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+            <span><label class="filebtn"><input type="file" name="app_dir" required/>Find Identity</label>
+            <button type="submit" class = "btn">Load Identity</button></span></td></tr>
+    </form>
+    </table>
     <h1>Configure Identity</h1>
     <form method="post" action="{{ url_for('createidentity') }}">
     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
@@ -25,3 +34,4 @@
         </table></form>
 
 {% endblock %}
+

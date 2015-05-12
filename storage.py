@@ -88,8 +88,8 @@ class Storage():
     def InitDB(self,passphrase,dbfilepath):
         #engine = create_engine('sqlite+pysqlcipher://:PASSPHRASE@/storage.db?cipher=aes-256-cfb&kdf_iter=64000')
         # This next one works although a numeric passphrase must be given
-#        engine = create_engine('sqlite+pysqlcipher://:' + passphrase + '/storage.db')
-        self.engine = create_engine('sqlite:///' + dbfilepath, connect_args={'check_same_thread':False})  # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
+#        self.engine = create_engine('sqlite+pysqlcipher://:' + passphrase + '/' + dbfilepath)
+        self.engine = create_engine('sqlite:////' + dbfilepath, connect_args={'check_same_thread':False})  # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
                                                             #  poolclass=StaticPool
         try:
             self.Base.metadata.create_all(self.engine)
@@ -103,9 +103,9 @@ class Storage():
 
     def Start(self):
         newstoragedb = True
-        if isfile(self.appdir + "/" + self.database):
+        if isfile(self.appdir + '/' + self.database):
             newstoragedb = False
-        if self.InitDB(self.passphrase,self.database):
+        if self.InitDB(self.passphrase, self.appdir + '/' +self.database):
                 return True
         else:
             if newstoragedb: print "Error creating storage database"
@@ -114,7 +114,7 @@ class Storage():
 
     def Stop(self):
         try:
-            self.engine.close()
+#            self.engine.close()
             self.engine.remove()
         except:
             print "Error removing DB session"

@@ -22,15 +22,16 @@ class messaging_loop(threading.Thread):
 # broker-hostname:pgpkeyid:UTCdatetime
 # The date time shall not contain seconds and will be chekced on the server to be no more than +/- 5 minutes fromcurrent server time
 
-    def __init__ (self, targetbroker, pgpkeyid, pgppassphrase, passphrase, database, homedir, q, q_res, workoffline=False):
+    def __init__ (self, targetbroker, pgpkeyid, pgppassphrase, passphrase, database, homedir, appdir, q, q_res, workoffline=False):
         self.targetbroker = targetbroker
         self.mypgpkeyid = pgpkeyid
         self.q = q
         self.q_res = q_res
         self.database = database
         self.homedir = homedir
+        self.appdir = appdir
         self.dbsecretkey = passphrase
-        self.gpg = gnupg.GPG(gnupghome=homedir + '/.gnupg')
+        self.gpg = gnupg.GPG(gnupghome=self.homedir + '/.gnupg',options='--primary-keyring='" + self.appdir + '/pubkeys.gpg"'')
         self.pgp_passphrase = pgppassphrase
         self.myMessaging = Messaging(self.mypgpkeyid,self.pgp_passphrase,homedir)
         self.sub_inbox = str("user/" + self.mypgpkeyid + "/inbox")
@@ -188,25 +189,35 @@ class messaging_loop(threading.Thread):
         session.add(new_db_contact)
         session.commit()
 
-    def run(self):
+    def read_configuration(self):
+        # read configuration from database
+        session = self.storageDB.DBSession()
+        try:
+            socks_proxy = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "proxy").first()
+            socks_proxy_port = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "proxy_port").first()
+        except:
+            return False
+        self.proxy = socks_proxy.value
+        self.proxy_port = socks_proxy_port.value
+        return True
 
+    def run(self):
+        # TODO: Clean up this flow
         # make db connection
-        self.storageDB = Storage(self.dbsecretkey,"storage.db",self.homedir + '/.dnmng')
+        self.storageDB = Storage(self.dbsecretkey,"storage.db",self.appdir)
         if not self.storageDB.Start():
             print "Error: Unable to start storage database"
             flash_msg = queue_task(0,'flash_error','Unable to start storage database ' + 'storage.db') #' self.targetbroker)
             self.q_res.put(flash_msg)
-            raise ()
-        # read configuration from database
-        session = self.storageDB.DBSession()
-        socks_proxy = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "proxy").first()
-        socks_proxy_port = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "proxy_port").first()
-        self.proxy = socks_proxy.value
-        self.proxy_port = socks_proxy_port.value
+            self.shutdown = True
+        # read configuration from config table
+        if not self.read_configuration():
+            flash_msg = queue_task(0,'flash_error','Unable to read configuration from database ' + 'storage.db') #' self.targetbroker)
+            self.q_res.put(flash_msg)
+            self.shutdown = True
         # make mqtt connection
-#        socket.socket = socks.socksocket
         client = mqtt(self.mypgpkeyid,False,proxy=self.proxy,proxy_port=int(self.proxy_port))
-        # client = mqtt.Client(self.mypgpkeyid,False) # before custom mqtt client
+        # client = mqtt.Client(self.mypgpkeyid,False) # before custom mqtt client # original paho-mqtt
         client.on_connect= self.on_connect
         client.on_message = self.on_message
         client.on_disconnect = self.on_disconnect

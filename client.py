@@ -3,7 +3,7 @@
 from flask import Flask, render_template, request, redirect, url_for, abort, session, flash, g
 from flask_login import LoginManager,UserMixin,login_user,current_user,logout_user,login_required
 import gnupg
-from os.path import expanduser, isfile, isdir
+from os.path import expanduser, isfile, isdir, dirname
 from os import makedirs
 import string
 import random
@@ -20,7 +20,7 @@ messageQueue_res = Queue.Queue()    # Results Queue for mqtt client thread
 login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.init_app(app)
-pager_items = 15 # default of 15 items per page when paginatiing
+pager_items = 12 # default of 12 items per page when paginating
 
 class User(UserMixin):
     def __init__(self, id):
@@ -130,7 +130,6 @@ def new_contact(contact_pgpkey=""):
             print contact
         else:           # We are adding by pgp key block
             contact={"displayname":"" + name + "","pgpkey":"" + pgpkey + "","pgpkeyid":""'"'} # TODO: add flags
-            print contact
         task = queue_task(1,'new_contact',contact)
         messageQueue.put(task)
         sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
@@ -229,13 +228,26 @@ def delete_message(id):
     checkEvents()
     return redirect(url_for('messages'))
 
+
+@app.route('/load-identity', methods=['POST'])
+def loadidentity():                                               # load existing app data from a non-default location
+  if app.SetupDone : return redirect(url_for('home'))
+  app.appdir = dirname(request.form['app_dir']) # strip off the file-name
+  print app.appdir
+  if isfile(app.appdir + "/secret") and isfile (app.appdir + "/storage.db") :
+      app.SetupDone = True # TODO: A better check is needed here
+  else:
+      flash("Could not load application data from " + app.appdir,category="error")
+  return redirect(url_for('login'))
+
+
 @app.route('/create-identity', methods=['POST'])
-def createidentity():
+def createidentity():                                               # This is a bit of a mess, TODO: clean up
   if app.SetupDone : return redirect(url_for('home'))
   app.pgp_keyid = request.form['keyid']
   app.display_name = request.form['displayname']
   app.pgp_passphrase = request.form['pgppassphrase']
-  # Now attempt to create secret file
+  # Now attempt to create our application data directory if it doesn't exist
   if not isdir(app.appdir):
       try:
         makedirs(app.appdir,mode=0700)
@@ -243,6 +255,15 @@ def createidentity():
         flash("Error creating identity - client folder not created",category="error")
         return redirect(url_for('install'))
   app.dbsecretkey = ''.join(random.SystemRandom().choice(string.digits) for _ in range(128))
+  # Now create our empty pgp keyring it it does not exist in our app data dir
+  if not isfile(app.appdir + '/pubkeys.gpg'):
+      try:
+         file = open(app.appdir+'/pubkeys.gpg', 'w')
+         file.close()
+      except:
+         flash("Error creating public keyring",category="error")
+         return redirect(url_for('install'))
+  # Now create or overwrite the secret db key file in the app data dir
   try:
      file = open(app.appdir+'/secret', 'w')
      encrypted_dbsecretkey = gpg.encrypt(app.dbsecretkey, app.pgp_keyid)
@@ -253,7 +274,7 @@ def createidentity():
      flash("Error creating identity - secret file not created",category="error")
      return redirect(url_for('install'))
   ## Now create & populate DB with initial values
-  installStorageDB = Storage(app.dbsecretkey,"storage.db",app.appdir)
+  installStorageDB = Storage(app.dbsecretkey,'storage.db',app.appdir)
   if not installStorageDB.Start():
      flash('There was a problem creating the storage database '+ 'storage.db',category="error")
   session = installStorageDB.DBSession()
@@ -401,7 +422,7 @@ def login():
         return render_template('login.html',key_list=private_keys)
     user = User.get(app.pgp_keyid)
     login_user(user)
-    messageThread = messaging_loop('c6gizttsgqhoqity.onion', app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey,"storage.db",app.homedir, messageQueue, messageQueue_res, workoffline=app.workoffline)
+    messageThread = messaging_loop('c6gizttsgqhoqity.onion', app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey,"storage.db",app.homedir, app.appdir, messageQueue, messageQueue_res, workoffline=app.workoffline)
     messageThread.start()
     return render_template('home.html')
   else:
@@ -421,7 +442,6 @@ def checkEvents():
             flash(results.data, category="error")
         elif results.command == 'flash_status':
             app.connection_status = results.data
-            print results.data
         else:
             flash("Unknown command received from client thread results queue", category="error")
     return(True)
@@ -439,9 +459,9 @@ if __name__ == '__main__':
   app.display_name = ""
   app.pgp_passphrase = ""
   app.homedir = expanduser("~")
-  app.appdir = app.homedir + '/.dnmng'
-  gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg')
+  app.appdir = app.homedir + '/.dnmng' # This is the default appdir location
+  gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg',options='--throw-keyids') # we want to encrypt the secret with throw keys
   app.connection_status = "Off-line"
-  if isfile(app.appdir + "/secret"):   app.SetupDone = True # TODO: A better check is needed here
+  if isfile(app.appdir + "/secret") and isfile (app.appdir + "/storage.db") :   app.SetupDone = True # TODO: A better check is needed here
   app.run(debug=True)
 

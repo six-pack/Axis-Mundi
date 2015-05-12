@@ -1,17 +1,20 @@
 Installation
 ============
 
-1) Download client files from https://github.com/six-pack/client/archive/master.zip
-2) Extract to your chosen location
-3) Open a terminal and change directory to the location you extracted the client to
-4) If you have not already installed the pre-requisite dependencies do so now using the commands:
+1) If you do not have PIP installed then do that first from a terminal
     $ sudo apt-get install python-pip
+2) Download client files from https://github.com/six-pack/client/archive/master.zip
+3) Extract to your chosen location
+4) Open a terminal and change directory to the location you extracted the client to
+4) If you have not already installed the pre-requisite python dependencies (you only have to do this once) then
+do so now using the commands:
+
     $ sudo pip install -r requirements.txt
 
 Running for First Time
 ======================
 
-Make  sure you have generate a PGP key in your gpg keyring before running the client (you can use an existing one).
+Make  sure you have generated a PGP key in your gpg keyring before running the client (you can use an existing one).
 
 1) Execute client.py
 2) Use a web browser to access the client using address http://127.0.0.1:5000/
