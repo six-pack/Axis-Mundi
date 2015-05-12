@@ -15,22 +15,22 @@ import socks
 import socket
 from calendar import timegm
 from time import gmtime
-
+import random
 
 class messaging_loop(threading.Thread):
 # Authentication shall set the password to a PGP clear-signed message containing the follow data only
 # broker-hostname:pgpkeyid:UTCdatetime
 # The date time shall not contain seconds and will be chekced on the server to be no more than +/- 5 minutes fromcurrent server time
 
-    def __init__ (self, targetbroker, pgpkeyid, pgppassphrase, passphrase, database, homedir, appdir, q, q_res, workoffline=False):
-        self.targetbroker = targetbroker
+    def __init__ (self, pgpkeyid, pgppassphrase, dbpassphrase, database, homedir, appdir, q, q_res, workoffline=False):
+        self.targetbroker = None
         self.mypgpkeyid = pgpkeyid
         self.q = q
         self.q_res = q_res
         self.database = database
         self.homedir = homedir
         self.appdir = appdir
-        self.dbsecretkey = passphrase
+        self.dbsecretkey = dbpassphrase
         self.gpg = gnupg.GPG(gnupghome=self.homedir + '/.gnupg',options='--primary-keyring='" + self.appdir + '/pubkeys.gpg"'')
         self.pgp_passphrase = pgppassphrase
         self.myMessaging = Messaging(self.mypgpkeyid,self.pgp_passphrase,homedir)
@@ -195,10 +195,12 @@ class messaging_loop(threading.Thread):
         try:
             socks_proxy = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "proxy").first()
             socks_proxy_port = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "proxy_port").first()
+            brokers = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "hubnodes").all()
         except:
             return False
         self.proxy = socks_proxy.value
         self.proxy_port = socks_proxy_port.value
+        self.brokers = brokers
         return True
 
     def run(self):
@@ -221,6 +223,8 @@ class messaging_loop(threading.Thread):
         client.on_connect= self.on_connect
         client.on_message = self.on_message
         client.on_disconnect = self.on_disconnect
+        # Select a random broker from our list of entry points
+        self.targetbroker = random.choice(self.brokers).value
         if not self.workoffline:
             # create broker authentication request
             password=self.make_pgp_auth()

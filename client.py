@@ -422,7 +422,7 @@ def login():
         return render_template('login.html',key_list=private_keys)
     user = User.get(app.pgp_keyid)
     login_user(user)
-    messageThread = messaging_loop('c6gizttsgqhoqity.onion', app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey,"storage.db",app.homedir, app.appdir, messageQueue, messageQueue_res, workoffline=app.workoffline)
+    messageThread = messaging_loop( app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey,"storage.db",app.homedir, app.appdir, messageQueue, messageQueue_res, workoffline=app.workoffline)
     messageThread.start()
     return render_template('home.html')
   else:
