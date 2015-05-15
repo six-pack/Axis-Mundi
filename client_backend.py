@@ -9,13 +9,14 @@ from mqtt_client import Client as mqtt
 from storage import Storage
 import gnupg
 from messaging import Message, Messaging, Contact
-from utilities import queue_task, current_time
+from utilities import queue_task, current_time, profile
 import json
 import socks
 import socket
 from calendar import timegm
 from time import gmtime
 import random
+import re
 
 class messaging_loop(threading.Thread):
 # Authentication shall set the password to a PGP clear-signed message containing the follow data only
@@ -29,13 +30,18 @@ class messaging_loop(threading.Thread):
         self.q_res = q_res
         self.database = database
         self.homedir = homedir
+        self.pgpdir = homedir + '/.gnupg'
         self.appdir = appdir
         self.dbsecretkey = dbpassphrase
-        self.gpg = gnupg.GPG(gnupghome=self.homedir + '/.gnupg',options='--primary-keyring='" + self.appdir + '/pubkeys.gpg"'')
+
+        self.gpg = gnupg.GPG(gnupghome=self.homedir + '/.gnupg',options={'--primary-keyring="' + self.appdir + '/pubkeys.gpg"'})
         self.pgp_passphrase = pgppassphrase
-        self.myMessaging = Messaging(self.mypgpkeyid,self.pgp_passphrase,homedir)
+        self.profile = profile
+        self.display_name = None
+        self.myMessaging = Messaging(self.mypgpkeyid,self.pgp_passphrase,self.pgpdir,appdir)
         self.sub_inbox = str("user/" + self.mypgpkeyid + "/inbox")
         self.pub_profile = str("user/" + self.mypgpkeyid + "/profile")
+        self.pub_key = str("user/" + self.mypgpkeyid + "/key")
         self.pub_items = str("user/" + self.mypgpkeyid + "/items")
         self.storageDB = Storage
         self.connected = False
@@ -63,7 +69,7 @@ class messaging_loop(threading.Thread):
 
     def on_message(self, client, userdata, msg):
         if msg.topic == self.sub_inbox:
-            message = self.myMessaging.GetMessage(msg.payload)
+            message = self.myMessaging.GetMessage(msg.payload,allow_unsigned=True) # TODO - read allow unsigned from config db
             if message == False:  print "Message was invalid"
             elif message.type == 'Private Message':
                 flash_msg = queue_task(0,'flash_message','Private message received from ' + message.sender)
@@ -99,16 +105,28 @@ class messaging_loop(threading.Thread):
 #                                                                 )
 #                session.add(new_db_message)
 #                session.commit()
+        elif re.match('user\/[A-F0-9]{16}\/key',msg.topic):
+            # Here is a key, store it and unsubscribe
+            client.unsubscribe(msg.topic)
+            #TODO: Check we have really been sent a PGP key block and check if it really is the same as the topic key
+            keyid = msg.topic[msg.topic.index('/')+1:msg.topic.rindex('/')]
+            session = self.storageDB.DBSession()
+            cachedkey = self.storageDB.cachePGPKeys(key_id=keyid,
+                                                    updated=datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S"),
+                                                    keyblock=msg.payload )
+            session.add(cachedkey)
+            session.commit()
+#            imp_res = self.gpg.import_keys(msg.payload) # we could import it here but we use the local keyserver
         else:
-            # todo: Check if this is for a PUB we have subscribed to temporarily
             flash_msg = queue_task(0,'flash_error','Message received for non-inbox topic - ' + msg.topic)
             self.q_res.put(flash_msg)
             print "Non PM message recv: " + msg.payload
 
     def setup_message_queues(self,client):
         client.subscribe(self.sub_inbox,1)                      # Our generic incoming queue, qos=1
-        client.publish(self.pub_items,"User is not publishing any items",1,True)      # Our published items queue, qos=1, durable
+        client.publish(self.pub_key,self.gpg.export_keys(self.mypgpkeyid,False,minimal=True),1,True)      # Our published pgp key block, qos=1, durable
         client.publish(self.pub_profile,"This will be the profile of " + self.mypgpkeyid,1,True)      # Our published profile queue, qos=1, durable
+        client.publish(self.pub_items,"User is not publishing any items",1,True)      # Our published items queue, qos=1, durable
 
     def sendMessage(self,client,message):
         outMessage = self.myMessaging.PrepareMessage(message)
@@ -196,6 +214,8 @@ class messaging_loop(threading.Thread):
             socks_proxy = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "proxy").first()
             socks_proxy_port = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "proxy_port").first()
             brokers = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "hubnodes").all()
+            display_name = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "displayname").first()
+            publish_identity = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "publish_identity").first()
         except:
             return False
         self.proxy = socks_proxy.value
@@ -206,6 +226,7 @@ class messaging_loop(threading.Thread):
     def run(self):
         # TODO: Clean up this flow
         # make db connection
+
         self.storageDB = Storage(self.dbsecretkey,"storage.db",self.appdir)
         if not self.storageDB.Start():
             print "Error: Unable to start storage database"
@@ -217,6 +238,12 @@ class messaging_loop(threading.Thread):
             flash_msg = queue_task(0,'flash_error','Unable to read configuration from database ' + 'storage.db') #' self.targetbroker)
             self.q_res.put(flash_msg)
             self.shutdown = True
+        # TODO: Execute database weeding functions here to include:
+        # 1 - purge all PM's older than the configured retention period (unless message has been marked for retention)
+        # 2 - purge addresses (buyer & seller side) for address information related to finalized transactions
+        # -------------------------
+        # build profile
+        self.profile.display_name = self.display_name
         # make mqtt connection
         client = mqtt(self.mypgpkeyid,False,proxy=self.proxy,proxy_port=int(self.proxy_port))
         # client = mqtt.Client(self.mypgpkeyid,False) # before custom mqtt client # original paho-mqtt
@@ -271,6 +298,11 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'delete_pm':
                     message_to_del = task.data['id']
                     self.delete_pm(message_to_del)
+                elif task.command == 'get_key':
+                    # TODO: check the local database  - is this function only to get a key from the remote topic
+                    # or a general key lookup function for the frontend? Discuss...
+                    key_topic = 'user/' + task.data['keyid'] + '/key'
+                    client.subscribe(str(key_topic),1)
                 elif task.command == 'new_contact':
                     contact = Contact()
                     contact.displayname = task.data['displayname']
@@ -282,5 +314,6 @@ class messaging_loop(threading.Thread):
                     self.shutdown = True
         client.disconnect()
         self.storageDB.DBSession.close_all()
+        print "client-backend exits"
         # Terminatedo
 

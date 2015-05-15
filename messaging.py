@@ -47,7 +47,7 @@ class Message(object):
         self.flags = '' # for future usage
         self.body = ''
         self.signed='' # set to true when a valid outer signature is present in the body (not to be set by users)
-        self.cleartext=''
+        self.encrypted=''
         self.sub_messages = [] # Contracts etc.
     def loadjson (self, j):
         # additional checking here would not hurt
@@ -60,11 +60,10 @@ class Message(object):
 
 class Messaging():
     # Overarching message handling class
-    def __init__(self, mypgpkeyid, pgppassphrase, homedir):
+    def __init__(self, mypgpkeyid, pgppassphrase, pgp_dir, app_dir):
         self.mypgpkeyid = mypgpkeyid
-        self.gpg = gnupg.GPG(gnupghome=homedir + '/.gnupg')
+        self.gpg = gnupg.GPG(gnupghome=pgp_dir,options={'--no-emit-version','--keyserver=hkp://127.0.0.1:5000','--keyserver-options=auto-key-retrieve=yes','--auto-key-locate=keyserver','--primary-keyring="' + app_dir + '/pubkeys.gpg"'})
         self.pgp_passphrase = pgppassphrase
-        self.allowUnsignedMessages = True
 #       self.gpg.options = "--no-emit-version"
 
     def PrepareMessage(self,message,alt_pgpkey=None, signmessage=True):
@@ -81,6 +80,7 @@ class Messaging():
         # Now always encrypt if this is a directed message
         if self.recipient:
             # TODO: encrypt to alternate pgp key if ephemeral pgp message keys are enabled and we have one for this recipient
+            self.gpg.recv_keys('hkp://127.0.0.1:5000',self.recipient) # We don't really want to do this every time but it will do for now
             final_message_raw = self.gpg.encrypt(final_clear_message,self.recipient,passphrase=self.pgp_passphrase, always_trust=True)
             if final_message_raw == False:
                 # Encryption did not succeed - stop now
@@ -93,9 +93,11 @@ class Messaging():
         # OK, ready to send
         return final_message
 
-    def GetMessage(self,rawmessage,alt_pgpkey=None):
+    def GetMessage(self,rawmessage,alt_pgpkey=None,allow_unsigned=True):
         # Decode and return a message object. First decrypt if encrypted, then check outer signature if signed, the parse
         # json, then attempt to safely deserialize into a message object, then set received time, finally return message or error
+        input_message_encrypted = False
+        input_message_signed = False
         lrawmessage = str(rawmessage)
         # First set the send time - ALWAYS USE UTC! Never use any local system timezone information
         #### Step 1 - Is it encrypted?
@@ -106,13 +108,16 @@ class Messaging():
                 return False
             else:
                 clear_lrawmessage = str(decrypt_msg)
+                input_message_encrypted = True
         else:
             clear_lrawmessage = lrawmessage
         #### Step 2 - Is it signed?
         if clear_lrawmessage.startswith('-----BEGIN PGP SIGNED MESSAGE-----'):
             #print "Clear-signed message identified..."
             verify_signature = self.gpg.verify(clear_lrawmessage)
-            if verify_signature.key_id:
+#            if verify_signature.pubkey_fingerprint:    # Proper signature check, full fp only returned if key present
+            if verify_signature.key_id:     # Weak signature check - TODO: TESTING ONLY!
+                input_message_signed = True
                 try:
                     clear_strippedlrawmessage = clear_lrawmessage[clear_lrawmessage.index('{'):clear_lrawmessage.rindex('}')+1]
                 except:
@@ -122,7 +127,7 @@ class Messaging():
         else:
             print "WARNING: Unsigned message block identified..."
             # TODO: If allow unsigned is set to on we will process this message, else drop it as invalid
-            if self.allowUnsignedMessages:
+            if allow_unsigned:
                 clear_strippedlrawmessage = clear_lrawmessage
             else:
                 return False
@@ -132,5 +137,13 @@ class Messaging():
             print "Could not decode JSON, dropping message. Message was " + clear_strippedlrawmessage
             return False
         else:
+            # Finally make sure the sender keyid matches the signing keyid
+            if not verify_signature.key_id == message.sender:
+                print "WARNING! Apparent spoofed message - claiming to be from " + message.sender
+                return False
+            if input_message_encrypted:
+                message.encrypted = True
+            if input_message_signed:
+                message.signed = True
             message.datetime_received =  current_time()
             return message

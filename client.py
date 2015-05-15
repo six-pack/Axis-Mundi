@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from flask import Flask, render_template, request, redirect, url_for, abort, session, flash, g
+from flask import Flask, render_template, request, redirect, url_for, abort, session, flash, g, make_response
 from flask_login import LoginManager,UserMixin,login_user,current_user,logout_user,login_required
 import gnupg
 from os.path import expanduser, isfile, isdir, dirname
@@ -43,7 +43,7 @@ def csrf_protect():
         token = session.pop('_csrf_token', None)
         if not token or token != request.form.get('_csrf_token'):
             flash('Invalid CSRF token, please try again.',category="error")
-            redirect(request.endpoint,302)
+            redirect(request.endpoint,302) # FIXME: This is not doing what it should
 
 def generate_csrf_token():
     if '_csrf_token' not in session:
@@ -102,8 +102,11 @@ def profile(keyid=None):
   # TODO:Check to see if this user is in our contacts list
   # TODO:Message to client_backend to SUB target user profile and target user listings
   if keyid is None:
-      keyid = app.pgp_keyid
-
+      keyid = app.pgp_keyid # if no key specified by user then look up our own profile
+  task = queue_task(1,'get_profile',keyid)
+  messageQueue.put(task)
+  # TODO: show the cached page so the user doesn't have to wait for the response
+  # for now wait for the response for up to [timeout] seconds
   return render_template('profile.html')
 
 @app.route('/contacts')
@@ -422,11 +425,51 @@ def login():
         return render_template('login.html',key_list=private_keys)
     user = User.get(app.pgp_keyid)
     login_user(user)
-    messageThread = messaging_loop( app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey,"storage.db",app.homedir, app.appdir, messageQueue, messageQueue_res, workoffline=app.workoffline)
-    messageThread.start()
+    if app.connection_status=="Off-line":
+        messageThread = messaging_loop( app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey,"storage.db",app.homedir, app.appdir, messageQueue, messageQueue_res, workoffline=app.workoffline)
+        messageThread.start()
     return render_template('home.html')
   else:
     return render_template('login.html',key_list=private_keys)
+
+# Minimalist PGP keyserver implementation (no auth required)
+# TODO: Move this whole function to client_backend and run as a small thread with a listener on a dedicated port
+@app.route('/pks/lookup')
+def pks_lookup():
+    if not app.pgp_keyid:
+        resp = make_response("Key server not available", 404)
+        resp.headers.extend({'X-HKP-Results-Count': '0'})
+        return resp
+    search_key = request.args.get('search','')
+    if not search_key:
+        resp = make_response("Key ID not provided", 404)
+        resp.headers.extend({'X-HKP-Results-Count': '0'})
+        return resp
+    # if the provided keyid starts with 0x
+    search_key_split = search_key.split('x')
+    if len(search_key_split)==2:
+        search_key=search_key_split[1] # strip 0x
+    # Query local key cache database for the key - we will request from the broker if we don't have it
+    session = app.roStorageDB.DBSession()
+    key_block = session.query(app.roStorageDB.cachePGPKeys).filter_by(key_id=search_key).first()
+    if not key_block:
+        key={"keyid":"" + search_key + ""}
+        task = queue_task(1,'get_key',key)
+        messageQueue.put(task)
+        # now, we wait...
+        timer = 0
+        key_block = session.query(app.roStorageDB.cachePGPKeys).filter_by(key_id=search_key).first()
+        while (not key_block) and (timer < 20): # 20 second timeout for key lookups
+            sleep (1)
+            key_block = session.query(app.roStorageDB.cachePGPKeys).filter_by(key_id=search_key).first()
+            timer = timer + 1
+        if not key_block:
+            resp = make_response("Key not found", 404)
+            resp.headers.extend({'X-HKP-Results-Count': '0'})
+            return resp
+    resp = make_response(key_block.keyblock, 200) # for now return our key
+    resp.headers.extend({'X-HKP-Results-Count': '1'}) # we will only ever return a single key
+    return resp
 
 def checkEvents():
     if messageQueue_res.empty(): return(False)
@@ -442,12 +485,15 @@ def checkEvents():
             flash(results.data, category="error")
         elif results.command == 'flash_status':
             app.connection_status = results.data
+        elif results.command == 'resolved_key':
+            app.pgpkeycache[results.data['keyid']] = results.data['key_block'] # add this key to the keycache
         else:
             flash("Unknown command received from client thread results queue", category="error")
     return(True)
 
 if __name__ == '__main__':
   app.storageThreadID = ""
+  app.pgpkeycache = {}
   app.dbsecretkey = ""
   app.workoffline = False
   app.secret_key = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16))
@@ -460,8 +506,9 @@ if __name__ == '__main__':
   app.pgp_passphrase = ""
   app.homedir = expanduser("~")
   app.appdir = app.homedir + '/.dnmng' # This is the default appdir location
-  gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg',options='--throw-keyids') # we want to encrypt the secret with throw keys
+  gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg',options={'--throw-keyids','--no-emit-version'}) # we want to encrypt the secret with throw keys
   app.connection_status = "Off-line"
   if isfile(app.appdir + "/secret") and isfile (app.appdir + "/storage.db") :   app.SetupDone = True # TODO: A better check is needed here
-  app.run(debug=True)
+  app.run(debug=True,threaded=True) # Enabe threading, primarily for pks keyserver support
+
 

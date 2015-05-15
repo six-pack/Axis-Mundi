@@ -11,3 +11,11 @@ def current_time():
     utc_datetime = datetime.utcnow()
     return utc_datetime.strftime("%Y-%m-%d %H:%M")+":00" # always zero seconds to reduce impact of clock time skew leakage
 
+class profile(object):
+    def __init__ (self, keyid):
+        self.keyid = keyid
+        self.display_name = None
+        self.profile_text = None
+        self.avatar = None
+        self.listings = None
+

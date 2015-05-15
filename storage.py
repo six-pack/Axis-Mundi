@@ -1,5 +1,3 @@
-import os
-import sys
 from sqlalchemy import Column, ForeignKey, Integer, String, Boolean, DECIMAL,DateTime, insert
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -8,9 +6,7 @@ from sqlalchemy.pool import StaticPool
 import pycountry
 import time
 from os.path import isfile
-import sys
 import paginate
-#import sqlalchemy
 
 class Storage():
 
@@ -84,6 +80,22 @@ class Storage():
         __tablename__ = 'countries'
         id = Column(Integer, primary_key=True)
         country = Column(String(80), nullable=False)
+
+    class cachePGPKeys(Base):
+        __tablename__ = 'cachepgpkeys'
+        id = Column(Integer, primary_key=True)
+        key_id = Column(String(16), nullable=False)
+        updated = Column(DateTime, nullable=False)
+        keyblock = Column(String(8192))
+
+    class cacheProfiles(Base):
+        __tablename__ = 'cacheprofiles'
+        id = Column(Integer, primary_key=True)
+        key_id = Column(String(16), nullable=False)
+        updated = Column(DateTime, nullable=False)
+        display_name = Column(String(80))
+        profile_text = Column(String(4096))
+        avatar_base64 = Column(String()) # this does not seem efficient
 
     def InitDB(self,passphrase,dbfilepath):
         #engine = create_engine('sqlite+pysqlcipher://:PASSPHRASE@/storage.db?cipher=aes-256-cfb&kdf_iter=64000')

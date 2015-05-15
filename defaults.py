@@ -22,6 +22,14 @@ def create_defaults(db,session,pgp_keyid,display_name,publish_id):
          new_conf_item.value = "c6gizttsgqhoqity.onion"                 # Hardcode in these seed entry points
          new_conf_item.displayname = "Entry Points"
          session.add(new_conf_item)
+         new_conf_item = db.Config(name="hubnodes")
+         new_conf_item.value = "r2j7zovmdkplwfrz.onion"                 # Hardcode in these seed entry points
+         new_conf_item.displayname = "Entry Points"
+         session.add(new_conf_item)
+         new_conf_item = db.Config(name="hubnodes")
+         new_conf_item.value = "evdjwy36ugatq2nm.onion"                 # Hardcode in these seed entry points
+         new_conf_item.displayname = "Entry Points"
+         session.add(new_conf_item)
          new_conf_item = db.Config(name="proxy")
          new_conf_item.value = "127.0.0.1"
          new_conf_item.displayname = "Proxy"
