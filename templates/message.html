@@ -4,33 +4,32 @@
 {% block content %}
   <h3>View Message</h3>
     <div class="datagrid">
-    <table width="100%">
+    <table style="layout: fixed">
         <tr>
           <td width="100px"><b>Date</b></td>
           <td>{{ message.message_date }}</td>
         </tr>
+        {% if message.message_direction=="In" %}
         <tr>
           <td width="100px"><b>From</b></td>
-          <td>{{ message.sender_key }}</td>
+          <td>{{ message.sender_name }}({{message.sender_key}})</td>
         </tr>
+        {% else %}
         <tr>
           <td width="100px"><b>To</b></td>
-          <td>{{ message.recipient_key }}</td>
+          <td>{{ message.recipient_name }}({{message.recipient_key}})</td>
         </tr>
+        {% endif %}
         <tr>
           <td width="100px"><b>Subject</b></td>
           <td>{{ message.subject }}</td>
         </tr>
         <tr><td></td></tr>
         <tr>
-          <td colspan="2" style="white-space:pre-wrap">
-              <div class="boxed">{{ message.body }}</div></td>
+          <td colspan="2" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;">
+              <div>{{ message.body }}</div></td>
         </tr>
-        <tr>
-            <td colspan="2">
 
-            </td>
-        </tr>
         <tr>
             <td colspan="2">
             <div style="float:right;padding:1px"><a class="btn"  href="{{ url_for('reply_message', id = message.id) }}">Reply</a></div>
@@ -41,7 +40,5 @@
 
     </table>
     </div>
-
-
 {% endblock %}
 

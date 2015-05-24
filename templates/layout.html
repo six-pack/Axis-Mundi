@@ -29,7 +29,12 @@
             <li><a href="{{ url_for('messages_sent') }}">Sent Messages</a></li>
           </ul>
         </li>
-        <li><a href="{{ url_for('contacts') }}">Contacts</a></li>
+        <li><a href="{{ url_for('contacts') }}">People</a>
+          <ul>
+              <li><a href="{{ url_for('contacts') }}">My Contacts</a></li>
+              <li><a href="{{ url_for('contacts') }}">Directory</a></li>
+          </ul>
+        </li>
         <li><a href="{{ url_for('setup') }}">Setup</a>
           <ul>
             <li><a href="{{ url_for('setup') }}/identity">Identity</a></li>

@@ -10,11 +10,13 @@ import random
 from storage import Storage, SqlalchemyOrmPage
 from client_backend import messaging_loop
 import Queue
-from utilities import queue_task
+from utilities import queue_task,encode_image
 from defaults import create_defaults
 from time import sleep
+import base64
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024 # (8Mb maximum upload to local webserver) - make sure we dont need to use the disk
 messageQueue = Queue.Queue()    # work Queue for mqtt client thread
 messageQueue_res = Queue.Queue()    # Results Queue for mqtt client thread
 login_manager = LoginManager()
@@ -97,17 +99,35 @@ def listings(page=1):
 @app.route('/profile/<string:keyid>')
 @login_required
 def profile(keyid=None):
-  checkEvents()
-  # TODO:Implement caching for (previously viewed) profiles in the local database
-  # TODO:Check to see if this user is in our contacts list
-  # TODO:Message to client_backend to SUB target user profile and target user listings
-  if keyid is None:
+    checkEvents()
+    # TODO:Implement caching for (previously viewed) profiles in the local database
+    # TODO:Check to see if this user is in our contacts list
+    # TODO:Message to client_backend to SUB target user profile and target user listings
+    if keyid is None:
       keyid = app.pgp_keyid # if no key specified by user then look up our own profile
-  task = queue_task(1,'get_profile',keyid)
-  messageQueue.put(task)
-  # TODO: show the cached page so the user doesn't have to wait for the response
-  # for now wait for the response for up to [timeout] seconds
-  return render_template('profile.html')
+#    task = queue_task(1,'get_profile',keyid)
+#    messageQueue.put(task)
+    # TODO: show the cached page so the user doesn't have to wait for the response
+    # for now wait for the response for up to [timeout] seconds
+    session = app.roStorageDB.DBSession()
+    profile = session.query(app.roStorageDB.cacheProfiles).filter_by(key_id=keyid).first()
+    if not profile:
+        key={"keyid":"" + keyid + ""}
+        task = queue_task(1,'get_profile',key)
+        messageQueue.put(task)
+        # now, we wait...
+        timer = 0
+        profile = session.query(app.roStorageDB.cacheProfiles).filter_by(key_id=keyid).first()
+        while (not profile) and (timer < 20): # 20 second timeout for profile lookups
+            sleep (1)
+            profile = session.query(app.roStorageDB.cacheProfiles).filter_by(key_id=keyid).first()
+            timer = timer + 1
+        if not profile:
+            resp = make_response("Profile not found", 404) # TODO - pretty this up
+            return resp
+    else: # we have returned an existing profile from the cache
+        print "Existing entry found in profile cache..." # Todo : deal with updating profile by sending background get_profile
+    return render_template('profile.html',profile=profile)
 
 @app.route('/contacts')
 @app.route('/contacts/<int:page>')
@@ -120,19 +140,20 @@ def contacts(page=1):
   return render_template('contacts.html', contacts=page_results)
 
 @app.route('/contacts/new/',methods=["GET","POST"])
-@app.route('/contacts/new/<string:contact_pgpkey>',methods=["GET","POST"])
 @login_required
 def new_contact(contact_pgpkey=""):
     checkEvents()
     if request.method == "POST":
         # TODO: Validate these inputs
+        # TODO: Don't store pgpkeyblock in contact, just store id and store keyblock in the pgpkeycache table
         name = request.form['name']
         pgpkey = request.form['pgpkey_block']
+        contact_pgpkey =request.form['pgpkey_id']
         if contact_pgpkey: # We are adding by pgp key id
-            contact={"displayname":"" + name + "","pgpkeyid":"" + contact_pgpkey + "","pgpkey":""'"'} # TODO: add flags
+            contact={"displayname":"" + name + "","pgpkeyid":"" + contact_pgpkey + "","pgpkey":""} # TODO: add flags
             print contact
         else:           # We are adding by pgp key block
-            contact={"displayname":"" + name + "","pgpkey":"" + pgpkey + "","pgpkeyid":""'"'} # TODO: add flags
+            contact={"displayname":"" + name + "","pgpkey":"" + pgpkey + "","pgpkeyid":""} # TODO: add flags
         task = queue_task(1,'new_contact',contact)
         messageQueue.put(task)
         sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
@@ -197,8 +218,31 @@ def reply_message(id):
         message = session.query(app.roStorageDB.PrivateMessaging).filter_by(id=id).one()
         return render_template('message-reply.html',message=message)
 
+
+@app.route('/listings/new/',methods=["GET","POST"])
+@login_required
+def new_listing():
+    checkEvents()
+    if request.method == "POST":
+        # TODO: Validate these inputs
+        title = request.form['title']
+        description = request.form['description']
+        message={"title":"" + title + "","description":"" + description + ""}
+        task = queue_task(1,'new_listing',message)
+        messageQueue.put(task)
+        sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
+                    # we will wait for 0.1 seconds here because usually this is long enough to get the queue response back
+        checkEvents()
+        return redirect(url_for('listings'))
+    else:
+        session = app.roStorageDB.DBSession()
+        categories = None # session.query(app.roStorageDB.Contacts).all() # TODO: Query list of categories currently known
+        return render_template('listing-new.html',categories=categories)
+
+
+
 @app.route('/messages/new/',methods=["GET","POST"])
-@app.route('/messages/new/<string:recipient_key>',methods=["GET","POST"])
+@app.route('/messages/new/<string:recipient_key>',methods=["GET","POST"]) # TODO CSRF protection required
 @login_required
 def new_message(recipient_key=""):
     checkEvents()
@@ -220,7 +264,7 @@ def new_message(recipient_key=""):
         contacts = session.query(app.roStorageDB.Contacts).all()
         return render_template('message-compose.html',contacts=contacts, recipient_key=recipient_key)
 
-@app.route('/messages/delete/<string:id>/',)
+@app.route('/messages/delete/<string:id>/',)    # TODO CSRF protection required
 @login_required
 def delete_message(id):
     message={"id":"" + id + ""}
@@ -308,6 +352,7 @@ def setup(page=''):
       session = app.roStorageDB.DBSession()
       displayname = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "displayname").first()
       profile =  session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "profile").first()
+      avatar_image =  session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "avatar_image").first()
       hubnodes = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "hubnodes").all()
       notaries = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "notaries").all()
       socks_proxy = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "proxy").first()
@@ -317,15 +362,25 @@ def setup(page=''):
 
       #
       if page == "identity":
-          if displayname:
-             displayname.value = request.form['displayname']
-          if profile:
-             profile.value = request.form['profile']
-          else:
-             new_conf_item = app.roStorageDB.Config(name="profile")
-             new_conf_item.value = str(request.form['profile'])
-             new_conf_item.displayname = "Public Profile"
-             session.add(new_conf_item)
+            if displayname:
+                displayname.value = request.form['displayname']
+            avatar_image_file = request.files['avatar_image']
+            if avatar_image_file and avatar_image_file.filename.rsplit('.', 1)[1] in {'png','jpg'}:
+                if not avatar_image:
+                    new_conf_item = app.roStorageDB.Config(name="avatar_image")
+                    new_conf_item.value = str(encode_image(avatar_image_file.read(),(128,128)))
+                    new_conf_item.displayname = "Avatar Image"
+                    session.add(new_conf_item)
+                else:
+                    avatar_image.value = encode_image(avatar_image_file.read(),(128,128))
+                    #print encode_image(avatar_image_file.read(),(128,128))
+            if profile:
+                profile.value = request.form['profile']
+            else:
+                new_conf_item = app.roStorageDB.Config(name="profile")
+                new_conf_item.value = str(request.form['profile'])
+                new_conf_item.displayname = "Public Profile"
+                session.add(new_conf_item)
       elif page == "network":
           socks_proxy.value = request.form['proxy']
           socks_proxy_port.value = request.form['proxy_port']
@@ -358,6 +413,7 @@ def setup(page=''):
       pgpkeyid = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "pgpkeyid").first()
       displayname = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "displayname").first()
       profile =  session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "profile").first()
+      avatar =  session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "avatar_image").first()
       hubnodes = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "hubnodes").all()
       notaries = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "notaries").all()
       socks_proxy = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "proxy").first()
@@ -368,7 +424,7 @@ def setup(page=''):
       if page == '':
         return render_template('setup.html',displayname=displayname,pgpkeyid=pgpkeyid,hubnodes=hubnodes,notaries=notaries)
       elif page == 'identity':
-        return render_template('setup-identity.html',displayname=displayname,pgpkeyid=pgpkeyid,profile=profile)
+        return render_template('setup-identity.html',displayname=displayname,pgpkeyid=pgpkeyid,profile=profile,avatar=avatar)
       elif page == 'network':
         return render_template('setup-network.html',proxy=socks_proxy,proxy_port=socks_proxy_port,hubnodes=hubnodes)
       elif page == 'security':
@@ -450,13 +506,17 @@ def pks_lookup():
     if len(search_key_split)==2:
         search_key=search_key_split[1] # strip 0x
     # Query local key cache database for the key - we will request from the broker if we don't have it
+    print "PKS Lookup for " + search_key
     session = app.roStorageDB.DBSession()
     key_block = session.query(app.roStorageDB.cachePGPKeys).filter_by(key_id=search_key).first()
     if not key_block:
         key={"keyid":"" + search_key + ""}
+        print "Keyblock not found in db, sending query key msg"
         task = queue_task(1,'get_key',key)
         messageQueue.put(task)
+        print "Sent message requesting key..."
         # now, we wait...
+        sleep(0.01)
         timer = 0
         key_block = session.query(app.roStorageDB.cachePGPKeys).filter_by(key_id=search_key).first()
         while (not key_block) and (timer < 20): # 20 second timeout for key lookups
@@ -508,7 +568,9 @@ if __name__ == '__main__':
   app.appdir = app.homedir + '/.dnmng' # This is the default appdir location
   gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg',options={'--throw-keyids','--no-emit-version'}) # we want to encrypt the secret with throw keys
   app.connection_status = "Off-line"
+  app.current_broker = None
+  app.current_broker_users = None
   if isfile(app.appdir + "/secret") and isfile (app.appdir + "/storage.db") :   app.SetupDone = True # TODO: A better check is needed here
-  app.run(debug=True,threaded=True) # Enabe threading, primarily for pks keyserver support
+  app.run(debug=True,threaded=True) # Enable threading, primarily for pks keyserver support until the keyserver is moved to client_backend
 
 

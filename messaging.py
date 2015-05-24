@@ -1,6 +1,9 @@
 import gnupg
 import json
 from utilities import current_time
+import textwrap
+import random
+import string
 
 class Contract_seed(object):
     def __init__(self):
@@ -33,10 +36,12 @@ class Message(object):
     # Generic message class - ALL messages take this format - sub-messages are dicts and may carry additional
     # things like orders and other application specific things. The message type is specified by the TYPE parameter
     def __init__(self):
-        self.id = ''
+        self.id = ''.join(random.SystemRandom().choice(string.ascii_uppercase  + string.ascii_lowercase + string.digits) for _ in range(8))
         self.version = ''
         self.sender = ''
+        self.sender_name = ''
         self.recipient = ''
+        self.recipient_name = ''
         self.subject = ''
         self.datetime_sent = ''
         self.datetime_received = ''
@@ -62,7 +67,7 @@ class Messaging():
     # Overarching message handling class
     def __init__(self, mypgpkeyid, pgppassphrase, pgp_dir, app_dir):
         self.mypgpkeyid = mypgpkeyid
-        self.gpg = gnupg.GPG(gnupghome=pgp_dir,options={'--no-emit-version','--keyserver=hkp://127.0.0.1:5000','--keyserver-options=auto-key-retrieve=yes','--auto-key-locate=keyserver','--primary-keyring="' + app_dir + '/pubkeys.gpg"'})
+        self.gpg = gnupg.GPG(gnupghome=pgp_dir,options={'--no-emit-version','--keyserver=hkp://127.0.0.1:5000','--keyserver-options=auto-key-retrieve=yes','--primary-keyring="' + app_dir + 'pubkeys.gpg"'}) # removed '--auto-key-locate=keyserver',
         self.pgp_passphrase = pgppassphrase
 #       self.gpg.options = "--no-emit-version"
 
@@ -73,6 +78,9 @@ class Messaging():
         message.datetime_sent = current_time()
         serialized_message = json.dumps(message,default=jdefault,sort_keys=True)
         # Now PGP clearsign if enabled
+        #print serialized_message
+        serialized_message = textwrap.fill(serialized_message, 80, drop_whitespace=False)
+        #print serialized_message
         if signmessage:
             final_clear_message = str(self.gpg.sign(serialized_message, keyid=self.mypgpkeyid,passphrase=self.pgp_passphrase ))
         else:
@@ -80,7 +88,9 @@ class Messaging():
         # Now always encrypt if this is a directed message
         if self.recipient:
             # TODO: encrypt to alternate pgp key if ephemeral pgp message keys are enabled and we have one for this recipient
+            print "PrepareMessage: calling recv keys"
             self.gpg.recv_keys('hkp://127.0.0.1:5000',self.recipient) # We don't really want to do this every time but it will do for now
+            print "PrepareMessage: calling encrypt"
             final_message_raw = self.gpg.encrypt(final_clear_message,self.recipient,passphrase=self.pgp_passphrase, always_trust=True)
             if final_message_raw == False:
                 # Encryption did not succeed - stop now
@@ -112,8 +122,8 @@ class Messaging():
         else:
             clear_lrawmessage = lrawmessage
         #### Step 2 - Is it signed?
+        # TODO - FIND OUT WHAT KEY WE NEED - IF WE DON'T HAVE IT THEN DEFER THIS MESSAGE WHILE THE KEY IS RETRIEVED
         if clear_lrawmessage.startswith('-----BEGIN PGP SIGNED MESSAGE-----'):
-            #print "Clear-signed message identified..."
             verify_signature = self.gpg.verify(clear_lrawmessage)
 #            if verify_signature.pubkey_fingerprint:    # Proper signature check, full fp only returned if key present
             if verify_signature.key_id:     # Weak signature check - TODO: TESTING ONLY!
@@ -126,12 +136,12 @@ class Messaging():
                 return False
         else:
             print "WARNING: Unsigned message block identified..."
-            # TODO: If allow unsigned is set to on we will process this message, else drop it as invalid
             if allow_unsigned:
                 clear_strippedlrawmessage = clear_lrawmessage
             else:
                 return False
         #### Step 3 - Is it a valid JSON message?
+        clear_strippedlrawmessage = clear_strippedlrawmessage.replace('\n', '')  # strip out all those newlines we added pre-signing
         message = Message()
         if message.loadjson(clear_strippedlrawmessage) == False:
             print "Could not decode JSON, dropping message. Message was " + clear_strippedlrawmessage

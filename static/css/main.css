@@ -117,6 +117,18 @@ inputs-moz-placeholder {
 }
 
 
+.inputs-file {
+
+    padding: 5px 0px;
+    font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    color: #6D6E6E;
+    text-shadow: 1px 1px 0 rgba(256, 256, 256, 1.0);
+    background: #FFF;
+
+}
+
 
 .inputs {
 
@@ -181,8 +193,8 @@ inputs-moz-placeholder {
   -moz-border-radius: 10;
   border-radius: 10px;
   color: #ffffff;
-  font-size: 16px;
-  padding: 10px 15px 10px 15px;
+  font-size: 15px;
+  padding: 6px 10px 6px 10px;
   text-decoration: none;
 }
 

@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
-import pycountry
+#import pycountry
 import time
 from os.path import isfile
 import paginate
@@ -33,7 +33,8 @@ class Storage():
         sender_name = Column(String(64))
         recipient_key = Column(String(16), nullable=False)
         recipient_name = Column(String(64))
-        message_date = Column(DateTime, nullable=False)
+        message_date = Column(DateTime)
+        message_purge_date = Column(DateTime, nullable=False) # Make sure we enforce a purge date
         subject = Column(String(250))
         body = Column(String(32768))         # 32KB limit for PM message body
         parent_message_id = Column(String(32))

@@ -2,16 +2,26 @@
 {% set active_page = "Profile" %}
 
 {% block content %}
-  <h2>View Profile</h2>
-    <br>
+      <br>
         <table cellpadding="10">
-            <tr><td width="200"><label>Name :</label></td>
-               <td width="400">xxxx</td>
-               <td width="200"><a class="btn" href="{{ url_for('contacts') }}">Add Contact</a></td></tr>
-            <tr><td colspan="3"><label>Public Profile :</label></td> </tr>
-            <tr><td colspan="3">xxxxxxxxxx</td></tr>
+            <tr><td width="200"><img width="256" height="256" alt="{{profile.display_name}}" src={% if profile.avatar_base64 %}"data:image/png;base64,{{profile.avatar_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
+               <td width="400"><h2>&nbsp;&nbsp;{{profile.display_name}}</h2></td>
+               <td width="200"><form method="post" action="{{ url_for('new_contact') }}">
+                   <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+                   <input type="hidden" name="name" value="{{profile.display_name}}">
+                   <input type="hidden" name="pgpkey_id" value="{{profile.key_id}}">
+                   <input type="hidden" name="pgpkey_block">
+
+            </tr>
+            <tr>
+               <td colspan="2" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;">{{profile.profile_text}}</td>
+               <td><p></p><div style="btn"><button type="submit" class = "btn">Add to Contacts</button></div></form></p>
+                <p><a class="btn" href="{{ url_for('new_message')}}{{profile.key_id}}">Send Message</a></p>
+                <p><a class="btn" href="{{ url_for('new_message')}}{{profile.key_id}}">View Listings</a></p></td>
+            </tr>
             <tr><td><label>PGP Key :</label></td>
-            <td><label>xxx</label></td></tr>
+            <td><label>{{profile.key_id}}</label></td></tr>
         </table>
 
 {% endblock %}
+

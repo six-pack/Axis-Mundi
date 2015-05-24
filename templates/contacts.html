@@ -6,7 +6,6 @@
 
     <div class="datagrid">
                <a class="btn" href="{{ url_for('new_contact') }}">New Contact</a>
-               <a class="btn" href="{{ url_for('contacts') }}refresh">Refresh Contacts</a>
     <br>
     <br>
     <table cellpadding="10" width="100%">
@@ -20,7 +19,8 @@
         <td width="350px">{{contact.contact_name}}</td>
         <td width="170px">{{contact.contact_key}}</td>
         <td align="center">
-             <a href="{{ url_for('new_message')}}{{contact.contact_key}}">Send Message</a>
+             <a class="btn" href="{{ url_for('new_message')}}{{contact.contact_key}}">Send Message</a>
+             <a class="btn" href="{{ url_for('profile')}}{{contact.contact_key}}">View Profile</a>
         </td>
         </tr>
         {% endfor %}
