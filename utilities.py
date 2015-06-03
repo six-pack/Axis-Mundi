@@ -4,7 +4,20 @@ import cStringIO
 import base64
 import re
 import json
+import random
+import string
 
+class Listing(object):
+    # Listing class
+    def __init__(self):
+        self.id = str(random.SystemRandom().randint(10000000000,9999999999999))
+        self.title = ''
+        self.description = ''
+        self.unitprice = ''
+        self.currency_code = ''
+        self.categories = ''
+        self.is_public = True
+        
 class full_name(object):
     def __init__(self,display_name,pgpkey_id):
         self.display_name = display_name

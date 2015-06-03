@@ -9,7 +9,7 @@ from mqtt_client import Client as mqtt
 from storage import Storage
 import gnupg
 from messaging import Message, Messaging, Contact
-from utilities import queue_task, current_time, got_pgpkey,parse_user_name, full_name
+from utilities import queue_task, current_time, got_pgpkey,parse_user_name, full_name, Listing
 import json
 import socks
 import socket
@@ -46,8 +46,11 @@ class messaging_loop(threading.Thread):
         self.homedir = homedir
         self.pgpdir = homedir + '/.gnupg'
         self.appdir = appdir
+        self.test_mode = False
         self.dbsecretkey = dbpassphrase
-
+        self.onion_brokers = []
+        self.i2p_brokers = []
+        self.clearnet_brokers = []
         self.gpg = gnupg.GPG(gnupghome=self.homedir + '/.gnupg',options={'--primary-keyring="' + self.appdir + '/pubkeys.gpg"'})
         self.pgp_passphrase = pgppassphrase
         self.profile_text = ''
@@ -68,6 +71,7 @@ class messaging_loop(threading.Thread):
         threading.Thread.__init__ (self)
 
     def on_connect(self, client, userdata, flags, rc):  # TODO: Check that these parameters are right, had to add "flags" which may break "rc"
+        print "Connected"
         self.connected = True
         flash_msg = queue_task(0,'flash_status','On-line')
         self.q_res.put(flash_msg)
@@ -84,7 +88,18 @@ class messaging_loop(threading.Thread):
             flash_msg = queue_task(0,'flash_message','Disconnected from ' + self.targetbroker)
         else:
             flash_msg = queue_task(0,'flash_message','Broker was disconnected, attempting to reconnect to ' + self.targetbroker)
+            try:
+                client.reconnect()
+            except:
+                print "Reconnection failure"
         self.q_res.put(flash_msg)
+
+    # TODO - make use of onpublish and onsubscribe callbacks instead of checking status of call to publish or subscribe
+    def on_publish(self, client, userdata, mid):
+        print "On publish for " + str(mid)
+
+    def on_subscribe(self, client, userdata, mid, granted_qos):
+        print "On subscribe for " + str(mid)
 
     def on_message(self, client, userdata, msg):
         if msg.topic == self.sub_inbox:
@@ -288,6 +303,19 @@ class messaging_loop(threading.Thread):
         password = str(self.gpg.sign(json.dumps(password_message),keyid=self.mypgpkeyid,passphrase=self.pgp_passphrase))
         return password
 
+
+    def select_random_broker(self):
+        transports=[]
+        if self.i2p_proxy_enabled and len(self.i2p_brokers) > 0:
+            transports.append('i2p')
+        if self.proxy_enabled and len(self.onion_brokers) > 0:
+            transports.append('tor')
+        transport = random.choice(transports)
+        if transport == 'i2p':
+            self.targetbroker = random.choice(self.i2p_brokers)
+        elif transport == 'tor':
+            self.targetbroker = random.choice(self.onion_brokers)
+
     def new_contact(self, contact):
         if contact.pgpkey != "":
             importedkey = self.gpg.import_keys(contact.pgpkey)
@@ -313,12 +341,35 @@ class messaging_loop(threading.Thread):
         session.add(cachedkey)
         session.commit()
 
+    def new_listing(self, listing):
+        if listing.title != "":
+            pass
+        else:
+            return False
+        flash_msg = queue_task(0,'flash_message','Added listing ' + listing.title)
+        self.q_res.put(flash_msg)
+        session = self.storageDB.DBSession()
+        new_listing = self.storageDB.Listings(
+                                                    id=listing.id,
+                                                    title=listing.title,
+                                                    description=listing.description,
+                                                    price=listing.unitprice,
+                                                    currency_code = listing.currency_code
+                                                    # TODO: Add other fields
+                                                 )
+        session.add(new_listing)
+        session.commit()
+
     def read_configuration(self):
         # read configuration from database
         session = self.storageDB.DBSession()
         try:
+            socks_proxy_enabled = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "socks_enabled").first()
+            i2p_socks_proxy_enabled = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "i2p_socks_enabled").first()
             socks_proxy = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "proxy").first()
             socks_proxy_port = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "proxy_port").first()
+            i2p_socks_proxy = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "i2p_proxy").first()
+            i2p_socks_proxy_port = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "i2p_proxy_port").first()
             brokers = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "hubnodes").all()
             display_name = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "displayname").first()
             publish_identity = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "publish_identity").first()
@@ -328,8 +379,20 @@ class messaging_loop(threading.Thread):
             allow_unsigned = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "accept_unsigned").first()
         except:
             return False
+        # Tor SOCKS proxy
         self.proxy = socks_proxy.value
         self.proxy_port = socks_proxy_port.value
+        if socks_proxy.value and socks_proxy_port.value and (socks_proxy_enabled.value == 'True'):
+            self.proxy_enabled = bool(socks_proxy_enabled)
+        else:
+            self.proxy_enabled = False
+        # i2p SOCKS proxy
+        self.i2p_proxy = i2p_socks_proxy.value
+        self.i2p_proxy_port = i2p_socks_proxy_port.value
+        if i2p_socks_proxy.value and i2p_socks_proxy_port.value and (i2p_socks_proxy_enabled.value == 'True'):
+            self.i2p_proxy_enabled = bool(i2p_socks_proxy_enabled)
+        else:
+            self.i2p_proxy_enabled = False
         self.brokers = brokers
         self.display_name = display_name.value
         if profile_text:
@@ -364,24 +427,59 @@ class messaging_loop(threading.Thread):
         # 1 - purge all PM's older than the configured retention period (unless message has been marked for retention)
         # 2 - purge addresses (buyer & seller side) for address information related to finalized transactions
         # -------------------------
+        # COnfirm proxy settings
 
-        # make mqtt connection
-        client = mqtt(self.mypgpkeyid,False,proxy=self.proxy,proxy_port=int(self.proxy_port))
-        # client = mqtt.Client(self.mypgpkeyid,False) # before custom mqtt client # original paho-mqtt
-        client.on_connect= self.on_connect
-        client.on_message = self.on_message
-        client.on_disconnect = self.on_disconnect
-        # Select a random broker from our list of entry points
-        self.targetbroker = random.choice(self.brokers).value
+        # sort the broker list into Tor, i2p and clearnet
+        for broker in self.brokers:
+            broker = broker[0]
+            if str(broker).endswith('.onion'):
+                self.onion_brokers.append(broker)
+            elif str(broker).endswith('.b32.i2p'):
+                self.i2p_brokers.append(broker)
+            else:   # There is a broker than appears to be neither Tor or i2p - we will not process these further for now unless test mode is enabled
+                # TODO: check for test mode and permit clearnet RFC1918 addresses only if it is enabled - right now these will be ignored
+                self.clearnet_brokers.append(broker)
+        if (not self.proxy_enabled) and (not self.i2p_proxy_enabled):
+                flash_msg = queue_task(0,'flash_error','WARNING: No Tor or i2p proxy specified. Setting off-line mode for your safety')
+                self.q_res.put(flash_msg)
+                self.workoffline = True
+        # self.targetbroker = random.choice(self.brokers).value
         if not self.workoffline:
+            # Select a random broker from our list of entry points and make mqtt connection
+            self.select_random_broker()
+            if self.targetbroker.endswith('.onion'):
+                client = mqtt(self.mypgpkeyid,False,proxy=self.proxy,proxy_port=int(self.proxy_port))
+                print self.proxy
+                print self.proxy_port
+                flash_msg = queue_task(0,'flash_message','Connecting to Tor hidden service ' + self.targetbroker)
+                self.q_res.put(flash_msg)
+            elif self.targetbroker.endswith('.b32.i2p'):
+                client = mqtt(self.mypgpkeyid,False,proxy=self.i2p_proxy,proxy_port=int(self.i2p_proxy_port))
+                print self.i2p_proxy
+                print self.i2p_proxy_port
+                flash_msg = queue_task(0,'flash_message','Connecting to i2p hidden service ' + self.targetbroker)
+                self.q_res.put(flash_msg)
+            else: # TODO: Only if in test mode
+                if self.test_mode == True:
+                    client = mqtt(self.mypgpkeyid,False,proxy=None,proxy_port=None)
+                flash_msg = queue_task(0,'flash_error','WARNING: On-line mode enabled and target broker does not appear to be a Tor or i2p hidden service')
+                self.q_res.put(flash_msg)
+            # client = mqtt.Client(self.mypgpkeyid,False) # before custom mqtt client # original paho-mqtt
+            client.on_connect= self.on_connect
+            client.on_message = self.on_message
+            client.on_disconnect = self.on_disconnect
+            client.on_publish = self.on_publish
+            client.on_subscribe = self.on_subscribe
             # create broker authentication request
             password=self.make_pgp_auth()
+            # print password
             client.username_pw_set(self.mypgpkeyid,password)
             flash_msg = queue_task(0,'flash_status','Connecting...')
             self.q_res.put(flash_msg)
             try:
                 self.connected = False
-                client.connect_async(self.targetbroker, 1883, 60)  # This is now async
+                #client.connect_async(self.targetbroker, 1883, 60)  # This is now async
+                client.connect(self.targetbroker, 1883, 60)  # This is now async
 #                time.sleep(0.5) # TODO: Find a better way to prevent the disconnect/reconnection loop following a connect
 
             except: # TODO: Async connect now means this error code will need to go elsewhere
@@ -389,22 +487,23 @@ class messaging_loop(threading.Thread):
                 self.q_res.put(flash_msg)
                 pass
         while not self.shutdown:
-            client.loop(0.05) # deal with mqtt events
+            if not self.workoffline:
+                    client.loop(0.05) # deal with mqtt events
             time.sleep(0.05)
-            if not self.connected and not self.workoffline:
-                try:
-                    # create broker authentication request
-                    flash_msg = queue_task(0,'flash_status','Connecting...')
-                    self.q_res.put(flash_msg)
-                    password=self.make_pgp_auth()
-                    client.username_pw_set(self.mypgpkeyid,password)
-                    client.connect(self.targetbroker, 1883, 60) # todo: make this connect_async
-                    time.sleep(0.5) # TODO: Find a better way to prevent the disconnect/reconnection loop following a connect
-                    self.connected = True
-                except:
-                    # print "Could not connect to broker, will retry (main loop)"
-                    print "reconnect failed"
-                    pass
+#            if not self.connected and not self.workoffline and 1==0: # TODO - sort this!!
+#                try:
+#                    # create broker authentication request
+#                    flash_msg = queue_task(0,'flash_status','Connecting...')
+#                    self.q_res.put(flash_msg)
+#                    password=self.make_pgp_auth()
+#                    client.username_pw_set(self.mypgpkeyid,password)
+#                    client.connect(self.targetbroker, 1883, 60) # todo: make this connect_async
+#                    time.sleep(0.5) # TODO: Find a better way to prevent the disconnect/reconnection loop following a connect
+#                    self.connected = True
+#                except:
+#                    # print "Could not connect to broker, will retry (main loop)"
+#                    print "reconnect failed"
+#                    pass
 
             for pending_message in self.task_state_messages.keys():   # check any messages queued for whatever reason
                 if self.task_state_messages[pending_message]['message'].sender == self.mypgpkeyid:
@@ -487,10 +586,22 @@ class messaging_loop(threading.Thread):
                     self.new_contact(contact)
                 elif task.command == 'new_listing':
                     print "New listing: " + task.data['title']
-                    #TODO: add listing
+                    listing = Listing()
+                    listing.title=task.data['title']
+                    listing.description=task.data['description']
+                    listing.unitprice=task.data['price']
+                    listing.currency_code=task.data['currency']
+                    #TODO: add other listing fields
+                    self.new_listing(listing)
                 elif task.command == 'shutdown':
                     self.shutdown = True
-        client.disconnect()
+        try:
+            client
+        except NameError:
+            pass
+        else:
+            if client._state == mqtt_cs_connected:
+                client.disconnect()
         self.storageDB.DBSession.close_all()
         print "client-backend exits"
         # Terminated

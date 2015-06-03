@@ -19,6 +19,19 @@
             </div></td>
         </tr>
         <tr>
+          <td><b>Price</b></td>
+          <td><input type="text" class="inputs full-width" name="price" placeholder="Type the base price here" required></td>
+          <td><div class = "select_style"><select name="currency">
+            {% for currency in currencies %}
+                <option value="{{ currency.code }}">&nbsp; {{ currency.name }} ({{ currency.code }})</option>
+            {% endfor %}
+            </select></div></td>
+        </tr>
+        <tr>
+          <td width="100px"><b>Title</b></td>
+          <td colspan="2"><input type="range" class="inputs full-width" name="max_order" placeholder="Maximum Order Quantity"></td>
+        </tr>
+        <tr>
             <td><label><b>Image</b></label></td> <td><input type="file" name="avatar_image"  class="inputs-file" style="float:left;vertical-align:middle" placeholder="Optionally select an image for this item"></td>
         </tr>
         <tr><td colspan="3">

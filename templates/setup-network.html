@@ -8,10 +8,11 @@
     <form method="post" action="{{ url_for('setup') }}/network">
     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
         <table cellpadding="10">
-            <tr><td><label>Proxy Address:</label></td> <td><input type="text" name="proxy" size="44" class="inputs" placeholder="SOCKS proxy address" required value="{{ proxy[0] }}"></td></tr>
-            <tr><td><label>Proxy Port:</label></td> <td><input type="text" name="proxy_port" size="44" class="inputs" placeholder="SOCKS proxy port" required value="{{ proxy_port[0] }}"></td></tr>
-            <tr><td><label>Entry Points :</label></td> <td><textarea name="hubnodes" cols="44" rows="4" class="inputs" placeholder="Entry Points" required>{% for node in hubnodes %}{{ node[0] }}&#013;&#010;{% endfor %}</textarea></td></tr>
+            <tr><td><label>Tor Proxy Address:</label></td> <td><input type="text" name="proxy" size="44" class="inputs" placeholder="Tor SOCKS proxy address" required value="{{ proxy[0] }}"></td><td><input type="checkbox" name="enable_socks" value="True" {% if socks_enabled[0] == 'True' %}checked{% endif %}>Enable Tor SOCKS</td></tr>
+            <tr><td><label>Tor Proxy Port:</label></td> <td><input type="text" name="proxy_port" size="44" class="inputs" placeholder="Tor SOCKS proxy port" required value="{{ proxy_port[0] }}"></td></tr>
+            <tr><td><label>i2p Proxy Address:</label></td> <td><input type="text" name="i2p_proxy" size="44" class="inputs" placeholder="i2p SOCKS proxy address" required value="{{ i2p_proxy[0] }}"></td><td><input type="checkbox" name="i2p_enable_socks" value="True" {% if i2p_socks_enabled[0] == 'True' %}checked{% endif %}>Enable i2p SOCKS</td></tr>
+            <tr><td><label>i2p Proxy Port:</label></td> <td><input type="text" name="i2p_proxy_port" size="44" class="inputs" placeholder="i2p SOCKS proxy port" required value="{{ i2p_proxy_port[0] }}"></td></tr>
+            <tr><td><label>Entry Points :</label></td> <td colspan="2"><textarea name="hubnodes" cols="60" rows="4" class="inputs" placeholder="Entry Points" required>{% for node in hubnodes %}{{ node[0] }}&#013;&#010;{% endfor %}</textarea></td></tr>
             <tr><td><div style="btn"><button type="submit" class = "btn">Update</button></div></td></tr>
         </table></form>
-
 {% endblock %}

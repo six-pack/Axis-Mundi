@@ -21,15 +21,19 @@
     <form method="post" action="{{ url_for('createidentity') }}">
     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
         <table cellpadding="10">
-
-            <tr><td><label>PGP Key: </label></td><td><div class = "select_style"><select name="keyid">
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td><label>PGP Key: </label></td><td colspan="2"><div class = "select_style"><select name="keyid">
             {% for key in key_list %}
                 <option value="{{ key.keyid }}">({{ key.keyid}}) &nbsp; {{ key.uids[0] }}</option>
             {% endfor %}
             </select></div></td></tr>
-            <tr><td><label>Display Name :</label></td> <td><input type="text" name="displayname" size="44" class="inputs" placeholder="Display Name" required></td></tr>
+            <tr><td><label>Display Name :</label></td> <td colspan="2"><input type="text" name="displayname" size="44" class="inputs" placeholder="Display Name" required></td></tr>
             <tr><td><label>PGP Passphrase:</label></td> <td><input type="password" name="pgppassphrase" size="44" class="inputs" placeholder="PGP Passphrase (will not be saved)"  required></td></tr>
             <tr><td><label></label></td> <td><input type="checkbox" name="offline" value="yes">Publish my identity to a directory</td></tr>
+            <tr><td><label>Tor Proxy Address:</label></td> <td><input type="text" name="proxy" size="44" class="inputs" placeholder="Tor SOCKS proxy address" required value="127.0.0.1"></td><td><input type="checkbox" name="enable_socks" value="True" checked>Enable Tor SOCKS</td></tr>
+            <tr><td><label>Tor Proxy Port:</label></td> <td><input type="text" name="proxy_port" size="44" class="inputs" placeholder="Tor SOCKS proxy port" required value="9151"></td></tr>
+            <tr><td><label>i2p Proxy Address:</label></td> <td><input type="text" name="i2p_proxy" size="44" class="inputs" placeholder="i2p SOCKS proxy address" value=""></td><td><input type="checkbox" name="i2p_enable_socks" value="True" >Enable i2p SOCKS</td></tr>
+            <tr><td><label>i2p Proxy Port:</label></td> <td><input type="text" name="i2p_proxy_port" size="44" class="inputs" placeholder="i2p SOCKS proxy port" value=""></td></tr>
             <tr><td><div style="btn"><button type="submit" class = "btn">Create Identity</button></div></td></tr>
         </table></form>
 

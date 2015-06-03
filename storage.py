@@ -54,10 +54,12 @@ class Storage():
         id = Column(Integer, primary_key=True)
         title = Column(String(80), nullable=False)
         description = Column(String(4096), nullable=False)
-        public = Column(Boolean, nullable=False)
-        quantity = Column(Integer, nullable=False)
-        max_order_quantity = Column(Integer, nullable=False)
+        public = Column(Boolean)
+        quantity = Column(Integer)
+        max_order_quantity = Column(Integer)
         price = Column(DECIMAL(8), nullable=False)
+        currency_code = Column(String, ForeignKey('currencies.code'))
+        currency = relationship('currencies')
         country_id = Column(Integer, ForeignKey('countries.id'))
     #    ships_from = relationship(country_id)
     #    ships_to = relationship(country_id)
@@ -81,6 +83,11 @@ class Storage():
         __tablename__ = 'countries'
         id = Column(Integer, primary_key=True)
         country = Column(String(80), nullable=False)
+
+    class currencies(Base):
+        __tablename__ = 'currencies'
+        code = Column(String(4), primary_key=True, nullable=False)
+        name = Column(String(40), nullable=False)
 
     class cachePGPKeys(Base):
         __tablename__ = 'cachepgpkeys'

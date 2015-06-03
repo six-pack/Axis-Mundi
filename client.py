@@ -227,7 +227,9 @@ def new_listing():
         # TODO: Validate these inputs
         title = request.form['title']
         description = request.form['description']
-        message={"title":"" + title + "","description":"" + description + ""}
+        price = request.form['price']
+        currency_code = request.form['currency']
+        message={"title":"" + title + "","description":"" + description + "","price":"" + price + "","currency":"" + currency_code + ""}
         task = queue_task(1,'new_listing',message)
         messageQueue.put(task)
         sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
@@ -237,7 +239,8 @@ def new_listing():
     else:
         session = app.roStorageDB.DBSession()
         categories = None # session.query(app.roStorageDB.Contacts).all() # TODO: Query list of categories currently known
-        return render_template('listing-new.html',categories=categories)
+        currencies = session.query(app.roStorageDB.currencies).all()
+        return render_template('listing-new.html',categories=categories, currencies=currencies)
 
 
 
@@ -327,11 +330,31 @@ def createidentity():                                               # This is a 
   session = installStorageDB.DBSession()
   # Now populate the config database with defaults + user specified data
   defaults = create_defaults(installStorageDB,session,app.pgp_keyid,app.display_name,app.publish_id)
-  session.close()
-  installStorageDB.Stop()
   if not defaults:
     flash('There was a problem creating the initial configuration in the storage database '+ 'storage.db',category="error")
     #return False
+  # Now set the proxy settings specified on the install page
+  socks_proxy = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "proxy").first()
+  socks_proxy_port = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "proxy_port").first()
+  i2p_socks_proxy = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "i2p_proxy").first()
+  i2p_socks_proxy_port = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "i2p_proxy_port").first()
+  socks_enabled = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "socks_enabled").first()
+  i2p_socks_enabled = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "i2p_socks_enabled").first()
+  if request.form.get('enable_socks') == 'True':
+    socks_enabled.value = 'True'
+  else:
+    socks_enabled.value = 'False'
+  socks_proxy.value = request.form['proxy']
+  socks_proxy_port.value = request.form['proxy_port']
+  if request.form.get('i2p_enable_socks') == 'True':
+    i2p_socks_enabled.value = 'True'
+  else:
+    i2p_socks_enabled.value = 'False'
+  i2p_socks_proxy.value = request.form['i2p_proxy']
+  i2p_socks_proxy_port.value = request.form['i2p_proxy_port']
+  session.commit()
+  session.close()
+  installStorageDB.Stop()
   return redirect(url_for('setup'))
 
 
@@ -357,9 +380,12 @@ def setup(page=''):
       notaries = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "notaries").all()
       socks_proxy = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "proxy").first()
       socks_proxy_port = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "proxy_port").first()
+      i2p_socks_proxy = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "i2p_proxy").first()
+      i2p_socks_proxy_port = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "i2p_proxy_port").first()
+      socks_enabled = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "socks_enabled").first()
+      i2p_socks_enabled = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "i2p_socks_enabled").first()
       message_retention = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "message_retention").first()
       accept_unsigned = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "accept_unsigned").first()
-
       #
       if page == "identity":
             if displayname:
@@ -382,8 +408,18 @@ def setup(page=''):
                 new_conf_item.displayname = "Public Profile"
                 session.add(new_conf_item)
       elif page == "network":
+          if request.form.get('enable_socks') == 'True':
+            socks_enabled.value = 'True'
+          else:
+            socks_enabled.value = 'False'
           socks_proxy.value = request.form['proxy']
           socks_proxy_port.value = request.form['proxy_port']
+          if request.form.get('i2p_enable_socks') == 'True':
+            i2p_socks_enabled.value = 'True'
+          else:
+            i2p_socks_enabled.value = 'False'
+          i2p_socks_proxy.value = request.form['i2p_proxy']
+          i2p_socks_proxy_port.value = request.form['i2p_proxy_port']
           new_hubnodes = str(request.form['hubnodes']).splitlines()
           session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "hubnodes").delete()
           for node in new_hubnodes:
@@ -418,6 +454,10 @@ def setup(page=''):
       notaries = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "notaries").all()
       socks_proxy = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "proxy").first()
       socks_proxy_port = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "proxy_port").first()
+      i2p_socks_proxy = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "i2p_proxy").first()
+      i2p_socks_proxy_port = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "i2p_proxy_port").first()
+      socks_enabled = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "socks_enabled").first()
+      i2p_socks_enabled = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "i2p_socks_enabled").first()
       message_retention = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "message_retention").first()
       accept_unsigned = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "accept_unsigned").first()
       session.close()
@@ -426,7 +466,7 @@ def setup(page=''):
       elif page == 'identity':
         return render_template('setup-identity.html',displayname=displayname,pgpkeyid=pgpkeyid,profile=profile,avatar=avatar)
       elif page == 'network':
-        return render_template('setup-network.html',proxy=socks_proxy,proxy_port=socks_proxy_port,hubnodes=hubnodes)
+        return render_template('setup-network.html',proxy=socks_proxy,proxy_port=socks_proxy_port,i2p_proxy=i2p_socks_proxy,i2p_proxy_port=i2p_socks_proxy_port,hubnodes=hubnodes,socks_enabled=socks_enabled, i2p_socks_enabled=i2p_socks_enabled)
       elif page == 'security':
         return render_template('setup-security.html',message_retention=message_retention,accept_unsigned=accept_unsigned.value)
       elif page == 'trading':
@@ -484,6 +524,8 @@ def login():
     if app.connection_status=="Off-line":
         messageThread = messaging_loop( app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey,"storage.db",app.homedir, app.appdir, messageQueue, messageQueue_res, workoffline=app.workoffline)
         messageThread.start()
+        sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
+        checkEvents()
     return render_template('home.html')
   else:
     return render_template('login.html',key_list=private_keys)
