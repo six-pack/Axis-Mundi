@@ -608,7 +608,7 @@ if __name__ == '__main__':
   app.pgp_passphrase = ""
   app.homedir = expanduser("~")
   app.appdir = app.homedir + '/.dnmng' # This is the default appdir location
-  gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg',options={'--throw-keyids','--no-emit-version'}) # we want to encrypt the secret with throw keys
+  gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg',options={'--throw-keyids','--no-emit-version','--trust-model=always'}) # we want to encrypt the secret with throw keys
   app.connection_status = "Off-line"
   app.current_broker = None
   app.current_broker_users = None
