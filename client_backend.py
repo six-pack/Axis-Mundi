@@ -20,6 +20,7 @@ import re
 from collections import defaultdict
 from pprint import pprint
 import string
+from platform import system as get_os
 
 MSG_STATE_NEEDS_KEY = 0
 MSG_STATE_KEY_REQUESTED = 1
@@ -44,14 +45,17 @@ class messaging_loop(threading.Thread):
         self.q_res = q_res  # results queue for client (outgoing)
         self.database = database
         self.homedir = homedir
-        self.pgpdir = homedir + '/.gnupg'
+        if get_os() == 'Windows':
+            self.pgpdir = homedir + '/application data/gnupg'
+        else:
+            self.pgpdir = homedir + '/.gnupg'
         self.appdir = appdir
         self.test_mode = False
         self.dbsecretkey = dbpassphrase
         self.onion_brokers = []
         self.i2p_brokers = []
         self.clearnet_brokers = []
-        self.gpg = gnupg.GPG(gnupghome=self.homedir + '/.gnupg',options={'--primary-keyring="' + self.appdir + '/pubkeys.gpg"'})
+        self.gpg = gnupg.GPG(gnupghome=self.pgpdir,options={'--primary-keyring="' + self.appdir + '/pubkeys.gpg"'})
         self.pgp_passphrase = pgppassphrase
         self.profile_text = ''
         self.display_name = None

@@ -7,6 +7,7 @@ from sqlalchemy.pool import StaticPool
 import time
 from os.path import isfile
 import paginate
+from platform import system as get_os
 
 class Storage():
 
@@ -109,8 +110,13 @@ class Storage():
         #engine = create_engine('sqlite+pysqlcipher://:PASSPHRASE@/storage.db?cipher=aes-256-cfb&kdf_iter=64000')
         # This next one works although a numeric passphrase must be given
 #        self.engine = create_engine('sqlite+pysqlcipher://:' + passphrase + '/' + dbfilepath)
-        self.engine = create_engine('sqlite:////' + dbfilepath, connect_args={'check_same_thread':False})  # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
-                                                            #  poolclass=StaticPool
+        print dbfilepath
+        if get_os() == 'Windows':
+            self.engine = create_engine(r'sqlite:///' + dbfilepath, connect_args={'check_same_thread':False})  # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
+                                                                #  poolclass=StaticPool
+        else:
+            self.engine = create_engine('sqlite:////' + dbfilepath, connect_args={'check_same_thread':False})  # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
+                                                                #  poolclass=StaticPool
         try:
             self.Base.metadata.create_all(self.engine)
         except:
@@ -125,12 +131,21 @@ class Storage():
         newstoragedb = True
         if isfile(self.appdir + '/' + self.database):
             newstoragedb = False
-        if self.InitDB(self.passphrase, self.appdir + '/' +self.database):
-                return True
+
+        if get_os() == 'Windows':
+            if self.InitDB(self.passphrase, self.appdir + '\\' +self.database):
+                    return True
+            else:
+                if newstoragedb: print "Error creating storage database"
+                else: print "Error accessing storage database"
+                return False
         else:
-            if newstoragedb: print "Error creating storage database"
-            else: print "Error accessing storage database"
-            return False
+            if self.InitDB(self.passphrase, self.appdir + '/' +self.database):
+                    return True
+            else:
+                if newstoragedb: print "Error creating storage database"
+                else: print "Error accessing storage database"
+                return False
 
     def Stop(self):
         try:

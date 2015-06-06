@@ -14,6 +14,7 @@ from utilities import queue_task,encode_image
 from defaults import create_defaults
 from time import sleep
 import base64
+from platform import system as get_os
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024 # (8Mb maximum upload to local webserver) - make sure we dont need to use the disk
@@ -607,8 +608,13 @@ if __name__ == '__main__':
   app.display_name = ""
   app.pgp_passphrase = ""
   app.homedir = expanduser("~")
-  app.appdir = app.homedir + '/.dnmng' # This is the default appdir location
-  gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg',options={'--throw-keyids','--no-emit-version','--trust-model=always'}) # we want to encrypt the secret with throw keys
+  if get_os() == 'Windows':
+    app.appdir = app.homedir + '\\application data\\.dnmng' # This is the default appdir location
+    gpg = gnupg.GPG(gnupghome=app.homedir + '/application data/gnupg',options={'--throw-keyids','--no-emit-version','--trust-model=always'}) # we want to encrypt the secret with throw keys
+  else:
+    app.appdir = app.homedir + '/.dnmng' # This is the default appdir location
+    gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg',options={'--throw-keyids','--no-emit-version','--trust-model=always'}) # we want to encrypt the secret with throw keys
+  print app.homedir
   app.connection_status = "Off-line"
   app.current_broker = None
   app.current_broker_users = None
