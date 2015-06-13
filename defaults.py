@@ -109,7 +109,25 @@ def create_defaults(db,session,pgp_keyid,display_name,publish_id):
          curr_db_item = db.currencies(code='GBP')
          curr_db_item.name = 'British Pound'
          session.add(curr_db_item)
-         # Finally commit
+         curr_db_item = db.currencies(code='CAD')
+         curr_db_item.name = 'Canadian Dollar'
+         session.add(curr_db_item)
+         curr_db_item = db.currencies(code='SEK')
+         curr_db_item.name = 'Swedish Krone'
+         session.add(curr_db_item)    
+         curr_db_item = db.currencies(code='ISK')
+         curr_db_item.name = 'Icelandic Krona'
+         session.add(curr_db_item) 
+         curr_db_item = db.currencies(code='NOK')
+         curr_db_item.name = 'Norwegian Krone'
+         session.add(curr_db_item) 
+         curr_db_item = db.currencies(code='DKK')
+         curr_db_item.name = 'Danish Krone'
+         session.add(curr_db_item) 
+         curr_db_item = db.currencies(code='RUB')
+         curr_db_item.name = 'Russian Ruble'
+         session.add(curr_db_item) 
+                  # Finally commit
          session.commit()
          return True
     except:
