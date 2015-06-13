@@ -5,8 +5,7 @@
     <strong><link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"></strong>
   </head>
   <body>
-
-{% set active_page = active_page|default('Home') %}
+{% set active_page = active_page|default('home') %}
 
 <header>
   <div class="container">
@@ -14,28 +13,28 @@
 
     <strong><nav id="primary_nav_wrap" class="primary_nav_menu">
       <ul>
-        <li{% if active_page == 'Home' %} class="current-menu-item" {% endif %}><a href="{{ url_for('home') }}">Home</a></li>
-        <li><a href="{{ url_for('orders') }}">Trade</a>
+        <li{% if active_page == 'home' %} class="current-menu-item" {% endif %}><a href="{{ url_for('home') }}">Home</a></li>
+        <li{% if active_page == 'Orders' %} class="current-menu-item" {% endif %}><a href="{{ url_for('orders') }}">Trade</a>
           <ul>
             <li><a href="{{ url_for('orders') }}/buying">Buying</a></li>
             <li><a href="{{ url_for('orders') }}/selling">Selling</a></li>
             <li><a href="{{ url_for('listings') }}">My Listings</a></li>
           </ul>
         </li>
-        <li><a href="{{ url_for('messages') }}">Messages</a>
+        <li{% if active_page == 'Messages' %} class="current-menu-item" {% endif %}><a href="{{ url_for('messages') }}">Messages</a>
           <ul>
             <li><a href="{{ url_for('new_message') }}">Create New Message</a></li>
             <li><a href="{{ url_for('messages') }}">Inbox</a></li>
             <li><a href="{{ url_for('messages_sent') }}">Sent Messages</a></li>
           </ul>
         </li>
-        <li><a href="{{ url_for('contacts') }}">People</a>
+        <li{% if active_page == 'Contacts' %} class="current-menu-item" {% endif %}><a href="{{ url_for('contacts') }}">People</a>
           <ul>
               <li><a href="{{ url_for('contacts') }}">My Contacts</a></li>
               <li><a href="{{ url_for('contacts') }}">Directory</a></li>
           </ul>
         </li>
-        <li><a href="{{ url_for('setup') }}">Setup</a>
+        <li{% if active_page == 'Setup' %} class="current-menu-item" {% endif %}><a href="{{ url_for('setup') }}">Setup</a>
           <ul>
             <li><a href="{{ url_for('setup') }}/identity">Identity</a></li>
             <li><a href="{{ url_for('setup') }}/network">Network</a></li>

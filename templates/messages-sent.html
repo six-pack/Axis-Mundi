@@ -16,7 +16,7 @@
         </thread>
         {% for o in sent_messages %}
         <tr>
-        <td width="200px">{{ o.recipient_key }}</td>
+        <td width="200px"><a href="/profile/{{ o.recipient_key }}">{{ o.recipient_key }}</a></td>
         <td width="400px"><a href="/messages/view/{{ o.id }}">{{ o.subject }}</a></td>
         <td width="200px">{{ o.message_date }}</td>
         <td>

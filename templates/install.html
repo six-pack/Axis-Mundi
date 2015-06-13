@@ -8,16 +8,39 @@
       select one. If no keys are displayed then you need to create a PGP key before you can continue.</p>
 
   <p>
-    <table hidden>
-    <form method="post" action="{{ url_for('loadidentity') }}">
-    <tr><td><b> Existing Users: </b>If you already have application data saved to a non-default location then select the file location here and hit
-      the load button</td>
-        <td width="33%"><input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
-            <span><label class="filebtn"><input type="file" name="app_dir" required/>Find Identity</label>
-            <button type="submit" class = "btn">Load Identity</button></span></td></tr>
-    </form>
+    <table >
+        <tr><td></td><td></td></tr>
+        <tr><td><b> Existing Users: </b>If you already have application data saved to a non-default location then select the file location here and hit
+      the load button</td><td width="20%"><label class="btn" for="modal-one">Load Identity</label></td>
     </table>
-    <h1>Configure Identity</h1>
+
+
+
+<!-- Modal One -->
+<div class="modal">
+  <input class="modal-open" id="modal-one" type="checkbox" hidden>
+  <div class="modal-wrap" aria-hidden="true" role="dialog">
+    <label class="modal-overlay" for="modal-one"></label>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2>Load Existing Identity</h2>
+        <label class="btn-close" for="modal-one" aria-hidden="true">×</label>
+      </div>
+      <div class="modal-body">
+        <form method="post" action="{{ url_for('loadidentity') }}">
+        <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+            <label>Location : </label><input type="text" class="inputs" placeholder="Enter the directory path to your existing identity data" required name="app_dir" size="40"/>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class = "btn">Load Identity</button></form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+   <h1>Configure Identity</h1>
     <form method="post" action="{{ url_for('createidentity') }}">
     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
         <table cellpadding="10">

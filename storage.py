@@ -60,7 +60,7 @@ class Storage():
         max_order_quantity = Column(Integer)
         price = Column(DECIMAL(8), nullable=False)
         currency_code = Column(String, ForeignKey('currencies.code'))
-        currency = relationship('currencies')
+    #    currency = relationship('currencies')
         country_id = Column(Integer, ForeignKey('countries.id'))
     #    ships_from = relationship(country_id)
     #    ships_to = relationship(country_id)

@@ -14,7 +14,7 @@
         </tr>
         {% for o in inbox_messages %}
         <tr>
-        <td width="200px">{{ o.sender_key }}</td>
+        <td width="200px"><a href="/profile/{{ o.sender_key }}">{{ o.sender_key }}</a></td>
         <td width="400px"><a href="/messages/view/{{ o.id }}">{{ o.subject }}</a></td>
         <td width="200px">{{ o.message_date }}</td>
         <td>
