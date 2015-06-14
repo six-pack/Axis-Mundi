@@ -10,13 +10,18 @@ import string
 class Listing(object):
     # Listing class
     def __init__(self):
-        self.id = str(random.SystemRandom().randint(10000000000,9999999999999))
+        self.id = str(random.SystemRandom().randint(1000000000,2000000000)) # This will form part of btc address generation
         self.title = ''
         self.description = ''
         self.unitprice = ''
         self.currency_code = ''
         self.categories = ''
         self.is_public = True
+        self.image_str = ''
+        self.quantity_available = 0
+        self.order_max_qty = 0
+        self.ships_from = ''
+        self.ships_to = []
         
 class full_name(object):
     def __init__(self,display_name,pgpkey_id):

@@ -352,13 +352,17 @@ class messaging_loop(threading.Thread):
             return False
         flash_msg = queue_task(0,'flash_message','Added listing ' + listing.title)
         self.q_res.put(flash_msg)
+        print listing.quantity_available
         session = self.storageDB.DBSession()
         new_listing = self.storageDB.Listings(
                                                     id=listing.id,
                                                     title=listing.title,
                                                     description=listing.description,
                                                     price=listing.unitprice,
-                                                    currency_code = listing.currency_code
+                                                    currency_code = listing.currency_code,
+                                                    qty_available = int(listing.quantity_available),
+                                                    order_max_qty = int(listing.order_max_qty),
+                                                    image_base64 = listing.image_str
                                                     # TODO: Add other fields
                                                  )
         session.add(new_listing)
@@ -595,6 +599,7 @@ class messaging_loop(threading.Thread):
                     listing.description=task.data['description']
                     listing.unitprice=task.data['price']
                     listing.currency_code=task.data['currency']
+                    listing.image_str=task.data['image']
                     #TODO: add other listing fields
                     self.new_listing(listing)
                 elif task.command == 'shutdown':

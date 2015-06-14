@@ -86,6 +86,34 @@ def orders(view_type='buying',page=1):
       page_results = SqlalchemyOrmPage(orders_selling, page=page, items_per_page=pager_items)
   return render_template('orders.html',orders=page_results, view=view_type)
 
+
+@app.route('/listings/view/<string:keyid>')
+@app.route('/listings/view/<string:keyid>/<int:page>')
+def xlistings(keyid=None,page=1):
+    if keyid is None:
+        return redirect('/listings')
+    # View anther users listings
+    session = app.roStorageDB.DBSession()
+    listings = session.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
+    if not listings:
+        key={"keyid":keyid}
+        task = queue_task(1,'get_listings',key)
+        messageQueue.put(task)
+        # now, we wait...
+        timer = 0
+        listings = session.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
+        while (not listings) and (timer < 20): # 20 second timeout for listings lookups
+            sleep (1)
+            profile = session.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
+            timer = timer + 1
+        if not listings:
+            resp = make_response("Listings not found", 404) # TODO - pretty this up
+            return resp
+    else: # we have returned an existing setof listings from the cache
+        print "Existing entry found in listings cache..." # Todo : deal with updating listings by sending background get_listings
+    return render_template('listings.html',listings=listings)
+
+
 @app.route('/listings')
 @app.route('/listings/<int:page>')
 @login_required
@@ -94,7 +122,7 @@ def listings(page=1):
   session = app.roStorageDB.DBSession()
   listings = session.query(app.roStorageDB.Listings)
   page_results = SqlalchemyOrmPage(listings, page=page, items_per_page=pager_items)
-  return render_template('listings.html', listings=page_results)
+  return render_template('mylistings.html', listings=page_results)
 
 @app.route('/profile/')
 @app.route('/profile/<string:keyid>')
@@ -113,7 +141,7 @@ def profile(keyid=None):
     session = app.roStorageDB.DBSession()
     profile = session.query(app.roStorageDB.cacheProfiles).filter_by(key_id=keyid).first()
     if not profile:
-        key={"keyid":"" + keyid + ""}
+        key={"keyid":keyid}
         task = queue_task(1,'get_profile',key)
         messageQueue.put(task)
         # now, we wait...
@@ -207,7 +235,7 @@ def reply_message(id):
         subject = request.form['subject']
         body = request.form['body']
         sign_msg = request.form['sign-message']
-        message={"recipient":"" + recipient + "","subject":"" + subject + "","body":"" + body + ""}
+        message={"recipient":recipient,"subject":subject,"body":body}
         task = queue_task(1,'send_pm',message)
         messageQueue.put(task)
         sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
@@ -230,7 +258,14 @@ def new_listing():
         description = request.form['description']
         price = request.form['price']
         currency_code = request.form['currency']
-        message={"title":"" + title + "","description":"" + description + "","price":"" + price + "","currency":"" + currency_code + ""}
+        qty_available = request.form['quantity']
+        order_max_qty = request.form['max_order']
+        listing_image_file = request.files['listing_image']
+        if listing_image_file and listing_image_file.filename.rsplit('.', 1)[1] in {'png','jpg'}:
+            image = str(encode_image(listing_image_file.read(),(128,128))) # TODO - maintain aspect ratio
+        else:
+            image = ''
+        message={"title":title,"description":description,"price":price,"currency":currency_code,"image": image}
         task = queue_task(1,'new_listing',message)
         messageQueue.put(task)
         sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
@@ -256,7 +291,7 @@ def new_message(recipient_key=""):
         subject = request.form['subject']
         body = request.form['body']
         sign_msg = request.form['sign-message']
-        message={"recipient":"" + recipient + "","subject":"" + subject + "","body":"" + body + ""}
+        message={"recipient":recipient,"subject":subject,"body":body}
         task = queue_task(1,'send_pm',message)
         messageQueue.put(task)
         sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
@@ -395,11 +430,11 @@ def setup(page=''):
             if avatar_image_file and avatar_image_file.filename.rsplit('.', 1)[1] in {'png','jpg'}:
                 if not avatar_image:
                     new_conf_item = app.roStorageDB.Config(name="avatar_image")
-                    new_conf_item.value = str(encode_image(avatar_image_file.read(),(128,128)))
+                    new_conf_item.value = str(encode_image(avatar_image_file.read(),(128,128))) # TODO - maintain aspect ratio
                     new_conf_item.displayname = "Avatar Image"
                     session.add(new_conf_item)
                 else:
-                    avatar_image.value = encode_image(avatar_image_file.read(),(128,128))
+                    avatar_image.value = encode_image(avatar_image_file.read(),(128,128)) # TODO - maintain aspect ratio
                     #print encode_image(avatar_image_file.read(),(128,128))
             if profile:
                 profile.value = request.form['profile']

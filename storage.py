@@ -56,15 +56,15 @@ class Storage():
         title = Column(String(80), nullable=False)
         description = Column(String(4096), nullable=False)
         public = Column(Boolean)
-        quantity = Column(Integer)
-        max_order_quantity = Column(Integer)
+        qty_available = Column(Integer)
+        order_max_qty = Column(Integer)
         price = Column(DECIMAL(8), nullable=False)
         currency_code = Column(String, ForeignKey('currencies.code'))
-    #    currency = relationship('currencies')
-        country_id = Column(Integer, ForeignKey('countries.id'))
+    #    country_id = Column(Integer, ForeignKey('countries.id'))
     #    ships_from = relationship(country_id)
     #    ships_to = relationship(country_id)
         # shipping?
+        image_base64 = Column(String())
 
     class Orders(Base):
         __tablename__ = 'orders'
@@ -96,6 +96,13 @@ class Storage():
         key_id = Column(String(16), nullable=False)
         updated = Column(DateTime, nullable=False)
         keyblock = Column(String(8192))
+
+    class cacheListings(Base):
+        __tablename__ = 'cachelistings'
+        id = Column(Integer, primary_key=True)
+        key_id = Column(String(16), nullable=False)
+        updated = Column(DateTime, nullable=False)
+        listings_block = Column(String())
 
     class cacheProfiles(Base):
         __tablename__ = 'cacheprofiles'

@@ -6,8 +6,20 @@
 <h4>Create New Listing</h4>
     <div class="datagrid">
     <table width="100%" cellpadding="10">
-        <form method="post" action="{{ url_for('new_listing') }}">
+        <form method="post" action="{{ url_for('new_listing') }}" enctype="multipart/form-data">
         <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+        <tr>
+          <td width="100px"><b>Category</b></td>
+          <td colspan="2"><div class = "select_style"><select name="category">
+            {% if categories %} {% for category in categories %}
+                <option value="{{ category }}">{{ category }}</option>
+            {% endfor %}
+            {% else %}
+                <option value="Not Specified">Not Specified</option>
+            {% endif %}
+            </select></div>
+        </tr>
+
         <tr>
           <td width="100px"><b>Title</b></td>
           <td colspan="2"><input type="text" class="inputs full-width" name="title" placeholder="Type the title of the listing here" required></td>
@@ -36,7 +48,7 @@
           <td><input type="text" class="inputs full-width" name="max_order" placeholder="Maximum Order Quantity"></td>
         </tr>
         <tr>
-            <td><label><b>Image</b></label></td> <td><input type="file" name="avatar_image"  class="inputs-file" style="float:left;vertical-align:middle" placeholder="Optionally select an image for this item"></td>
+            <td><label><b>Image</b></label></td> <td><input type="file" name="listing_image"  class="inputs-file" style="float:left;vertical-align:middle" placeholder="Optionally select an image for this item"></td>
         </tr>
         <tr><td colspan="3">
             <div style="btn"><a href="{{ url_for('listings') }}"><input type="button" style="float:right" class = "btn" value="Cancel"></a></div>

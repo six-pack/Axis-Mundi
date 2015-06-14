@@ -2,7 +2,7 @@
 {% set active_page = "Listings" %}
 
 {% block content %}
-  <h2>Listings</h2>
+  <h2>My Listings</h2>
 
     <div class="datagrid">
                <a class="btn" href="{{ url_for('new_listing') }}">New Listing</a>
@@ -15,6 +15,7 @@
         <th width="400px" align="left"><strong>Title</strong></th>
         <th width="100px"><strong>Price</strong></th>
         <th width="80px"><strong>Quantity</strong></th>
+        <th width="80px"><strong>Public</strong></th>
         <th width="200px"><strong>Actions</strong></th>
         </tr>
         {% for listing in listings %}
@@ -23,6 +24,7 @@
         <td>{{listing.title}}</td>
         <td>{{listing.price}} {{listing.currency_code}}</td>
         <td>{{listing.quantity}}</td>
+        <td>{{listing.public}}</td>
         </tr>
         {% endfor %}
         <tr>

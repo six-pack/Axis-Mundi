@@ -114,19 +114,19 @@ def create_defaults(db,session,pgp_keyid,display_name,publish_id):
          session.add(curr_db_item)
          curr_db_item = db.currencies(code='SEK')
          curr_db_item.name = 'Swedish Krone'
-         session.add(curr_db_item)    
+         session.add(curr_db_item)
          curr_db_item = db.currencies(code='ISK')
          curr_db_item.name = 'Icelandic Krona'
-         session.add(curr_db_item) 
+         session.add(curr_db_item)
          curr_db_item = db.currencies(code='NOK')
          curr_db_item.name = 'Norwegian Krone'
-         session.add(curr_db_item) 
+         session.add(curr_db_item)
          curr_db_item = db.currencies(code='DKK')
          curr_db_item.name = 'Danish Krone'
-         session.add(curr_db_item) 
+         session.add(curr_db_item)
          curr_db_item = db.currencies(code='RUB')
          curr_db_item.name = 'Russian Ruble'
-         session.add(curr_db_item) 
+         session.add(curr_db_item)
                   # Finally commit
          session.commit()
          return True
