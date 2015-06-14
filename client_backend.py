@@ -195,6 +195,34 @@ class messaging_loop(threading.Thread):
         #            imp_res = self.gpg.import_keys(msg.payload) # we could import it here but we use the local keyserver
             else:
                 print "No profile message found in profile returned from " + keyid
+        elif re.match('user\/[A-F0-9]{16}\/items',msg.topic):
+            # Here is a listings message, store it and unsubscribe
+            client.unsubscribe(msg.topic)
+            keyid = msg.topic[msg.topic.index('/')+1:msg.topic.rindex('/')]
+            #TODO: Check we have really been sent a valid listings message for the key indicated
+            #print msg.payload
+            listings_message = self.myMessaging.GetMessage(msg.payload,allow_unsigned=False) # Never allow unsigned listings
+            if listings_message:
+                if not keyid==listings_message.sender:
+                    print "Listings were signed by a different key - discarding..."
+                else:
+                    profile_text = listings_message.sub_messages['listings']
+                    session = self.storageDB.DBSession()
+                    # TODO: loop and extract items
+#                    if 'display_name' in profile_message.sub_messages and 'profile' in profile_message.sub_messages and 'avatar_image' in profile_message.sub_messages:
+#                        cachedprofile = self.storageDB.cacheProfiles(key_id=keyid,
+#                                                            updated=datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S"),
+#                                                            display_name=profile_message.sub_messages['display_name'],
+#                                                            profile_text=profile_message.sub_messages['profile'],
+#                                                            avatar_base64=profile_message.sub_messages['avatar_image'])
+#                        session.add(cachedprofile)
+#                        session.commit()
+#                    else:
+#                        print "Listings message did not contain mandatory fields"
+        #            imp_res = self.gpg.import_keys(msg.payload) # we could import it here but we use the local keyserver
+            else:
+                print "No listings message found in listings returned from " + keyid
+
         else:
             flash_msg = queue_task(0,'flash_error','Message received for non-inbox topic - ' + msg.topic)
             self.q_res.put(flash_msg)
@@ -214,8 +242,19 @@ class messaging_loop(threading.Thread):
         profile_message.sub_messages = profile_dict # todo: use .append to add a submessage instead
         profile_out_message = Messaging.PrepareMessage(self.myMessaging,profile_message)
         client.publish(self.pub_profile,profile_out_message,1,True)      # Our published profile queue, qos=1, durable
-        # TODO: build items message
-        client.publish(self.pub_items,"User is not publishing any items",1,True)      # Our published items queue, qos=1, durable
+        # build and send listings message
+        listings_message = Message()
+        listings_message.type = 'Listings Message'
+        listings_message.sender = self.mypgpkeyid
+        listings_message.body = "User is not publishing any items"
+        listings_dict = {}
+        # TODO: Loop and append listings (if any) to our message
+#        listings_dict['display_name'] = self.display_name
+#        listings_dict['profile'] = self.profile_text
+#        listings_dict['avatar_image'] = self.avatar_image
+        listings_message.sub_messages = listings_dict # todo: use .append to add a submessage instead
+        listings_out_message = Messaging.PrepareMessage(self.myMessaging,listings_message)
+        client.publish(self.pub_items,listings_out_message,1,True)      # Our published items queue, qos=1, durable
 
     def sendMessage(self,client,message):
         message.recipient = parse_user_name(message.recipient).pgpkey_id
@@ -584,7 +623,11 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'get_profile':
                     key_topic = 'user/' + task.data['keyid'] + '/profile'
                     client.subscribe(str(key_topic),1)
-                    print "Requesting profile"
+                    print "Requesting profile for " + task.data['keyid']
+                elif task.command == 'get_listings':
+                    key_topic = 'user/' + task.data['keyid'] + '/items'
+                    client.subscribe(str(key_topic),1)
+                    print "Requesting listings for " + task.data['keyid']
                 elif task.command == 'new_contact':
                     contact = Contact()
                     contact.displayname = task.data['displayname']
