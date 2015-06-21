@@ -9,7 +9,7 @@
         <form method="post" action="{{ url_for('new_listing') }}" enctype="multipart/form-data">
         <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
         <tr>
-          <td width="100px"><b>Category</b></td>
+          <td width="200px"><b>Category</b></td>
           <td colspan="2"><div class = "select_style"><select name="category">
             {% if categories %} {% for category in categories %}
                 <option value="{{ category }}">{{ category }}</option>
@@ -21,11 +21,11 @@
         </tr>
 
         <tr>
-          <td width="100px"><b>Title</b></td>
+          <td><b>Title</b></td>
           <td colspan="2"><input type="text" class="inputs full-width" name="title" placeholder="Type the title of the listing here" required></td>
         </tr>
         <tr>
-            <td width="100px"><b>Description</b></td>
+            <td><b>Description</b></td>
             <td colspan="2"><div id="container">
                 <div class="twrap"><textarea class="inputs" name="description" cols="80" rows="10" placeholder="Type the item description here"></textarea></div>
             </div></td>
@@ -39,14 +39,16 @@
             {% endfor %}
             </select></div></td>
         </tr>
+        <tr><td><label><b>Order Types</b></label></td> <td><input type="checkbox" name="order_direct" value="True" checked>Allow Direct Transactions</td><td><input type="checkbox" name="order_escrow" value="True" checked>Allow Escrow Transactions</td></tr>
         <tr>
-          <td width="100px"><b>Quantity</b></td>
-          <td><input type="text" class="inputs full-width" name="quantity" placeholder="Quantity"></td>
+          <td><b>Quantity</b></td>
+          <td><input type="text" class="inputs full-width" name="quantity" placeholder="Quantity available"></td>
         </tr>
         <tr>
-          <td width="100px"><b>Max. Order Quantity</b></td>
-          <td><input type="text" class="inputs full-width" name="max_order" placeholder="Maximum Order Quantity"></td>
+          <td><b>Max. Items/Order</b></td>
+          <td><input type="text" class="inputs full-width" name="max_order" placeholder="Maximum items per order"></td>
         </tr>
+        <tr><td><label><b>Make Public</b></label></td> <td><input type="checkbox" name="is_public" value="True" checked></td></tr>
         <tr>
             <td><label><b>Image</b></label></td> <td><input type="file" name="listing_image"  class="inputs-file" style="float:left;vertical-align:middle" placeholder="Optionally select an image for this item"></td>
         </tr>

@@ -2,6 +2,7 @@
 {% set active_page = "Profile" %}
 
 {% block content %}
+        {{ url_for('listings')}}
       <br>
         <table cellpadding="10">
             <tr><td width="200"><img width="256" height="256" alt="{{profile.display_name}}" src={% if profile.avatar_base64 %}"data:image/png;base64,{{profile.avatar_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
@@ -17,7 +18,7 @@
                <td colspan="2" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;">{{profile.profile_text}}</td>
                <td><p></p><div style="btn"><button type="submit" class = "btn">Add to Contacts</button></div></form></p>
                 <p><a class="btn" href="{{ url_for('new_message')}}{{profile.key_id}}">Send Message</a></p>
-                <p><a class="btn" href="{{ url_for('new_message')}}{{profile.key_id}}">View Listings</a></p></td>
+                <p><a class="btn" href="{{ url_for('external_listings',keyid=profile.key_id)}}">View Listings</a></p></td>
             </tr>
             <tr><td><label>PGP Key :</label></td>
             <td><label>{{profile.key_id}}</label></td></tr>

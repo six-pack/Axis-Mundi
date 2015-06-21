@@ -21,6 +21,7 @@ from collections import defaultdict
 from pprint import pprint
 import string
 from platform import system as get_os
+import textwrap
 
 MSG_STATE_NEEDS_KEY = 0
 MSG_STATE_KEY_REQUESTED = 1
@@ -206,9 +207,22 @@ class messaging_loop(threading.Thread):
                 if not keyid==listings_message.sender:
                     print "Listings were signed by a different key - discarding..."
                 else:
-                    profile_text = listings_message.sub_messages['listings']
-                    session = self.storageDB.DBSession()
+                    listings = listings_message.sub_messages # ['listings']
+                    print "Listings message received from " + keyid
+#                    session = self.storageDB.DBSession()
                     # TODO: loop and extract items
+                    for item in listings_message.sub_messages:
+                        verify_item = self.gpg.verify(item)
+                        if verify_item.key_id == keyid: # TODO - this is a weak check - check the fingerprint is set
+                            try:
+                                stripped_item = item[item.index('{'):item.rindex('}')+1]
+                            except:
+                                print "Error: item not extracted from signed sub-message"
+                            print "================="
+                            print "Item from " + keyid
+                            print stripped_item
+                            print "================="
+
 #                    if 'display_name' in profile_message.sub_messages and 'profile' in profile_message.sub_messages and 'avatar_image' in profile_message.sub_messages:
 #                        cachedprofile = self.storageDB.cacheProfiles(key_id=keyid,
 #                                                            updated=datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S"),
@@ -246,13 +260,33 @@ class messaging_loop(threading.Thread):
         listings_message = Message()
         listings_message.type = 'Listings Message'
         listings_message.sender = self.mypgpkeyid
-        listings_message.body = "User is not publishing any items"
-        listings_dict = {}
         # TODO: Loop and append listings (if any) to our message
-#        listings_dict['display_name'] = self.display_name
-#        listings_dict['profile'] = self.profile_text
-#        listings_dict['avatar_image'] = self.avatar_image
-        listings_message.sub_messages = listings_dict # todo: use .append to add a submessage instead
+        session = self.storageDB.DBSession()
+        listings = session.query(self.storageDB.Listings).filter_by(public=True).all()  # We're only going to publish listings marked as public=True  # .filter_by(public=True)
+        if not listings:
+            listings_message.body = "User is not publishing any items"
+            listings_message.sub_messages = None
+        else: # We have listings, iterate and add a sub-message per listing
+
+            for listing_item in listings:
+                listings_dict = {}
+                listings_dict['id'] = listing_item.id
+                listings_dict['item'] = listing_item.title
+                listings_dict['description'] = listing_item.description
+                listings_dict['image'] = listing_item.image_base64
+                listings_dict['unit_price'] = listing_item.price
+                listings_dict['currency'] = listing_item.currency_code
+                listings_dict['qty'] = listing_item.qty_available
+                listings_dict['max_order_qty'] = listing_item.order_max_qty
+                listings_dict['publish_date'] = current_time()
+                # listings_dict_str = json.dumps(listings_dict)
+                listings_dict_str = json.dumps(listings_dict,sort_keys=True)
+                signed_item = str(self.gpg.sign(listings_dict_str,keyid=self.mypgpkeyid,passphrase=self.pgp_passphrase))
+#                signed_item = str(signed_item).replace('\n','\\n')
+                print "Signed item follows:"
+                print signed_item
+                listings_message.sub_messages.append(signed_item)#listings_dict_str)
+                #listings_dict.clear()
         listings_out_message = Messaging.PrepareMessage(self.myMessaging,listings_message)
         client.publish(self.pub_items,listings_out_message,1,True)      # Our published items queue, qos=1, durable
 
@@ -401,7 +435,8 @@ class messaging_loop(threading.Thread):
                                                     currency_code = listing.currency_code,
                                                     qty_available = int(listing.quantity_available),
                                                     order_max_qty = int(listing.order_max_qty),
-                                                    image_base64 = listing.image_str
+                                                    image_base64 = listing.image_str,
+                                                    public = bool(listing.is_public)
                                                     # TODO: Add other fields
                                                  )
         session.add(new_listing)
@@ -643,6 +678,10 @@ class messaging_loop(threading.Thread):
                     listing.unitprice=task.data['price']
                     listing.currency_code=task.data['currency']
                     listing.image_str=task.data['image']
+                    listing.is_public=task.data['is_public']
+                    listing.quantity_available=task.data['quantity']
+                    listing.order_max_qty=task.data['max_order']
+                    print "NEW LISTING : Make it Public = " + listing.is_public
                     #TODO: add other listing fields
                     self.new_listing(listing)
                 elif task.command == 'shutdown':

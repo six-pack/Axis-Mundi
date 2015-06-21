@@ -121,6 +121,7 @@ class Messaging():
                 input_message_encrypted = True
         else:
             clear_lrawmessage = lrawmessage
+        print clear_lrawmessage
         #### Step 2 - Is it signed?
         # TODO - FIND OUT WHAT KEY WE NEED - IF WE DON'T HAVE IT THEN DEFER THIS MESSAGE WHILE THE KEY IS RETRIEVED
         if clear_lrawmessage.startswith('-----BEGIN PGP SIGNED MESSAGE-----'):

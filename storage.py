@@ -58,7 +58,7 @@ class Storage():
         public = Column(Boolean)
         qty_available = Column(Integer)
         order_max_qty = Column(Integer)
-        price = Column(DECIMAL(8), nullable=False)
+        price = Column(String(20), nullable=False) # Column(DECIMAL(8), nullable=False) # sqlalchemy/sqlite doesn't do decimal
         currency_code = Column(String, ForeignKey('currencies.code'))
     #    country_id = Column(Integer, ForeignKey('countries.id'))
     #    ships_from = relationship(country_id)

@@ -16,6 +16,18 @@ from time import sleep
 import base64
 from platform import system as get_os
 
+ # /////////// patch socket module to attempt to fix bug #12 -  "socket.error: [Errno 98] Address already in use"
+ # This fixes re-use error but results in multiple cliet.py instances which is very undesirable
+ # TODO : Fix by ensuring that client.py Flask threads exit when we want them to
+import socket
+socket.socket._bind = socket.socket.bind
+def my_socket_bind(self, *args, **kwargs):
+    self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+    return socket.socket._bind(self, *args, **kwargs)
+#socket.socket.bind = my_socket_bind
+# //////////// end socket patch
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024 # (8Mb maximum upload to local webserver) - make sure we dont need to use the disk
 messageQueue = Queue.Queue()    # work Queue for mqtt client thread
@@ -86,10 +98,10 @@ def orders(view_type='buying',page=1):
       page_results = SqlalchemyOrmPage(orders_selling, page=page, items_per_page=pager_items)
   return render_template('orders.html',orders=page_results, view=view_type)
 
-
 @app.route('/listings/view/<string:keyid>')
 @app.route('/listings/view/<string:keyid>/<int:page>')
-def xlistings(keyid=None,page=1):
+@login_required
+def external_listings(keyid='none',page=1):
     if keyid is None:
         return redirect('/listings')
     # View anther users listings
@@ -104,7 +116,7 @@ def xlistings(keyid=None,page=1):
         listings = session.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
         while (not listings) and (timer < 20): # 20 second timeout for listings lookups
             sleep (1)
-            profile = session.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
+            listings = session.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
             timer = timer + 1
         if not listings:
             resp = make_response("Listings not found", 404) # TODO - pretty this up
@@ -249,8 +261,9 @@ def reply_message(id):
 
 
 @app.route('/listings/new/',methods=["GET","POST"])
+@app.route('/listings/edit/<int:id>',methods=["GET","POST"])
 @login_required
-def new_listing():
+def new_listing(id=0):
     checkEvents()
     if request.method == "POST":
         # TODO: Validate these inputs
@@ -259,13 +272,17 @@ def new_listing():
         price = request.form['price']
         currency_code = request.form['currency']
         qty_available = request.form['quantity']
-        order_max_qty = request.form['max_order']
+        max_order = request.form['max_order']
+        if request.form.get('is_public') == 'True':
+            is_public = 'True'
+        else:
+            is_public = 'False'
         listing_image_file = request.files['listing_image']
         if listing_image_file and listing_image_file.filename.rsplit('.', 1)[1] in {'png','jpg'}:
             image = str(encode_image(listing_image_file.read(),(128,128))) # TODO - maintain aspect ratio
         else:
             image = ''
-        message={"title":title,"description":description,"price":price,"currency":currency_code,"image": image}
+        message={"title":title,"description":description,"price":price,"currency":currency_code,"image": image,"is_public":is_public,"quantity":qty_available,"max_order":max_order}
         task = queue_task(1,'new_listing',message)
         messageQueue.put(task)
         sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
@@ -629,6 +646,9 @@ def checkEvents():
             flash("Unknown command received from client thread results queue", category="error")
     return(True)
 
+def client_shutdown(sender, **extra):
+    print "Client_Shutdown called....exiting"
+
 if __name__ == '__main__':
   app.storageThreadID = ""
   app.pgpkeycache = {}
@@ -655,5 +675,6 @@ if __name__ == '__main__':
   app.current_broker_users = None
   if isfile(app.appdir + "/secret") and isfile (app.appdir + "/storage.db") :   app.SetupDone = True # TODO: A better check is needed here
   app.run(debug=True,threaded=True) # Enable threading, primarily for pks keyserver support until the keyserver is moved to client_backend
+
 
 
