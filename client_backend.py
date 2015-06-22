@@ -213,11 +213,15 @@ class messaging_loop(threading.Thread):
                     # TODO: loop and extract items
                     for item in listings_message.sub_messages:
                         verify_item = self.gpg.verify(item)
+                        item = item.replace('\n', '') # remove the textwrapping we applied when encoding this submessage
                         if verify_item.key_id == keyid: # TODO - this is a weak check - check the fingerprint is set
                             try:
                                 stripped_item = item[item.index('{'):item.rindex('}')+1]
                             except:
+                                stripped_item = ''
                                 print "Error: item not extracted from signed sub-message"
+                                print item
+                                continue
                             print "================="
                             print "Item from " + keyid
                             print stripped_item
@@ -281,10 +285,8 @@ class messaging_loop(threading.Thread):
                 listings_dict['publish_date'] = current_time()
                 # listings_dict_str = json.dumps(listings_dict)
                 listings_dict_str = json.dumps(listings_dict,sort_keys=True)
+                listings_dict_str = textwrap.fill(listings_dict_str, 80, drop_whitespace=False)
                 signed_item = str(self.gpg.sign(listings_dict_str,keyid=self.mypgpkeyid,passphrase=self.pgp_passphrase))
-#                signed_item = str(signed_item).replace('\n','\\n')
-                print "Signed item follows:"
-                print signed_item
                 listings_message.sub_messages.append(signed_item)#listings_dict_str)
                 #listings_dict.clear()
         listings_out_message = Messaging.PrepareMessage(self.myMessaging,listings_message)
