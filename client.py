@@ -32,6 +32,7 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024 # (8Mb maximum upload to local webserver) - make sure we dont need to use the disk
 messageQueue = Queue.Queue()    # work Queue for mqtt client thread
 messageQueue_res = Queue.Queue()    # Results Queue for mqtt client thread
+messageQueue_data = Queue.Queue()    # Profile and Listing Results Queue for mqtt client thread
 login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.init_app(app)
@@ -98,32 +99,43 @@ def orders(view_type='buying',page=1):
       page_results = SqlalchemyOrmPage(orders_selling, page=page, items_per_page=pager_items)
   return render_template('orders.html',orders=page_results, view=view_type)
 
-@app.route('/listings/view/<string:keyid>')
-@app.route('/listings/view/<string:keyid>/<int:page>')
+@app.route
+@app.route('/listings/publish')
 @login_required
-def external_listings(keyid='none',page=1):
-    if keyid is None:
+def publish_listings():
+    if app.workoffline:
+        return redirect(url_for('listings'))
+    task = queue_task(1,'publish_listings',app.pgp_keyid)
+    messageQueue.put(task)
+    return redirect(url_for('listings'))
+
+
+@app.route('/listings/view/<string:keyid>')
+@app.route('/listings/view/<string:keyid>/<string:id>')
+@login_required
+def external_listings(keyid='none',id='none'):
+    if keyid == 'none':
         return redirect('/listings')
     # View anther users listings
-    session = app.roStorageDB.DBSession()
-    listings = session.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
-    if not listings:
-        key={"keyid":keyid}
-        task = queue_task(1,'get_listings',key)
-        messageQueue.put(task)
-        # now, we wait...
-        timer = 0
-        listings = session.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
-        while (not listings) and (timer < 20): # 20 second timeout for listings lookups
-            sleep (1)
-            listings = session.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
-            timer = timer + 1
-        if not listings:
-            resp = make_response("Listings not found", 404) # TODO - pretty this up
-            return resp
-    else: # we have returned an existing setof listings from the cache
-        print "Existing entry found in listings cache..." # Todo : deal with updating listings by sending background get_listings
-    return render_template('listings.html',listings=listings)
+    key={"keyid":keyid}
+    messageQueue_data.empty()
+    task = queue_task(1,'get_listings',key)
+    messageQueue.put(task)
+    # now, we wait...
+    timer = 0
+    while timer <20: # todo: this chunk of code is deeply crap - rewrite.
+        listings_data = checkDataQ()
+        if listings_data=='none':
+            listings_data=None
+            break
+        elif listings_data:
+            break
+        sleep(0.1)
+        timer = timer + 0.1
+    if not listings_data:
+        resp = make_response("Listings not found", 404) # TODO - pretty this up
+        return resp
+    return render_template('listings.html',listings=listings_data)
 
 
 @app.route('/listings')
@@ -269,6 +281,8 @@ def new_listing(id=0):
         # TODO: Validate these inputs
         title = request.form['title']
         description = request.form['description']
+        category = request.form['category']
+        print category
         price = request.form['price']
         currency_code = request.form['currency']
         qty_available = request.form['quantity']
@@ -277,12 +291,21 @@ def new_listing(id=0):
             is_public = 'True'
         else:
             is_public = 'False'
+        if request.form.get('order_direct') == 'True':
+            order_direct = 'True'
+        else:
+            order_direct = 'False'
+        if request.form.get('order_escrow') == 'True':
+            order_escrow = 'True'
+        else:
+            order_escrow = 'False'
         listing_image_file = request.files['listing_image']
         if listing_image_file and listing_image_file.filename.rsplit('.', 1)[1] in {'png','jpg'}:
             image = str(encode_image(listing_image_file.read(),(128,128))) # TODO - maintain aspect ratio
         else:
             image = ''
-        message={"title":title,"description":description,"price":price,"currency":currency_code,"image": image,"is_public":is_public,"quantity":qty_available,"max_order":max_order}
+        message={"category":category,"title":title,"description":description,"price":price,"currency":currency_code,"image": image,"is_public":is_public,"quantity":qty_available,"max_order":max_order,"order_direct":order_direct,"order_escrow":order_escrow}
+        print message
         task = queue_task(1,'new_listing',message)
         messageQueue.put(task)
         sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
@@ -575,7 +598,7 @@ def login():
     user = User.get(app.pgp_keyid)
     login_user(user)
     if app.connection_status=="Off-line":
-        messageThread = messaging_loop( app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey,"storage.db",app.homedir, app.appdir, messageQueue, messageQueue_res, workoffline=app.workoffline)
+        messageThread = messaging_loop( app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey,"storage.db",app.homedir, app.appdir, messageQueue, messageQueue_res, messageQueue_data, workoffline=app.workoffline)
         messageThread.start()
         sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
         checkEvents()
@@ -645,6 +668,13 @@ def checkEvents():
         else:
             flash("Unknown command received from client thread results queue", category="error")
     return(True)
+
+def checkDataQ():
+    if messageQueue_data.empty(): return(False)
+    while not messageQueue_data.empty():
+        results = messageQueue_data.get()
+        # TODO: check results is set to a valid queue_task object here
+        return results
 
 def client_shutdown(sender, **extra):
     print "Client_Shutdown called....exiting"

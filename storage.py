@@ -54,6 +54,7 @@ class Storage():
         __tablename__ = 'listings'
         id = Column(Integer, primary_key=True)
         title = Column(String(80), nullable=False)
+        category = Column(String(255), nullable=False)
         description = Column(String(4096), nullable=False)
         public = Column(Boolean)
         qty_available = Column(Integer)

@@ -5,7 +5,7 @@
   <h2>My Listings</h2>
 
     <div class="datagrid">
-               <a class="btn" href="{{ url_for('new_listing') }}">New Listing</a>
+               <a class="btn" href="{{ url_for('new_listing') }}">New Listing</a>&nbsp;<a class="btn" href="{{ url_for('publish_listings') }}">Re-publish</a>
     <br>
     <br>
 
@@ -23,8 +23,12 @@
         <td style="width:66px"><img width="64" height="64" alt="{{listing.title}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
         <td>{{listing.title}}</td>
         <td>{{listing.price}} {{listing.currency_code}}</td>
-        <td>{{listing.quantity}}</td>
+        <td>{{listing.qty_available}}</td>
         <td>{{listing.public}}</td>
+        <td>
+             <a href="{{ url_for('listings', id = listing.id) }}">Edit</a>  -
+             <a href="{{ url_for('listings', id = listing.id) }}">Delete</a>
+        </td>
         </tr>
         {% endfor %}
         <tr>

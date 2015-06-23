@@ -39,11 +39,12 @@ class messaging_loop(threading.Thread):
 # broker-hostname:pgpkeyid:UTCdatetime
 # The date time shall not contain seconds and will be chekced on the server to be no more than +/- 5 minutes fromcurrent server time
 
-    def __init__ (self, pgpkeyid, pgppassphrase, dbpassphrase, database, homedir, appdir, q, q_res, workoffline=False):
+    def __init__ (self, pgpkeyid, pgppassphrase, dbpassphrase, database, homedir, appdir, q, q_res, q_data, workoffline=False):
         self.targetbroker = None
         self.mypgpkeyid = pgpkeyid
         self.q = q # queue for client (incoming queue_task requests)
         self.q_res = q_res  # results queue for client (outgoing)
+        self.q_data = q_data  # results queue for client (outgoing)
         self.database = database
         self.homedir = homedir
         if get_os() == 'Windows':
@@ -204,28 +205,40 @@ class messaging_loop(threading.Thread):
             #print msg.payload
             listings_message = self.myMessaging.GetMessage(msg.payload,allow_unsigned=False) # Never allow unsigned listings
             if listings_message:
+                print listings_message
                 if not keyid==listings_message.sender:
                     print "Listings were signed by a different key - discarding..."
                 else:
-                    listings = listings_message.sub_messages # ['listings']
+                    listings = listings_message.sub_messages
                     print "Listings message received from " + keyid
-#                    session = self.storageDB.DBSession()
-                    # TODO: loop and extract items
-                    for item in listings_message.sub_messages:
-                        verify_item = self.gpg.verify(item)
-                        item = item.replace('\n', '') # remove the textwrapping we applied when encoding this submessage
-                        if verify_item.key_id == keyid: # TODO - this is a weak check - check the fingerprint is set
-                            try:
-                                stripped_item = item[item.index('{'):item.rindex('}')+1]
-                            except:
-                                stripped_item = ''
-                                print "Error: item not extracted from signed sub-message"
-                                print item
-                                continue
-                            print "================="
-                            print "Item from " + keyid
-                            print stripped_item
-                            print "================="
+                    session = self.storageDB.DBSession()
+                    # TODO : Write listings to cache
+                    # TODO: check if requested listing is cached in the db
+                    verified_listings = []
+                    if not listings_message.sub_messages:
+                        self.q_data.put ('none')
+                    else:
+                        print "Extracting listings from valid listings message..."
+                        for item in listings_message.sub_messages:
+                            verify_item = self.gpg.verify(item)
+                            item = item.replace('\n', '') # remove the textwrapping we applied when encoding this submessage
+                            if verify_item.key_id == keyid: # TODO - this is a weak check - check the fingerprint is set
+                                try:
+                                    stripped_item = item[item.index('{'):item.rindex('}')+1]
+                                except:
+                                    stripped_item = ''
+                                    print "Error: item not extracted from signed sub-message"
+                                    print item
+                                    continue
+                                try:
+                                    verified_listings.append(json.loads(stripped_item))
+                                except:
+                                    print "Error: item json not extracted from signed sub-message"
+                                    print item
+                                    continue
+                                print stripped_item
+                        self.q_data.put (verified_listings)
+
 
 #                    if 'display_name' in profile_message.sub_messages and 'profile' in profile_message.sub_messages and 'avatar_image' in profile_message.sub_messages:
 #                        cachedprofile = self.storageDB.cacheProfiles(key_id=keyid,
@@ -261,6 +274,10 @@ class messaging_loop(threading.Thread):
         profile_out_message = Messaging.PrepareMessage(self.myMessaging,profile_message)
         client.publish(self.pub_profile,profile_out_message,1,True)      # Our published profile queue, qos=1, durable
         # build and send listings message
+        listings_out_message = Messaging.PrepareMessage(self.myMessaging,self.create_listings_msg())
+        client.publish(self.pub_items,listings_out_message,1,True)      # Our published items queue, qos=1, durable
+
+    def create_listings_msg(self):
         listings_message = Message()
         listings_message.type = 'Listings Message'
         listings_message.sender = self.mypgpkeyid
@@ -276,6 +293,7 @@ class messaging_loop(threading.Thread):
                 listings_dict = {}
                 listings_dict['id'] = listing_item.id
                 listings_dict['item'] = listing_item.title
+                listings_dict['category'] = listing_item.category
                 listings_dict['description'] = listing_item.description
                 listings_dict['image'] = listing_item.image_base64
                 listings_dict['unit_price'] = listing_item.price
@@ -289,8 +307,7 @@ class messaging_loop(threading.Thread):
                 signed_item = str(self.gpg.sign(listings_dict_str,keyid=self.mypgpkeyid,passphrase=self.pgp_passphrase))
                 listings_message.sub_messages.append(signed_item)#listings_dict_str)
                 #listings_dict.clear()
-        listings_out_message = Messaging.PrepareMessage(self.myMessaging,listings_message)
-        client.publish(self.pub_items,listings_out_message,1,True)      # Our published items queue, qos=1, durable
+        return listings_message
 
     def sendMessage(self,client,message):
         message.recipient = parse_user_name(message.recipient).pgpkey_id
@@ -432,6 +449,7 @@ class messaging_loop(threading.Thread):
         new_listing = self.storageDB.Listings(
                                                     id=listing.id,
                                                     title=listing.title,
+                                                    category=listing.categories,
                                                     description=listing.description,
                                                     price=listing.unitprice,
                                                     currency_code = listing.currency_code,
@@ -665,6 +683,11 @@ class messaging_loop(threading.Thread):
                     key_topic = 'user/' + task.data['keyid'] + '/items'
                     client.subscribe(str(key_topic),1)
                     print "Requesting listings for " + task.data['keyid']
+                elif task.command == 'publish_listings':
+                    listings_out_message = Messaging.PrepareMessage(self.myMessaging,self.create_listings_msg())
+                    client.publish(self.pub_items,listings_out_message,1,True)      # Our published items queue, qos=1, durable
+                    flash_msg = queue_task(0,'flash_message','Re-publishing listings')
+                    self.q_res.put(flash_msg)
                 elif task.command == 'new_contact':
                     contact = Contact()
                     contact.displayname = task.data['displayname']
@@ -676,6 +699,7 @@ class messaging_loop(threading.Thread):
                     print "New listing: " + task.data['title']
                     listing = Listing()
                     listing.title=task.data['title']
+                    listing.categories=task.data['category']
                     listing.description=task.data['description']
                     listing.unitprice=task.data['price']
                     listing.currency_code=task.data['currency']

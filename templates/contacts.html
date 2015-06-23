@@ -19,8 +19,9 @@
         <td width="350px">{{contact.contact_name}}</td>
         <td width="170px">{{contact.contact_key}}</td>
         <td align="center">
-             <a class="btn" href="{{ url_for('new_message')}}{{contact.contact_key}}">Send Message</a>
-             <a class="btn" href="{{ url_for('profile')}}{{contact.contact_key}}">View Profile</a>
+             <a class="btn" href="{{ url_for('new_message')}}{{contact.contact_key}}">Message</a>
+             <a class="btn" href="{{ url_for('profile')}}{{contact.contact_key}}">Profile</a>
+             <a class="btn" href="{{ url_for('external_listings',keyid=contact.contact_key)}}">Listings</a></p></td>
         </td>
         </tr>
         {% endfor %}
