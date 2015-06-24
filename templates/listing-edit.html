@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+{% set active_page = "Trade" %}
+
+{% block content %}
+
+
+<h4>Update Listing</h4>
+    <div class="datagrid">
+    <table width="100%" cellpadding="10">
+        <form method="post" action="{{ url_for('edit_listing',id=listing.id) }}" enctype="multipart/form-data">
+        <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+        <tr>
+          <td width="200px"><b>Category</b></td>
+          <td colspan="2"><div class = "select_style"><select name="category">
+            {% if categories %} {% for category in categories %}
+                <option value="{{ category }}">{{ category }}</option>
+            {% endfor %}
+            {% else %}
+                <option value="Not Specified">{{listing.category}}</option>
+            {% endif %}
+            </select>
+            <input type="checkbox" style="margin-left:30px" name="is_public" value="True" {% if listing.public == 1 %}checked{% endif %}><b> Display in public listings</b></div></td>
+        </tr>
+
+        <tr>
+          <td><b>Title</b></td>
+          <td colspan="2"><input type="text" class="inputs full-width" name="title" placeholder="Type the title of the listing here" required value="{{listing.title}}"></td>
+        </tr>
+        <tr>
+            <td><b>Description</b></td>
+            <td colspan="2"><div id="container">
+                <div class="twrap"><textarea class="inputs" name="description" cols="80" rows="10" placeholder="Type the item description here" >{{listing.description}}</textarea></div>
+            </div></td>
+        </tr>
+        <tr>
+          <td><b>Price</b></td>
+          <td><input type="text" class="inputs full-width" name="price" placeholder="Type the base price here" required value="{{listing.price}}"></td>
+          <td><div class = "select_style"><select name="currency">
+            {% for currency in currencies %}
+                <option value="{{ currency.code }}" {% if listing.currency_code == currency.code %}selected{% endif %}>&nbsp; {{ currency.name }} ({{ currency.code }})</option>
+            {% endfor %}
+            </select></div></td>
+        </tr>
+        <tr><td><label><b>Order Types</b></label></td> <td><input type="checkbox" name="order_direct" value="True" checked><b>Allow Direct Transactions</b></td><td><input type="checkbox" name="order_escrow" value="True" checked><b>Allow Escrow Transactions</b></td></tr>
+        <tr>
+          <td><b>Quantity</b></td>
+          <td><input type="text" class="inputs full-width" name="quantity" placeholder="Quantity available" value="{{listing.qty_available}}"></td>
+          <td><b>Max. Items/Order</b><input type="text" class="inputs" style="margin-left:20px" name="max_order" placeholder="Maximum items per order" value="{{listing.order_max_qty}}"></td>
+        </tr>
+        <tr>
+            <td><label><b>Image</b></label></td> <td><img width="128" height="128" alt="{{listing.title}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /><input type="file" name="listing_image"  class="inputs-file" style="float:left;vertical-align:middle" placeholder="Optionally select an image for this item"></td>
+        </tr>
+        <tr><td colspan="3">
+            <div style="btn"><a href="{{ url_for('listings') }}"><input type="button" style="float:right" class = "btn" value="Cancel"></a></div>
+            <div style="btn"><button type="submit" style="float:right" class = "btn">Update Listing</button></div></td></tr>
+        </form>
+    </table>
+    </div>
+
+{% endblock %}
+
+
+
+
