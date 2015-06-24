@@ -444,7 +444,6 @@ class messaging_loop(threading.Thread):
             return False
         flash_msg = queue_task(0,'flash_message','Added listing ' + listing.title)
         self.q_res.put(flash_msg)
-        print listing.quantity_available
         session = self.storageDB.DBSession()
         new_listing = self.storageDB.Listings(
                                                     id=listing.id,
@@ -461,6 +460,39 @@ class messaging_loop(threading.Thread):
                                                  )
         session.add(new_listing)
         session.commit()
+        time.sleep(0.1)
+
+    def update_listing(self, listing):
+        if listing.title != "":
+            pass
+        else:
+            return False
+        session = self.storageDB.DBSession()
+        db_listing = session.query(self.storageDB.Listings).filter_by(id=listing.id).first()
+        db_listing.id=listing.id
+        db_listing.title=listing.title
+        db_listing.category=listing.categories
+        db_listing.description=listing.description
+        db_listing.price=listing.unitprice
+        db_listing.currency_code = listing.currency_code
+        db_listing.qty_available = int(listing.quantity_available)
+        db_listing.order_max_qty = int(listing.order_max_qty)
+        db_listing.image_base64 = listing.image_str
+        db_listing.public = bool(listing.is_public)
+        # TODO: Add other fields
+        session.commit()
+        flash_msg = queue_task(0,'flash_message','Updated listing ' + listing.title)
+        self.q_res.put(flash_msg)
+        time.sleep(0.1)
+
+    def delete_listing(self,id):
+        # Write the message to the database
+        session = self.storageDB.DBSession()
+        session.query(self.storageDB.Listings).filter_by(id=id).delete()
+        session.commit()
+        flash_msg = queue_task(0,'flash_message','Deleted listing ')
+        self.q_res.put(flash_msg)
+        time.sleep(0.1)
 
     def read_configuration(self):
         # read configuration from database
@@ -707,9 +739,26 @@ class messaging_loop(threading.Thread):
                     listing.is_public=task.data['is_public']
                     listing.quantity_available=task.data['quantity']
                     listing.order_max_qty=task.data['max_order']
-                    print "NEW LISTING : Make it Public = " + listing.is_public
                     #TODO: add other listing fields
                     self.new_listing(listing)
+                elif task.command == 'update_listing':
+                    print "Update listing: " + task.data['title']
+                    listing = Listing()
+                    listing.id=task.data['id'] # Since we are updating the generate id needs to be overwritten
+                    listing.title=task.data['title']
+                    listing.categories=task.data['category']
+                    listing.description=task.data['description']
+                    listing.unitprice=task.data['price']
+                    listing.currency_code=task.data['currency']
+                    listing.image_str=task.data['image']
+                    listing.is_public=task.data['is_public']
+                    listing.quantity_available=task.data['quantity']
+                    listing.order_max_qty=task.data['max_order']
+                    #TODO: add other listing fields
+                    self.update_listing(listing)
+                elif task.command == 'delete_listing':
+                    listing_to_del = task.data['id']
+                    self.delete_listing(listing_to_del)
                 elif task.command == 'shutdown':
                     self.shutdown = True
         try:

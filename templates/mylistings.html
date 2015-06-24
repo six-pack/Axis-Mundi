@@ -5,7 +5,9 @@
   <h2>My Listings</h2>
 
     <div class="datagrid">
-               <a class="btn" href="{{ url_for('new_listing') }}">New Listing</a>&nbsp;<a class="btn" href="{{ url_for('publish_listings') }}">Re-publish</a>
+               <a class="btn" href="{{ url_for('new_listing') }}">New Listing</a>&nbsp;
+               <a class="btn" href="{{ url_for('publish_listings') }}">Re-publish</a>&nbsp;
+               <a class="btn" href="{{ url_for('export_listings')}}" hidden="Yes">Export listings</a>
     <br>
     <br>
 
@@ -26,8 +28,8 @@
         <td>{{listing.qty_available}}</td>
         <td>{{listing.public}}</td>
         <td>
-             <a href="{{ url_for('listings', id = listing.id) }}">Edit</a>  -
-             <a href="{{ url_for('listings', id = listing.id) }}">Delete</a>
+             <a href="{{ url_for('edit_listing', id = listing.id) }}">Edit</a>  -
+             <a href="{{ url_for('delete_listing', id = listing.id) }}">Delete</a>
         </td>
         </tr>
         {% endfor %}

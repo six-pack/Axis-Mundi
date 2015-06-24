@@ -109,6 +109,14 @@ def publish_listings():
     messageQueue.put(task)
     return redirect(url_for('listings'))
 
+@app.route
+@app.route('/listings/export')
+@login_required
+def export_listings():
+    task = queue_task(1,'export_listings',app.pgp_keyid)
+    messageQueue.put(task)
+    return redirect(url_for('listings'))
+
 
 @app.route('/listings/view/<string:keyid>')
 @app.route('/listings/view/<string:keyid>/<string:id>')
@@ -273,7 +281,6 @@ def reply_message(id):
 
 
 @app.route('/listings/new/',methods=["GET","POST"])
-@app.route('/listings/edit/<int:id>',methods=["GET","POST"])
 @login_required
 def new_listing(id=0):
     checkEvents()
@@ -318,6 +325,63 @@ def new_listing(id=0):
         currencies = session.query(app.roStorageDB.currencies).all()
         return render_template('listing-new.html',categories=categories, currencies=currencies)
 
+@app.route('/listings/edit/<int:id>',methods=["GET","POST"])
+@login_required
+def edit_listing(id=0):
+    checkEvents()
+    if request.method == "POST":
+        # TODO: Validate these inputs
+        title = request.form['title']
+        description = request.form['description']
+        category = request.form['category']
+        print category
+        price = request.form['price']
+        currency_code = request.form['currency']
+        qty_available = request.form['quantity']
+        max_order = request.form['max_order']
+        if request.form.get('is_public') == 'True':
+            is_public = 'True'
+        else:
+            is_public = 'False'
+        if request.form.get('order_direct') == 'True':
+            order_direct = 'True'
+        else:
+            order_direct = 'False'
+        if request.form.get('order_escrow') == 'True':
+            order_escrow = 'True'
+        else:
+            order_escrow = 'False'
+        listing_image_file = request.files['listing_image']
+        if listing_image_file and listing_image_file.filename.rsplit('.', 1)[1] in {'png','jpg'}:
+            image = str(encode_image(listing_image_file.read(),(128,128))) # TODO - maintain aspect ratio
+        else:
+            image = ''
+        message={"id":id,"category":category,"title":title,"description":description,"price":price,"currency":currency_code,"image": image,"is_public":is_public,"quantity":qty_available,"max_order":max_order,"order_direct":order_direct,"order_escrow":order_escrow}
+        print message
+        task = queue_task(1,'update_listing',message)
+        messageQueue.put(task)
+        sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
+                    # we will wait for 0.1 seconds here because usually this is long enough to get the queue response back
+        checkEvents()
+        return redirect(url_for('listings'))
+    else:
+        session = app.roStorageDB.DBSession()
+        categories = None # session.query(app.roStorageDB.Contacts).all() # TODO: Query list of categories currently known
+        currencies = session.query(app.roStorageDB.currencies).all()
+        listing_item=session.query(app.roStorageDB.Listings).filter_by(id=id).first()
+        return render_template('listing-edit.html',categories=categories, currencies=currencies, listing=listing_item)
+
+
+@app.route('/listings/delete/<int:id>',methods=["GET"])
+@login_required
+def delete_listing(id=0):
+    message={"id": str(id)}
+    task = queue_task(1,'delete_listing',message)
+    messageQueue.put(task)
+    sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
+                # we will wait for 0.1 seconds here because usually this is long enough to get the queue response back
+    checkEvents()
+    return redirect(url_for('listings'))
 
 
 @app.route('/messages/new/',methods=["GET","POST"])

@@ -17,7 +17,8 @@
             {% else %}
                 <option value="Not Specified">Not Specified</option>
             {% endif %}
-            </select></div>
+            </select>
+            <input type="checkbox" style="margin-left:30px" name="is_public" value="True" checked><b> Display in public listings</b></div></td>
         </tr>
 
         <tr>
@@ -39,16 +40,12 @@
             {% endfor %}
             </select></div></td>
         </tr>
-        <tr><td><label><b>Order Types</b></label></td> <td><input type="checkbox" name="order_direct" value="True" checked>Allow Direct Transactions</td><td><input type="checkbox" name="order_escrow" value="True" checked>Allow Escrow Transactions</td></tr>
+        <tr><td><label><b>Order Types</b></label></td> <td><input type="checkbox" name="order_direct" value="True" checked><b>Allow Direct Transactions</b></td><td><input type="checkbox" name="order_escrow" value="True" checked><b>Allow Escrow Transactions</b></td></tr>
         <tr>
           <td><b>Quantity</b></td>
           <td><input type="text" class="inputs full-width" name="quantity" placeholder="Quantity available"></td>
+          <td><b>Max. Items/Order</b><input type="text" class="inputs" style="margin-left:20px" name="max_order" placeholder="Maximum items per order"></td>
         </tr>
-        <tr>
-          <td><b>Max. Items/Order</b></td>
-          <td><input type="text" class="inputs full-width" name="max_order" placeholder="Maximum items per order"></td>
-        </tr>
-        <tr><td><label><b>Make Public</b></label></td> <td><input type="checkbox" name="is_public" value="True" checked></td></tr>
         <tr>
             <td><label><b>Image</b></label></td> <td><input type="file" name="listing_image"  class="inputs-file" style="float:left;vertical-align:middle" placeholder="Optionally select an image for this item"></td>
         </tr>
