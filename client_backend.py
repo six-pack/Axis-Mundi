@@ -74,6 +74,7 @@ class messaging_loop(threading.Thread):
         self.allow_unsigned = True # allow unsigned PMs by default
         self.task_state_messages=defaultdict(defaultdict)  # This will hold the state of any outstanding message tasks
         self.task_state_pgpkeys=defaultdict(defaultdict)  # This will hold the state of any outstanding key retrieval tasks
+        self.memcache_listing_items=defaultdict(defaultdict)  # This will hold cached listing items, entries will be created as needed
         threading.Thread.__init__ (self)
 
     def on_connect(self, client, userdata, flags, rc):  # TODO: Check that these parameters are right, had to add "flags" which may break "rc"
@@ -231,12 +232,16 @@ class messaging_loop(threading.Thread):
                                     print item
                                     continue
                                 try:
-                                    verified_listings.append(json.loads(stripped_item))
+                                    verified_item = json.loads(stripped_item) # TODO: Additional input validation required here
+                                    verified_listings.append(verified_item)
                                 except:
                                     print "Error: item json not extracted from signed sub-message"
                                     print item
                                     continue
-                                print stripped_item
+                                # Add this listing (or update if already present) in the listings item memory cache
+                                self.memcache_listing_items[keyid][str(verified_item['id'])]= (item,verified_item) # Bit shitty - tuple containing raw, signed msg & validate python object
+                                print self.memcache_listing_items[keyid]
+                                #self.memcache_listing_items[keyid]['raw_msg']= verified_item
                         self.q_data.put (verified_listings)
 
 
@@ -261,7 +266,7 @@ class messaging_loop(threading.Thread):
 
     def setup_message_queues(self,client):
         client.subscribe(self.sub_inbox,1)                      # Our generic incoming queue, qos=1
-        client.publish(self.pub_key,self.gpg.export_keys(self.mypgpkeyid,False,minimal=True),1,True)      # Our published pgp key block, qos=1, durable
+        client.publish(self.pub_key,self.gpg.export_keys(self.mypgpkeyid,False,minimal=True),  1,True)      # Our published pgp key block, qos=1, durable
         # build and send profile message
         profile_message = Message()
         profile_message.type = 'Profile Message'
@@ -712,9 +717,24 @@ class messaging_loop(threading.Thread):
                     client.subscribe(str(key_topic),1)
                     print "Requesting profile for " + task.data['keyid']
                 elif task.command == 'get_listings':
-                    key_topic = 'user/' + task.data['keyid'] + '/items'
-                    client.subscribe(str(key_topic),1)
-                    print "Requesting listings for " + task.data['keyid']
+                    item_id = task.data['id']
+                    key_id = task.data['keyid']
+                    print "Get_listings command received : " + key_id + "/" + item_id
+                    if item_id == 'none':
+                        key_topic = 'user/' + key_id + '/items'
+                        client.subscribe(str(key_topic),1)
+                        print "Requesting listings for " + key_id
+                    else:
+                    # Looks like user is viewing a specific item
+                        try:
+                            print self.memcache_listing_items
+                            print self.memcache_listing_items[key_id]
+                            if not self.memcache_listing_items[key_id][item_id] == '':
+                                print "Entry found in listing item memcache..."
+                                print self.memcache_listing_items[key_id][item_id][1] # [0] is the raw, signed copy of the listiing, [1] is stripped
+                                self.q_data.put (self.memcache_listing_items[key_id][item_id][1])
+                        except: # TODO: Reduce scope to just keyerror
+                            print "Could not find  memcache entry for " + str(key_id + ' ' + item_id)
                 elif task.command == 'publish_listings':
                     listings_out_message = Messaging.PrepareMessage(self.myMessaging,self.create_listings_msg())
                     client.publish(self.pub_items,listings_out_message,1,True)      # Our published items queue, qos=1, durable

@@ -63,6 +63,16 @@ h3 {
   color: #999;
 }
 
+h4 {
+  font-size: 1.5em;
+
+}
+
+h5 {
+  font-size: 1.3em;
+
+}
+
 /*
  * Display navigation links inline
  */

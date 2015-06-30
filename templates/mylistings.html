@@ -17,8 +17,8 @@
         <th width="400px" align="left"><strong>Title</strong></th>
         <th width="100px"><strong>Price</strong></th>
         <th width="80px"><strong>Quantity</strong></th>
-        <th width="80px"><strong>Public</strong></th>
-        <th width="200px"><strong>Actions</strong></th>
+        <th width="80px"><strong>Published</strong></th>
+        <th width="200px"></th>
         </tr>
         {% for listing in listings %}
         <tr>
@@ -26,10 +26,10 @@
         <td>{{listing.title}}</td>
         <td>{{listing.price}} {{listing.currency_code}}</td>
         <td>{{listing.qty_available}}</td>
-        <td>{{listing.public}}</td>
+        <td>{% if listing.public == True %}Yes{% else %}No{% endif %} </td>
         <td>
-             <a href="{{ url_for('edit_listing', id = listing.id) }}">Edit</a>  -
-             <a href="{{ url_for('delete_listing', id = listing.id) }}">Delete</a>
+             <a class="btn" href="{{ url_for('edit_listing', id = listing.id) }}"> Edit </a>  &nbsp;
+             <a class="btn" href="{{ url_for('delete_listing', id = listing.id) }}">Delete</a>
         </td>
         </tr>
         {% endfor %}

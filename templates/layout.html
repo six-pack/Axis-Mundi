@@ -31,7 +31,7 @@
         <li{% if active_page == 'Contacts' %} class="current-menu-item" {% endif %}><a href="{{ url_for('contacts') }}">People</a>
           <ul>
               <li><a href="{{ url_for('contacts') }}">My Contacts</a></li>
-              <li><a href="{{ url_for('contacts') }}">Directory</a></li>
+              <li><a href="{{ url_for('directory') }}">Directory</a></li>
           </ul>
         </li>
         <li{% if active_page == 'Setup' %} class="current-menu-item" {% endif %}><a href="{{ url_for('setup') }}">Setup</a>

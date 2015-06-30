@@ -125,9 +125,9 @@ def external_listings(keyid='none',id='none'):
     if keyid == 'none':
         return redirect('/listings')
     # View anther users listings
-    key={"keyid":keyid}
+    cmd_data={"keyid":keyid,"id":id}
     messageQueue_data.empty()
-    task = queue_task(1,'get_listings',key)
+    task = queue_task(1,'get_listings',cmd_data)
     messageQueue.put(task)
     # now, we wait...
     timer = 0
@@ -138,12 +138,31 @@ def external_listings(keyid='none',id='none'):
             break
         elif listings_data:
             break
-        sleep(0.1)
-        timer = timer + 0.1
+        sleep(0.5)
+        timer = timer + 0.5
     if not listings_data:
         resp = make_response("Listings not found", 404) # TODO - pretty this up
         return resp
-    return render_template('listings.html',listings=listings_data)
+    if not id == 'none':
+        # This is a specific listing response
+        return render_template('listing.html',listing=listings_data,pgp_key=keyid)
+    else:
+        # This is a full listings response
+        return render_template('listings.html',listings=listings_data,pgp_key=keyid)
+
+@app.route('/cart',methods=["GET","POST"])
+@app.route('/cart/add',methods=["GET","POST"])
+@login_required
+def cart():
+  checkEvents()
+  return render_template('not_yet.html')
+
+@app.route('/directory')
+@app.route('/directory/<int:page>')
+@login_required
+def directory(page=1):
+  checkEvents()
+  return render_template('not_yet.html')
 
 
 @app.route('/listings')

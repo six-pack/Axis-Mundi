@@ -17,7 +17,7 @@
         {% for listing in listings %}
         <tr>
         <td style="width:66px"><img width="64" height="64" alt="{{listing.item}}" src={% if listing.image %}"data:image/png;base64,{{listing.image}}"{% else %}"/static/img/none.png"{% endif %} /></td>
-        <td>{{listing.item}}</td>
+        <td><a href="/listings/view/{{pgp_key}}/{{listing.id}}">{{listing.item}}</a></td>
         <td>{{listing.unit_price}} {{listing.currency}}</td>
         <td>{{listing.qty}}</td>
         </tr>
