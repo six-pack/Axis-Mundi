@@ -1,38 +1,65 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en-us">
   <head>
-    <meta charset='utf-8'>
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <meta name="description" content="TBD : A secure, resilient, distributed and open communication platform.">
-
-    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
-
-    <title>TBD</title>
+    <meta charset="UTF-8">
+    <title>TBD by six-pack</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
   </head>
-
   <body>
+    <section class="page-header">
+      <h1 class="project-name">TBD</h1>
+      <h2 class="project-tagline">A secure, resilient, distributed and open communication platform.</h2>
+      <a href="https://github.com/six-pack/client" class="btn">View on GitHub</a>
+      <a href="https://github.com/six-pack/client/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/six-pack/client/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
 
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <a id="forkme_banner" href="https://github.com/six-pack/tbd">View on GitHub</a>
+    <section class="main-content">
+      <h3>
+<a id="introduction" class="anchor" href="#introduction" aria-hidden="true"><span class="octicon octicon-link"></span></a>Introduction</h3>
 
-          <h1 id="project_title">TBD</h1>
-          <h2 id="project_tagline">A secure, resilient, distributed and open communication platform.</h2>
+<p>This decentralized platform allows people to communicate and if desired, trade with each other securely through their existing anonymity network of choice. </p>
 
-            <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/six-pack/tbd/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/six-pack/tbd/tarball/master">Download this project as a tar.gz file</a>
-            </section>
-        </header>
-    </div>
+<p>100% of the software is open-source and freely available for download and inspection.</p>
 
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
-        <h3>
-<a id="it-has-to-start-somewhere" class="anchor" href="#it-has-to-start-somewhere" aria-hidden="true"><span class="octicon octicon-link"></span></a>It has to start somewhere...</h3>
+<p>A person who wishes to access the platform must run a small piece of software (the client) which executes wholly on their own system and is responsible for ensuring communications are secured and correctly routed through the network to the desired recipients. There is no centralized list of users, rather each person identifies themselves to the network and each other using a PGP key of their choosing.</p>
+
+<p>After starting the client, users access the platform via a standard web browser, all browsers are supported and the platform makes no use of any client browser side scripting (e.g. Javascript).</p>
+
+<p>The client enables users to:</p>
+
+<ol>
+<li>Publish a profile for other users to see</li>
+<li>Publish listings, or items that they may have for sale</li>
+<li>Send and receive private messages with any other users</li>
+<li>View profiles and listings of other users</li>
+<li>Place orders for items that other users are selling</li>
+<li>Accept orders from other users who wish to purchase fron you</li>
+<li>Use third party notaries (other users) to act as both escrow agents and/or to notarize orders thus allowing buyer and seller feedback/ratings to be left.</li>
+</ol>
+
+<p>The decentralized platform utilizes a number of independent but federated broker systems which accepts communications from users and ensure that messages for other users are delivered immediately or stored until the recipient is next online. All brokers synchronize data between each other and clients will randomly choose a broker to connect to each time the client is started.</p>
+
+<p>Although anybody can run a broker it is expected that very few users will do so however as it requires a system that will remain permenantly connected to Tor and/or I2P. The number of brokers is expected to vary over time as are the number of broker operators. </p>
+
+<p>The client is designed to place no trust in brokers and also to remain largely unaffected in the event that even the majority of brokers are taken out.</p>
+
+<h1>
+<a id="obtaining-the-software" class="anchor" href="#obtaining-the-software" aria-hidden="true"><span class="octicon octicon-link"></span></a>Obtaining the software</h1>
+
+<p>The client software may be downloaded from the primary repository which is hosted on GitHub. There are two options available.</p>
+
+<ol>
+<li>Download the Python source code and run directly from source</li>
+<li>Download a pre-compiled binary for the desired platform (Linux, Mac or Windows)</li>
+</ol>
+
+<h2>
+<a id="technical-overview" class="anchor" href="#technical-overview" aria-hidden="true"><span class="octicon octicon-link"></span></a>Technical Overview</h2>
 
 <p>This is a secure messaging and communication client written in 100% Python. The client currently consists of the following main elements:</p>
 
@@ -81,18 +108,16 @@
 <a id="specialized-clients" class="anchor" href="#specialized-clients" aria-hidden="true"><span class="octicon octicon-link"></span></a>Specialized Clients</h1>
 
 <p>A number of specialized clients can exist on the network which may be utilized by normal clients for enhanced functions and operations such as user directories, discussion boards and many other functions.</p>
-      </section>
-    </div>
 
-    <!-- FOOTER  -->
-    <div id="footer_wrap" class="outer">
-      <footer class="inner">
-        <p class="copyright">TBD maintained by <a href="https://github.com/six-pack">six-pack</a></p>
-        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/six-pack/client">TBD</a> is maintained by <a href="https://github.com/six-pack">six-pack</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
       </footer>
-    </div>
 
-    
+    </section>
 
+  
   </body>
 </html>
+
