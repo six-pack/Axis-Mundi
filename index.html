@@ -1,37 +1,37 @@
 <!DOCTYPE html>
 <html>
-
   <head>
     <meta charset='utf-8'>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <meta name="description" content="The Platform : A secure, resilient, distributed and open communication platform.">
-
-    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
-
-    <title>The Platform</title>
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>The Platform by six-pack</title>
   </head>
 
   <body>
+    <div id="container">
+      <div class="inner">
 
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <a id="forkme_banner" href="https://github.com/six-pack/client">View on GitHub</a>
-
-          <h1 id="project_title">The Platform</h1>
-          <h2 id="project_tagline">A secure, resilient, distributed and open communication platform.</h2>
-
-            <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/six-pack/client/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/six-pack/client/tarball/master">Download this project as a tar.gz file</a>
-            </section>
+        <header>
+          <h1>The Platform</h1>
+          <h2>A secure, resilient, distributed and open communication platform.</h2>
         </header>
-    </div>
 
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
-        <h1>
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/six-pack/client/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/six-pack/client/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/six-pack/client" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h1>
 <a id="introduction" class="anchor" href="#introduction" aria-hidden="true"><span class="octicon octicon-link"></span></a>Introduction</h1>
 
 <p>This decentralized platform allows people to communicate and if desired, trade with each other securely through their existing anonymity network of choice. </p>
@@ -39,6 +39,8 @@
 <p>100% of the software is open-source and freely available for download and inspection.</p>
 
 <p>A person who wishes to access the platform must run a small piece of software (the client) which executes wholly on their own system and is responsible for ensuring communications are secured and correctly routed through the network to the desired recipients. There is no centralized list of users, rather each person identifies themselves to the network and each other using a PGP key of their choosing.</p>
+
+<p><img src="/client/images/platform_hld.png" alt="Client"></p>
 
 <p>After starting the client, users access the platform via a standard web browser, all browsers are supported and the platform makes no use of any client browser side scripting (e.g. Javascript). The client is shown in this screenshot.</p>
 
@@ -101,9 +103,9 @@
 
 <p><img src="/client/images/network.png" alt="Client"></p>
 
-<p><em>You should always logout and then login to make sure that configuration changes have taken effect</em></p>
+<p><strong>You should always logout and then login to make sure that configuration changes have taken effect</strong></p>
 
-<p>At this time, there is no directory available of users so it is currently important that you have your contacts set-up with the other users you want to communicate or trade with. The client application has a simple contact manager that enables you to view and add contacts. Contacts can be added by simply pasting in their PGP public key or by adding them from their profile page. From the contacts page you can also view your contacts profiles (if they have one) and also their listings for sale, again if they have any.</p>
+<p>At this time, there is no directory available of users so it is important that your contacts list is populated with the other users you want to communicate or trade with. The client application has a simple contact manager that enables you to view and add contacts. Contacts can be added by simply pasting in their PGP public key or by adding them from their profile page. From the contacts page you can also send contacts a message, view your contacts profiles (if they have one) and also their listings for sale, again if they have any.</p>
 
 <p><img src="/client/images/contacts.png" alt="Client"></p>
 
@@ -147,7 +149,7 @@
 <a id="basic-client-operation-overview" class="anchor" href="#basic-client-operation-overview" aria-hidden="true"><span class="octicon octicon-link"></span></a>Basic Client Operation Overview</h2>
 
 <ol>
-<li>Client application is started and may be accessed using a web-browser at <a href="http://127.0.0.1:7755">http://127.0.0.1:7755</a>
+<li>Client application is started and may be accessed using a web-browser at <a href="http://127.0.0.1:5000">http://127.0.0.1:5000</a>
 </li>
 <li>If first run is detected then an initial set-up procedure is executed that requires the user to provide their PGP key and passphrase and a chosen display name. The application will create the encrypted local database and encrypt the database key using the users chosen PGP key. This concludes the initial setup.</li>
 <li>The user is prompted to select a PGP key and provide the corresponding passphrase to access the application</li>
@@ -161,18 +163,15 @@
 <a id="specialized-clients" class="anchor" href="#specialized-clients" aria-hidden="true"><span class="octicon octicon-link"></span></a>Specialized Clients</h2>
 
 <p>A number of specialized clients can exist on the network which may be utilized by normal clients for enhanced functions and operations such as user directories, discussion boards and many other functions.</p>
-      </section>
+        </section>
+
+        <footer>
+          The Platform is maintained by <a href="https://github.com/six-pack">six-pack</a><br>
+          This page was generated by <a href="https://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
     </div>
-
-    <!-- FOOTER  -->
-    <div id="footer_wrap" class="outer">
-      <footer class="inner">
-        <p class="copyright">The Platform maintained by <a href="https://github.com/six-pack">six-pack</a></p>
-        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
-      </footer>
-    </div>
-
-    
-
   </body>
 </html>
