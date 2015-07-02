@@ -111,11 +111,9 @@
 
 <p>The client has a simple but secure private message facility built in. The PM facility automatically PGP encrypts all outbound messages and automatically decrypts all encrypted incoming PMs. You are more than welcome to double encrypt messages if you feel it is necessary. All PM functions are available from the 'Messages' menu item. Creating a new message is very easy, just click on 'Create Message'</p>
 
-<p><img src="/client/images/new-message.png" alt="Client"></p>
-
 <p>Note that if you are creating a new message from scratch, a drop-down box with your contacts appears when you start to type in the recipient/to field.</p>
 
-<p><img src="/client/images/new-message.png" alt="Client"></p>
+<p><img src="/client/images/new-mesage.png" alt="Client"></p>
 
 <p>You can provide a subject and message body, signing the message is optional but is the only way that the recipient knows that the message really was from you. Signing of outbound PM's is on by default. The mail can be sent by hitting the send button unsurprisingly.</p>
 
@@ -131,11 +129,11 @@
 
 <p>And it is very simple to respond by simply hitting the reply button</p>
 
-<p><img src="/client/images/messages-reply.png" alt="Client"></p>
+<p><img src="/client/images/message-reply.png" alt="Client"></p>
 
 <p>There is also a 'Trade' menu and from here it is possible to see the status of any current orders, that includes items that have you have ordered and items that you have sold. An additional option shown is 'My Listings' and from here you can create, edit and delete items you wish to sell.</p>
 
-<p><img src="/client/images/listings.png" alt="Client"></p>
+<p><img src="/client/images/mylistings.png" alt="Client"></p>
 
 <p>New items may be added to your listings from here using the 'Create' button,also listings can be re-publihed at any time (without having to logout and back in) by using the 'Republish' button after making changes to your listings. There are a number of fields that are required when creating a new listing such as title, description, price and currency. A number of additional fields may be completed if desired including providing an image, setting the quantity available, the item category and so on.</p>
 
@@ -191,7 +189,7 @@
 </li>
 <li>If first run is detected then an initial set-up procedure is executed that requires the user to provide their PGP key and passphrase and a chosen display name. The application will create the encrypted local database and encrypt the database key using the users chosen PGP key. This concludes the initial setup.</li>
 <li>The user is prompted to select a PGP key and provide the corresponding passphrase to access the application</li>
-<li>The 'secret' file is PGP de-crypted and the SQL password is then read and used to decrypt and access the local database.</li>
+<li>The 'secret' file is PGP decrypted and the SQL password is then read and used to decrypt and access the local database.</li>
 <li>The client now attempts to establish a connection to the MQTT broker specified in the configuration. A customized PGP authentication plugin is used on each broker which allows client to authenticate using their chosen PGP key. The user identity consists of the 16 Byte PGP key ID.</li>
 <li>If the connection is successful then the client establishes a number of PUB/SUB topics on the broker using the users PGP key as a username. Any queued messages will be delivered to the client</li>
 <li>The client is now operational and may be used to send and receive messages.</li>
@@ -200,7 +198,7 @@
 <h2>
 <a id="specialized-clients" class="anchor" href="#specialized-clients" aria-hidden="true"><span class="octicon octicon-link"></span></a>Specialized Clients</h2>
 
-<p>A number of specialized clients can exist on the network which may be utilized by normal clients for enhanced functions and operations such as user directories, discussion boards and many other functions.</p>
+<p>A number of specialized clients can exist on the network which may be utilized by normal clients for enhanced functions and operations such as user directories, discussion boards and many other functions. This aspect transforms the platform in ways which will become clear as time progresses.</p>
       </section>
     </div>
     <footer>
