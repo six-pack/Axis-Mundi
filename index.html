@@ -17,13 +17,13 @@
   <body>
     <div class="wrapper">
       <header>
-        <h1>The Platform</h1>
+        <h1>Axis Mundi</h1>
         <p>A secure, resilient, distributed and open communication platform.</p>
-        <p class="view"><a href="https://github.com/six-pack/client">View the Project on GitHub <small>six-pack/client</small></a></p>
+        <p class="view"><a href="https://github.com/six-pack/Axis-Mundi">View the Project on GitHub <small>six-pack/Axis-Mundi</small></a></p>
         <ul>
-          <li><a href="https://github.com/six-pack/client/zipball/master">Download <strong>ZIP File</strong></a></li>
-          <li><a href="https://github.com/six-pack/client/tarball/master">Download <strong>TAR Ball</strong></a></li>
-          <li><a href="https://github.com/six-pack/client">View On <strong>GitHub</strong></a></li>
+          <li><a href="https://github.com/six-pack/Axis-Mundi/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/six-pack/Axis-Mundi/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/six-pack/Axis-Mundi">View On <strong>GitHub</strong></a></li>
         </ul>
       </header>
       <section>
@@ -36,11 +36,11 @@
 
 <p>A person who wishes to access the platform must run a small piece of software (the client) which executes wholly on their own system and is responsible for ensuring communications are secured and correctly routed through the network to the desired recipients. There is no centralized list of users, rather each person identifies themselves to the network and each other using a PGP key of their choosing.</p>
 
-<p><img src="/client/images/platform_hld.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/platform_hld.png" alt="Axis-Mundi"></p>
 
 <p>After starting the client, users access the platform via a standard web browser, all browsers are supported and the platform makes no use of any client browser side scripting (e.g. Javascript). The client is shown in this screenshot.</p>
 
-<p><img src="/client/images/listings.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/listings.png" alt="Axis-Mundi"></p>
 
 <p>The client enables users to:</p>
 
@@ -77,79 +77,79 @@
 
 <p>The very first time that the client is run, an installation screen will appear when the client is accessed through the browser. The installation screen requires that you select a PGP to use as identity as well as provide details such as chosen display name (the name shown to other users) and Tor and i2p proxy settings. You should ensure that your proxy settings are correct although you will be able to change them later.</p>
 
-<p><img src="/client/images/install.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/install.png" alt="Client"></p>
 
 <p>At this stage no network communications have been attempted and the client is completely off-line. </p>
 
 <p>From now on the you will be presented with a login screen where you must select the PGP key specified during installation and provide the correct passphrase. After hitting the login button the client attempts to connect to a randomly selected hidden service entry point (broker) to authenticate against.</p>
 
-<p><img src="/client/images/login.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/login.png" alt="Client"></p>
 
 <p>If login is successful then you will be presented with the home page of the client which is currently rather sparse. A dropdown menu is presented at the top of the screen along with the current connection status of the client. </p>
 
-<p><img src="/client/images/home.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/home.png" alt="Client"></p>
 
 <p>Your first steps should be setting up your client, especially your public profile should you want one. All set-up screen can be found underneath the 'Setup' menu. </p>
 
 <p>The identity set-up page is shown below</p>
 
-<p><img src="/client/images/edit-profile.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/edit-profile.png" alt="Client"></p>
 
 <p>And the network set-up page is shown here. You should also set-up your network settings if you didn't set them during installation. If you wish to use I2P then you will need to ensure that a SOCKS proxy is enabled and configured o the network setup screen.</p>
 
-<p><img src="/client/images/network.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/network.png" alt="Client"></p>
 
 <p><strong>You should always logout and then login to make sure that configuration changes have taken effect</strong></p>
 
 <p>At this time, there is no directory available of users so it is important that your contacts list is populated with the other users you want to communicate or trade with. The client application has a simple contact manager that enables you to view and add contacts. Contacts can be added by simply pasting in their PGP public key or by adding them from their profile page. From the contacts page you can also send contacts a message, view your contacts profiles (if they have one) and also their listings for sale, again if they have any.</p>
 
-<p><img src="/client/images/contacts.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/contacts.png" alt="Client"></p>
 
 <p>Adding a contact by PGP key is very simple, in the screenshot below we are adding a friend to our contacts by pasting their public key into the box and hitting the add button.</p>
 
-<p><img src="/client/images/new-contact.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/new-contact.png" alt="Client"></p>
 
 <p>It is possible to view another users profile from the contacts page and in fact clicking a username on almost any page will also show you the user profile.</p>
 
-<p><img src="/client/images/profile.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/profile.png" alt="Client"></p>
 
 <p>The client has a simple but secure private message facility built in. The PM facility automatically PGP encrypts all outbound messages and automatically decrypts all encrypted incoming PMs. You are more than welcome to double encrypt messages if you feel it is necessary. All PM functions are available from the 'Messages' menu item. Creating a new message is very easy, just click on 'Create Message'</p>
 
 <p>Note that if you are creating a new message from scratch, a drop-down box with your contacts appears when you start to type in the recipient/to field.</p>
 
-<p><img src="/client/images/new-mesage.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/new-mesage.png" alt="Client"></p>
 
 <p>You can provide a subject and message body, signing the message is optional but is the only way that the recipient knows that the message really was from you. Signing of outbound PM's is on by default. The mail can be sent by hitting the send button unsurprisingly.</p>
 
-<p><img src="/client/images/new-mesage-2.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/new-mesage-2.png" alt="Client"></p>
 
 <p>You can view your current inbox easily from the Messages menu by selecting 'Inbox'. In the next screenshot you can see what the inbox look like but also note that the client is notifying us that a new PM message has been received.</p>
 
-<p><img src="/client/images/messages-just-received.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/messages-just-received.png" alt="Client"></p>
 
 <p>Selecting any of the messages in the list will show the full message iincluding the body.</p>
 
-<p><img src="/client/images/messages-read.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/messages-read.png" alt="Client"></p>
 
 <p>And it is very simple to respond by simply hitting the reply button</p>
 
-<p><img src="/client/images/message-reply.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/message-reply.png" alt="Client"></p>
 
 <p>There is also a 'Trade' menu and from here it is possible to see the status of any current orders, that includes items that have you have ordered and items that you have sold. An additional option shown is 'My Listings' and from here you can create, edit and delete items you wish to sell.</p>
 
-<p><img src="/client/images/mylistings.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/mylistings.png" alt="Client"></p>
 
 <p>New items may be added to your listings from here using the 'Create' button,also listings can be re-publihed at any time (without having to logout and back in) by using the 'Republish' button after making changes to your listings. There are a number of fields that are required when creating a new listing such as title, description, price and currency. A number of additional fields may be completed if desired including providing an image, setting the quantity available, the item category and so on.</p>
 
-<p><img src="/client/images/newlisting.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/newlisting.png" alt="Client"></p>
 
 <p>As you will have noticed on the 'contacts' and user profile pages, there is a button to view other users listings. This allows you to view, inspect and ultimately order items for sales from other users listings.</p>
 
-<p><img src="/client/images/listings.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/listings.png" alt="Client"></p>
 
 <p>Selecting any of a users listings will allow you to view the full listing detail and add the item to your card for ordering. This listing caught our eye and is something we would consider purchasing.</p>
 
-<p><img src="/client/images/listing-item.png" alt="Client"></p>
+<p><img src="/Axis-Mundi/images/listing-item.png" alt="Client"></p>
 
 <p>At present (1st July 2015) - ordering functions are being implemented and will be added to this walk through when fully integrated.</p>
 
