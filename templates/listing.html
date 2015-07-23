@@ -9,7 +9,7 @@
                 <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
                 <input type="hidden" name="pgpkey_id" value="{{listing.key_id}}"><div style="btn"><button type="submit" class = "btn">Add to Cart</button></div></form></td></tr>
             <tr><td width="200"><B>Quantity Available </b></td><td>{{listing.qty}}</td></tr>
-            <tr><td width="200"><B>Seller</b></td><td>{{pgp_key}}</td><td><a class="btn" href="{{ url_for('new_message')}}{{listing.key_id}}">Send Message</a></td></tr>
+            <tr><td width="200"><B>Seller</b></td><td>{{pgp_key}}</td><td><a class="btn" href="{{ url_for('new_message')}}{{pgp_key}}">Send Message</a></td></tr>
             <tr><td width="200"><B>Ships From</b></td><td>Not Specified</td></tr>
             <tr><td width="200"><B>Ships To</b></td><td>Worldwide</td></tr>
 

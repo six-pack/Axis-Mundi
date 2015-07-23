@@ -1,4 +1,4 @@
-def create_defaults(db,session,pgp_keyid,display_name,publish_id):
+def create_defaults(db,session,pgp_keyid,display_name,publish_id,btc_master_seed):
     try:
          # Identity default settings
          new_conf_item = db.Config(name="pgpkeyid")
@@ -38,6 +38,50 @@ def create_defaults(db,session,pgp_keyid,display_name,publish_id):
          new_conf_item.value = "o5bgiilpfir7nyofkruggiehk655brlr5xsrkdjdyv3mbpmaesrq.b32.i2p"                 # Hardcode in these i2p seed entry points
          new_conf_item.displayname = "Entry Points"
          session.add(new_conf_item)
+         new_conf_item = db.Config(name="stratum_servers")
+         new_conf_item.value = "electrum.be:50002:s"                 # Hardcode in these servers from electrum
+         new_conf_item.displayname = "Stratum Servers"
+         session.add(new_conf_item)
+         new_conf_item = db.Config(name="stratum_servers")
+         new_conf_item.value = "electrum.bitfuzz.nl:50002:s"                 # Hardcode in these servers from electrum
+         new_conf_item.displayname = "Stratum Servers"
+         session.add(new_conf_item)
+         new_conf_item = db.Config(name="stratum_servers")
+         new_conf_item.value = "h.1209k.com:50002:s"                 # Hardcode in these servers from electrum
+         new_conf_item.displayname = "Stratum Servers"
+         session.add(new_conf_item)
+         new_conf_item = db.Config(name="stratum_servers")
+         new_conf_item.value = "erbium.sytes.net:50002:s"                 # Hardcode in these servers from electrum
+         new_conf_item.displayname = "Stratum Servers"
+         session.add(new_conf_item)
+         new_conf_item = db.Config(name="stratum_servers")
+         new_conf_item.value = "ecdsa.net:50002:s"                # Hardcode in these servers from electrum
+         new_conf_item.displayname = "Stratum Servers"
+         session.add(new_conf_item)
+         new_conf_item = db.Config(name="stratum_servers")
+         new_conf_item.value = "electrum.no-ip.org:50002:s"                 # Hardcode in these servers from electrum
+         new_conf_item.displayname = "Stratum Servers"
+         session.add(new_conf_item)
+         new_conf_item = db.Config(name="stratum_servers")
+         new_conf_item.value = "bitcoin.epicinet.net:50002:s"                 # Hardcode in these servers from electrum
+         new_conf_item.displayname = "Stratum Servers"
+         session.add(new_conf_item)
+         new_conf_item = db.Config(name="stratum_servers")
+         new_conf_item.value = "kirsche.emzy.de:50002:s"                 # Hardcode in these servers from electrum
+         new_conf_item.displayname = "Stratum Servers"
+         session.add(new_conf_item)
+         new_conf_item = db.Config(name="stratum_servers")
+         new_conf_item.value = "electrum.mindspot.org:50002:s"                 # Hardcode in these servers from electrum
+         new_conf_item.displayname = "Stratum Servers"
+         session.add(new_conf_item)
+         new_conf_item = db.Config(name="stratum_servers")
+         new_conf_item.value = "ecdsa.net:110:s"                 # Hardcode in these servers from electrum
+         new_conf_item.displayname = "Stratum Servers"
+         session.add(new_conf_item)
+         new_conf_item = db.Config(name="stratum_servers")
+         new_conf_item.value = "electrum.thwg.org:50002:s"                 # Hardcode in these servers from electrum
+         new_conf_item.displayname = "Stratum Servers"
+         session.add(new_conf_item)
          new_conf_item = db.Config(name="socks_enabled")
          new_conf_item.value = "True"
          new_conf_item.displayname = "SOCKS Proxy Enabled"
@@ -72,6 +116,10 @@ def create_defaults(db,session,pgp_keyid,display_name,publish_id):
          new_conf_item.displayname = "Accept Unsigned Messages"
          session.add(new_conf_item)
          # Trade default settings
+         new_conf_item = db.Config(name="wallet_seed")
+         new_conf_item.value = btc_master_seed
+         new_conf_item.displayname = "Wallet Seed"
+         session.add(new_conf_item)
          new_conf_item = db.Config(name="market_directory_helpers")
          new_conf_item.value = "1234567812345678"
          new_conf_item.displayname = "Market Directory Helpers"

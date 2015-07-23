@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% set active_page = "Setup" %}
+
+{% block content %}
+  <h2>Configuration - Bitcoin</h2>
+  <p>You may configure various options here. To ensure new settings take effect, please log off and log back in.</p>
+  <p>Changing your wallet seed can result in complete coin loss - be careful</p>
+ <!--   <h1>Configure</h1> -->
+    <form method="post" action="{{ url_for('setup') }}/bitcoin">
+    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+        <table cellpadding="10">
+            <tr><td></td><td></td><td></td><td></td></tr>
+           <tr><td><label>Wallet Seed </label></td> <td colspan="3"><textarea name="seed" cols="80" class="inputs" style ="height: auto;" rows=2  placeholder="Only change the wallet seed if you know what you are doing. Complete coin loss can occur.">{{wallet_seed[0]}}</textarea></td></tr>
+            <tr><td><label>Stratum Servers </label></td> <td colspan="3"><textarea name="stratum_servers" cols="60" style ="height: auto;" rows="6" spellcheck="false" class="inputs" placeholder="Stratum/Electrum Servers" required>{% for node in stratum_servers %}{{ node[0] }}&#013;&#010;{% endfor %}</textarea></td></tr>
+
+            <tr><td><div style="btn"><button type="submit" class = "btn">Update</button></div></td></tr>
+        </table></form>
+
+{% endblock %}

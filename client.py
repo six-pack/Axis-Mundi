@@ -2,6 +2,7 @@
 
 from flask import Flask, render_template, request, redirect, url_for, abort, session, flash, g, make_response
 from flask_login import LoginManager,UserMixin,login_user,current_user,logout_user,login_required
+from functools import wraps, update_wrapper
 import gnupg
 from os.path import expanduser, isfile, isdir, dirname
 from os import makedirs
@@ -10,11 +11,12 @@ import random
 from storage import Storage, SqlalchemyOrmPage
 from client_backend import messaging_loop
 import Queue
-from utilities import queue_task,encode_image
+from utilities import queue_task,encode_image,generate_seed
 from defaults import create_defaults
 from time import sleep
 import base64
 from platform import system as get_os
+import pybitcointools as btc
 
  # /////////// patch socket module to attempt to fix bug #12 -  "socket.error: [Errno 98] Address already in use"
  # This fixes re-use error but results in multiple cliet.py instances which is very undesirable
@@ -71,6 +73,12 @@ def generate_csrf_token():
 def get_connection_status():
     checkEvents()
     g.connection_status = app.connection_status
+
+@app.after_request
+def add_header(response):
+    #response.cache_control.max_age = 0
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    return response
 
 ########## Flask Routes ##################################
 
@@ -482,13 +490,15 @@ def createidentity():                                               # This is a 
   except:
      flash("Error creating identity - secret file not created",category="error")
      return redirect(url_for('install'))
+  # Now generate initial Bitcoin keys
+  wallet_seed = generate_seed(18) # todo: ensure wordcount reflects size of wordlist
   ## Now create & populate DB with initial values
   installStorageDB = Storage(app.dbsecretkey,'storage.db',app.appdir)
   if not installStorageDB.Start():
      flash('There was a problem creating the storage database '+ 'storage.db',category="error")
   session = installStorageDB.DBSession()
   # Now populate the config database with defaults + user specified data
-  defaults = create_defaults(installStorageDB,session,app.pgp_keyid,app.display_name,app.publish_id)
+  defaults = create_defaults(installStorageDB,session,app.pgp_keyid,app.display_name,app.publish_id,wallet_seed)
   if not defaults:
     flash('There was a problem creating the initial configuration in the storage database '+ 'storage.db',category="error")
     #return False
@@ -545,6 +555,7 @@ def setup(page=''):
       i2p_socks_enabled = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "i2p_socks_enabled").first()
       message_retention = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "message_retention").first()
       accept_unsigned = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "accept_unsigned").first()
+      wallet_seed = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "wallet_seed").first()
       #
       if page == "identity":
             if displayname:
@@ -580,7 +591,7 @@ def setup(page=''):
           i2p_socks_proxy.value = request.form['i2p_proxy']
           i2p_socks_proxy_port.value = request.form['i2p_proxy_port']
           new_hubnodes = str(request.form['hubnodes']).splitlines()
-          session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "hubnodes").delete()
+          session.query(app.roStoracgeDB.Config.value).filter(app.roStorageDB.Config.name == "hubnodes").delete()
           for node in new_hubnodes:
             new_conf_item = app.roStorageDB.Config(name="hubnodes")
             new_conf_item.value = node
@@ -592,6 +603,15 @@ def setup(page=''):
             accept_unsigned.value = 'True'
           else:
             accept_unsigned.value = 'False'
+      elif page == "bitcoin":
+          wallet_seed = request.form['seed']
+          new_stratum_servers = str(request.form['stratum_servers']).splitlines()
+          session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "stratum_servers").delete()
+          for node in new_stratum_servers:
+            new_conf_item = app.roStorageDB.Config(name="stratum_servers")
+            new_conf_item.value = node
+            new_conf_item.displayname = "Stratum Servers"
+            session.add(new_conf_item)
       try:
          session.commit()
       except:
@@ -619,6 +639,8 @@ def setup(page=''):
       i2p_socks_enabled = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "i2p_socks_enabled").first()
       message_retention = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "message_retention").first()
       accept_unsigned = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "accept_unsigned").first()
+      wallet_seed = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "wallet_seed").first()
+      stratum_servers = session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "stratum_servers").all()
       session.close()
       if page == '':
         return render_template('setup.html',displayname=displayname,pgpkeyid=pgpkeyid,hubnodes=hubnodes,notaries=notaries)
@@ -630,6 +652,8 @@ def setup(page=''):
         return render_template('setup-security.html',message_retention=message_retention,accept_unsigned=accept_unsigned.value)
       elif page == 'trading':
         return render_template('setup-trading.html',notaries=notaries)
+      elif page == 'bitcoin':
+        return render_template('setup-bitcoin.html',wallet_seed=wallet_seed,stratum_servers=stratum_servers)
 
 @app.route('/about')
 @login_required

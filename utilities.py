@@ -6,6 +6,7 @@ import re
 import json
 import random
 import string
+import itertools
 
 class Listing(object):
     # Listing class
@@ -75,3 +76,23 @@ def parse_user_name(name):
         print "Unable to extract display name/key if from recipient"
         return None
    # display_name =
+
+def generate_seed(words=12):
+    seed=''
+    wordlist = getWords('words.txt') # TODO: allow user specified wordlist AND handle different locations/non-existant words
+    if words<12: words=12
+    for x in range(0, words-1):
+        seed = ' '.join(random.SystemRandom().choice(wordlist) for _ in range(words))
+    return seed
+
+def getWords(filepath):
+    with open(filepath) as f:
+        words = []
+        pos = {}
+        position = itertools.count()
+        for line in f:
+            for word in line.split():
+                if word not in pos:
+                    pos[word] = position.next()
+                    words.append(word)
+    return sorted(words, key=pos.__getitem__)
