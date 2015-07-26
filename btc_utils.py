@@ -21,4 +21,3 @@ def receiver_payee_privkey_from_stealth(receiver_prikey,sender_pubkey):
     key = btc.add_privkeys(receiver_prikey,ss2)
     return key
 
-

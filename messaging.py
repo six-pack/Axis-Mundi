@@ -1,9 +1,10 @@
 import gnupg
 import json
-from utilities import current_time
+from utilities import current_time, got_pgpkey
 import textwrap
 import random
 import string
+from constants import *
 
 class Contract_seed(object):
     def __init__(self):
@@ -54,6 +55,8 @@ class Message(object):
         self.signed='' # set to true when a valid outer signature is present in the body (not to be set by users)
         self.encrypted=''
         self.sub_messages = [] # Contracts etc.
+        self.raw_message = ''
+        self.topic=''
     def loadjson (self, j):
         # additional checking here would not hurt
         try:
@@ -103,7 +106,7 @@ class Messaging():
         # OK, ready to send
         return final_message
 
-    def GetMessage(self,rawmessage,alt_pgpkey=None,allow_unsigned=True):
+    def GetMessage(self,rawmessage,client_instance,topic,alt_pgpkey=None,allow_unsigned=True):
         # Decode and return a message object. First decrypt if encrypted, then check outer signature if signed, the parse
         # json, then attempt to safely deserialize into a message object, then set received time, finally return message or error
         input_message_encrypted = False
@@ -123,7 +126,38 @@ class Messaging():
             clear_lrawmessage = lrawmessage
 #        print clear_lrawmessage
         #### Step 2 - Is it signed?
-        # TODO - FIND OUT WHAT KEY WE NEED - IF WE DON'T HAVE IT THEN DEFER THIS MESSAGE WHILE THE KEY IS RETRIEVED
+        # TODO - IF MESSAGE IS SIGNED FIND OUT WHAT KEY WE NEED - IF WE DON'T HAVE IT THEN DEFER THIS MESSAGE WHILE THE KEY IS RETRIEVED
+        if clear_lrawmessage.startswith('-----BEGIN PGP SIGNED MESSAGE-----'):
+            tmp_key=False
+            try:
+                tmp_stripped_msg = clear_lrawmessage[clear_lrawmessage.index('{'):clear_lrawmessage.rindex('}')+1]
+                tmp_stripped_msg = tmp_stripped_msg.replace('\n', '')  # strip out all those newlines we added pre-signing
+                print tmp_stripped_msg
+                tmp_message = Message()
+                tmp_message.loadjson(tmp_stripped_msg)
+                tmp_key = tmp_message.sender
+                tmp_message.raw_message = rawmessage # we will need this when we finally get the key
+                tmp_message.topic = topic
+            except:
+                print "Failed to parse json response and extract sender key id"
+                return False
+            if tmp_key:
+                # check if this key needs to be retreived
+                if got_pgpkey(client_instance.storageDB,tmp_key):
+                    print "Already have the necessary key " + tmp_key # we already have the key
+                else:
+                    print "Need key " + tmp_key # defer message processing until key is retrieved
+                    random_id = random.randrange(1,stop=999999999,step=1) # assign a temporary random id
+                    client_instance.task_state_pgpkeys[tmp_key]['state']=KEY_LOOKUP_STATE_INITIAL # create task request for a lookup
+                    client_instance.task_state_messages[random_id]['state']= MSG_STATE_KEY_REQUESTED
+                    client_instance.task_state_messages[random_id]['message']= tmp_message
+                    return MSG_STATE_KEY_REQUESTED
+
+            else:
+                print "Sending keyid could not be extracted from message - unable to verify sender key - dropping message..."
+                print clear_lrawmessage
+                return False
+#        print clear_lrawmessage
         if clear_lrawmessage.startswith('-----BEGIN PGP SIGNED MESSAGE-----'):
             verify_signature = self.gpg.verify(clear_lrawmessage)
 #            if verify_signature.pubkey_fingerprint:    # Proper signature check, full fp only returned if key present
@@ -157,4 +191,5 @@ class Messaging():
             if input_message_signed:
                 message.signed = True
             message.datetime_received =  current_time()
+            message.topic = topic
             return message

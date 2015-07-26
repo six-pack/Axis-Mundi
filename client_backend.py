@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timedelta
 #import paho.mqtt.client as mqtt
 #from paho.mqtt.client import MQTT_ERR_SUCCESS, mqtt_cs_connected
-from mqtt_client import MQTT_ERR_SUCCESS, mqtt_cs_connected
+from mqtt_client import MQTT_ERR_SUCCESS, mqtt_cs_connected, MQTTMessage
 from mqtt_client import Client as mqtt
 from storage import Storage
 import gnupg
@@ -22,17 +22,8 @@ from pprint import pprint
 import string
 from platform import system as get_os
 import textwrap
+from constants import *
 
-MSG_STATE_NEEDS_KEY = 0
-MSG_STATE_KEY_REQUESTED = 1
-MSG_STATE_READY_TO_PROCESS = 2
-MSG_STATE_DONE = 3
-MSG_STATE_QUEUED = 4
-
-KEY_LOOKUP_STATE_INITIAL = 0
-KEY_LOOKUP_STATE_REQUESTED = 1
-KEY_LOOKUP_STATE_FOUND = 2
-KEY_LOOKUP_STATE_NOTFOUND = 3
 
 class messaging_loop(threading.Thread):
 # Authentication shall set the password to a PGP clear-signed message containing the follow data only
@@ -103,14 +94,52 @@ class messaging_loop(threading.Thread):
 
     # TODO - make use of onpublish and onsubscribe callbacks instead of checking status of call to publish or subscribe
     def on_publish(self, client, userdata, mid):
-        print "On publish for " + str(mid)
+        print "On publish for " + str(mid) + " " + str(userdata)
 
     def on_subscribe(self, client, userdata, mid, granted_qos):
-        print "On subscribe for " + str(mid)
+        print "On subscribe for " + str(mid) + " " + str(userdata)
 
     def on_message(self, client, userdata, msg):
-        if msg.topic == self.sub_inbox:
-            message = self.myMessaging.GetMessage(msg.payload,allow_unsigned=self.allow_unsigned)
+        print msg.topic
+        # Key blocks are a special case because they are not signed so we check for them first
+        if re.match('user\/[A-F0-9]{16}\/key',msg.topic):
+            # Here is a key, store it and unsubscribe
+            print "Key Retrieved from " + str(msg.topic)
+            client.unsubscribe(msg.topic)
+            #TODO: Check we have really been sent a PGP key block and check if it really is the same as the topic key
+            keyid = msg.topic[msg.topic.index('/')+1:msg.topic.rindex('/')]
+            try:
+                state=self.task_state_pgpkeys[keyid]['state']
+            except KeyError:
+                state=None
+            if state == KEY_LOOKUP_STATE_REQUESTED:
+                session = self.storageDB.DBSession()
+                cachedkey = self.storageDB.cachePGPKeys(key_id=keyid,
+                                                        updated=datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S"),
+                                                        keyblock=msg.payload )
+                session.add(cachedkey)
+                session.commit()
+                self.task_state_pgpkeys[keyid]['state'] = KEY_LOOKUP_STATE_FOUND
+                print "Retrieved key committed"
+            else:
+                print "Dropping unexpected pgp key received for keyid: " + keyid
+                #TODO: Shall we just always allow keys to be received?
+            return None
+#            imp_res = self.gpg.import_keys(msg.payload) # we could import it here but we use the local keyserver
+
+        #  let us see if we can parse the base message and have the necessary public key to check signature, if any
+        incoming_message = self.myMessaging.GetMessage(msg.payload,self,msg.topic,allow_unsigned=self.allow_unsigned)
+        # If this message was deferred lets stack it...
+        if incoming_message == False:
+            print "Message received but not processed correctly so dropped..."
+            return
+        elif incoming_message == MSG_STATE_KEY_REQUESTED:
+            # getmessage should have already updated task_state_pgpkeys and task_state_messages
+            print "Incoming message has been deferred while signing key is requested"
+            return
+
+        if msg.topic == self.sub_inbox and (self.allow_unsigned or incoming_message.signed ):
+            message = incoming_message
             if message == False:  print "Message was invalid"
             elif message.type == 'Private Message':
                 # Calculate purge date for this message
@@ -150,35 +179,13 @@ class messaging_loop(threading.Thread):
 #                                                                 )
 #                session.add(new_db_message)
 #                session.commit()
-        elif re.match('user\/[A-F0-9]{16}\/key',msg.topic):
-            # Here is a key, store it and unsubscribe
-            print "Key Retrieved"
-            client.unsubscribe(msg.topic)
-            #TODO: Check we have really been sent a PGP key block and check if it really is the same as the topic key
-            keyid = msg.topic[msg.topic.index('/')+1:msg.topic.rindex('/')]
-            try:
-                state=self.task_state_pgpkeys[keyid]['state']
-            except KeyError:
-                state=None
-            if state == KEY_LOOKUP_STATE_REQUESTED:
-                session = self.storageDB.DBSession()
-                cachedkey = self.storageDB.cachePGPKeys(key_id=keyid,
-                                                        updated=datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S"),
-                                                        keyblock=msg.payload )
-                session.add(cachedkey)
-                session.commit()
-                self.task_state_pgpkeys[keyid]['state'] = KEY_LOOKUP_STATE_FOUND
-                print "Retrieved key committed"
-            else:
-                print "Dropping unexpected pgp key received for keyid: " + keyid
-#            imp_res = self.gpg.import_keys(msg.payload) # we could import it here but we use the local keyserver
-        elif re.match('user\/[A-F0-9]{16}\/profile',msg.topic):
+        elif re.match('user\/[A-F0-9]{16}\/profile',msg.topic) and incoming_message.signed:
             # Here is a profile, store it and unsubscribe
             client.unsubscribe(msg.topic)
             keyid = msg.topic[msg.topic.index('/')+1:msg.topic.rindex('/')]
             #TODO: Check we have really been sent a valid profile message for the key indicated
             #print msg.payload
-            profile_message = self.myMessaging.GetMessage(msg.payload,allow_unsigned=False) # Never allow unsigned profiles
+            profile_message = incoming_message # self.myMessaging.GetMessage(msg.payload,self,allow_unsigned=False) # Never allow unsigned profiles
             if profile_message:
                 if not keyid==profile_message.sender:
                     print "Profile was signed by a different key - discarding..."
@@ -198,13 +205,13 @@ class messaging_loop(threading.Thread):
         #            imp_res = self.gpg.import_keys(msg.payload) # we could import it here but we use the local keyserver
             else:
                 print "No profile message found in profile returned from " + keyid
-        elif re.match('user\/[A-F0-9]{16}\/items',msg.topic):
+        elif re.match('user\/[A-F0-9]{16}\/items',msg.topic) and incoming_message.signed:
             # Here is a listings message, store it and unsubscribe
             client.unsubscribe(msg.topic)
             keyid = msg.topic[msg.topic.index('/')+1:msg.topic.rindex('/')]
             #TODO: Check we have really been sent a valid listings message for the key indicated
             #print msg.payload
-            listings_message = self.myMessaging.GetMessage(msg.payload,allow_unsigned=False) # Never allow unsigned listings
+            listings_message = incoming_message # self.myMessaging.GetMessage(msg.payload,self,allow_unsigned=False) # Never allow unsigned listings
             if listings_message:
                 print listings_message
                 if not keyid==listings_message.sender:
@@ -260,9 +267,14 @@ class messaging_loop(threading.Thread):
                 print "No listings message found in listings returned from " + keyid
 
         else:
-            flash_msg = queue_task(0,'flash_error','Message received for non-inbox topic - ' + msg.topic)
+            if incoming_message.signed:
+                flash_msg = queue_task(0,'flash_error','Message received for non-inbox topic - ' + msg.topic)
+                print "Unsigned message recv: " + msg.payload
+            else:
+                flash_msg = queue_task(0,'flash_error','Unsigned message received for topic - ' + msg.topic)
+                print "Non PM message recv: " + msg.payload
             self.q_res.put(flash_msg)
-            print "Non PM message recv: " + msg.payload
+
 
     def setup_message_queues(self,client):
         client.subscribe(self.sub_inbox,1)                      # Our generic incoming queue, qos=1
@@ -645,12 +657,12 @@ class messaging_loop(threading.Thread):
 #                    pass
 
             for pending_message in self.task_state_messages.keys():   # check any messages queued for whatever reason
-                if self.task_state_messages[pending_message]['message'].sender == self.mypgpkeyid:
-                    outbound=True
-                    pending_key=self.task_state_messages[pending_message]['message'].recipient
-                else:
+                if self.task_state_messages[pending_message]['message'].recipient == self.mypgpkeyid or self.task_state_messages[pending_message]['message'].recipient == "":
                     outbound=False
                     pending_key=self.task_state_messages[pending_message]['message'].sender
+                else:
+                    outbound=True
+                    pending_key=self.task_state_messages[pending_message]['message'].recipient
                 pending_message_state = self.task_state_messages[pending_message]['state']
                 # check pending message state
                 if pending_message_state == MSG_STATE_NEEDS_KEY:
@@ -658,21 +670,33 @@ class messaging_loop(threading.Thread):
                     self.task_state_pgpkeys[pending_key]['state']=KEY_LOOKUP_STATE_INITIAL # create task request for a lookup
                     self.task_state_messages[pending_message]['state']=MSG_STATE_KEY_REQUESTED
                 elif pending_message_state == MSG_STATE_KEY_REQUESTED:
-#                    print "Message is waiting on a key " + self.task_state_messages[pending_message]['message'].recipient
+                    print "Message is waiting on a key " + pending_key
                     if self.task_state_pgpkeys[pending_key]['state']==KEY_LOOKUP_STATE_FOUND:
                         self.task_state_messages[pending_message]['state']=MSG_STATE_READY_TO_PROCESS
-                        del self.task_state_pgpkeys[pending_key]
+#                        del self.task_state_pgpkeys[pending_key]
                 elif pending_message_state == MSG_STATE_QUEUED:
-                    print "Can we send queued message for " + self.task_state_messages[pending_message]['message'].recipient
+                    print "Can we send queued message for " + pending_key
                     if self.connected:
                         if outbound: # this should always be true as incoming messages should never be set to MSG_STATE_QUEUED
                             self.sendMessage(client,self.task_state_messages[pending_message]['message'])
                             self.task_state_messages[pending_message]['state']=MSG_STATE_DONE
                 elif pending_message_state == MSG_STATE_READY_TO_PROCESS:
-                    print "Deferred message now ready - send the message now"
+                    print "Deferred message now ready"
                     if outbound:
+                        print "Sending deferred message"
                         self.sendMessage(client,self.task_state_messages[pending_message]['message'])
                         self.task_state_messages[pending_message]['state']=MSG_STATE_DONE
+                    else:
+                        # This is an inbound message - throw it back at getmessage()
+                        print "Re-processing received deferred message"
+                        self.task_state_messages[pending_message]['state']=MSG_STATE_DONE
+                        msg = MQTTMessage()
+                        msg.payload = self.task_state_messages[pending_message]['message'].raw_message
+                        msg.topic = self.task_state_messages[pending_message]['message'].topic
+                        print msg.topic
+                        self.on_message(client,None,msg)
+#                        self.myMessaging.GetMessage(self.task_state_messages[pending_message]['message'].raw_message,self,allow_unsigned=self.allow_unsigned)
+
                 elif pending_message_state == MSG_STATE_DONE:
                     del self.task_state_messages[pending_message]
 
@@ -683,9 +707,14 @@ class messaging_loop(threading.Thread):
                     state = None
                 if state == KEY_LOOKUP_STATE_INITIAL:
                     key_topic = 'user/' + pgp_key + '/key'
+                    print "Subscribing to requested PGP key topic " + key_topic
                     res = client.subscribe(str(key_topic),1)
+                    print "Subscribing to requested PGP key topic " + key_topic + " ...Subscribe sent"
                     if res[0] == MQTT_ERR_SUCCESS:
                         self.task_state_pgpkeys[pgp_key]['state'] = KEY_LOOKUP_STATE_REQUESTED
+                        print "Subscribing to requested PGP key topic " + key_topic + " ...Subscribe Done"
+                    else:
+                        print "Subscribing to requested PGP key topic " + key_topic + " ...Subscribe Failed"
 #                elif state == KEY_LOOKUP_STATE_REQUESTED:
 #                    print "Waiting for key..."
 #                elif state == KEY_LOOKUP_STATE_FOUND:
@@ -708,10 +737,10 @@ class messaging_loop(threading.Thread):
                     message_to_del = task.data['id']
                     self.delete_pm(message_to_del)
                 elif task.command == 'get_key': # fetch a key from a user
-                    print "Requesting key"
-                    key_topic = 'user/' + task.data['keyid'] + '/key'
-                    client.subscribe(str(key_topic),1)
+                    print "Client Requesting key from backend"
                     self.task_state_pgpkeys[task.data['keyid']]['state']=KEY_LOOKUP_STATE_INITIAL # create task request for a lookup
+#                    key_topic = 'user/' + task.data['keyid'] + '/key'
+#                    client.subscribe(str(key_topic),1) # disabked 24th July as duplicating code in the state_table
                 elif task.command == 'get_profile':
                     key_topic = 'user/' + task.data['keyid'] + '/profile'
                     client.subscribe(str(key_topic),1)
@@ -724,6 +753,7 @@ class messaging_loop(threading.Thread):
                         key_topic = 'user/' + key_id + '/items'
                         client.subscribe(str(key_topic),1)
                         print "Requesting listings for " + key_id
+
                     else:
                     # Looks like user is viewing a specific item
                         try:
@@ -740,6 +770,11 @@ class messaging_loop(threading.Thread):
                     client.publish(self.pub_items,listings_out_message,1,True)      # Our published items queue, qos=1, durable
                     flash_msg = queue_task(0,'flash_message','Re-publishing listings')
                     self.q_res.put(flash_msg)
+                elif task.command == 'get_directory':
+                        # Request list of all users
+                        key_topic = 'user/+/profile'
+                        client.subscribe(str(key_topic),1)
+                        print "Requesting profiles for all users"
                 elif task.command == 'new_contact':
                     contact = Contact()
                     contact.displayname = task.data['displayname']

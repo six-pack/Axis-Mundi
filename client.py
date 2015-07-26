@@ -169,6 +169,8 @@ def cart():
 @app.route('/directory/<int:page>')
 @login_required
 def directory(page=1):
+  task = queue_task(1,'get_directory',None)
+  messageQueue.put(task)
   checkEvents()
   return render_template('not_yet.html')
 
@@ -741,11 +743,12 @@ def pks_lookup():
         messageQueue.put(task)
         print "Sent message requesting key..."
         # now, we wait...
-        sleep(0.01)
+        sleep(0.1)
         timer = 0
         key_block = session.query(app.roStorageDB.cachePGPKeys).filter_by(key_id=search_key).first()
         while (not key_block) and (timer < 20): # 20 second timeout for key lookups
             sleep (1)
+            checkEvents()
             key_block = session.query(app.roStorageDB.cachePGPKeys).filter_by(key_id=search_key).first()
             timer = timer + 1
         if not key_block:
@@ -771,6 +774,7 @@ def checkEvents():
         elif results.command == 'flash_status':
             app.connection_status = results.data
         elif results.command == 'resolved_key':
+            print "Backend resolved a key for front end " + results.data['keyid']
             app.pgpkeycache[results.data['keyid']] = results.data['key_block'] # add this key to the keycache
         else:
             flash("Unknown command received from client thread results queue", category="error")
