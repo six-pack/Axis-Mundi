@@ -67,6 +67,7 @@ class Message(object):
         return True
 
 class Messaging():
+    #TODO : Refactor messaging...
     # Overarching message handling class
     def __init__(self, mypgpkeyid, pgppassphrase, pgp_dir, app_dir):
         self.mypgpkeyid = mypgpkeyid
@@ -126,13 +127,11 @@ class Messaging():
             clear_lrawmessage = lrawmessage
 #        print clear_lrawmessage
         #### Step 2 - Is it signed?
-        # TODO - IF MESSAGE IS SIGNED FIND OUT WHAT KEY WE NEED - IF WE DON'T HAVE IT THEN DEFER THIS MESSAGE WHILE THE KEY IS RETRIEVED
         if clear_lrawmessage.startswith('-----BEGIN PGP SIGNED MESSAGE-----'):
             tmp_key=False
             try:
                 tmp_stripped_msg = clear_lrawmessage[clear_lrawmessage.index('{'):clear_lrawmessage.rindex('}')+1]
                 tmp_stripped_msg = tmp_stripped_msg.replace('\n', '')  # strip out all those newlines we added pre-signing
-                print tmp_stripped_msg
                 tmp_message = Message()
                 tmp_message.loadjson(tmp_stripped_msg)
                 tmp_key = tmp_message.sender
@@ -155,10 +154,11 @@ class Messaging():
 
             else:
                 print "Sending keyid could not be extracted from message - unable to verify sender key - dropping message..."
-                print clear_lrawmessage
+#                print clear_lrawmessage
                 return False
 #        print clear_lrawmessage
         if clear_lrawmessage.startswith('-----BEGIN PGP SIGNED MESSAGE-----'):
+            signed = True
             verify_signature = self.gpg.verify(clear_lrawmessage)
 #            if verify_signature.pubkey_fingerprint:    # Proper signature check, full fp only returned if key present
             if verify_signature.key_id:     # Weak signature check - TODO: TESTING ONLY!
@@ -173,6 +173,7 @@ class Messaging():
             print "WARNING: Unsigned message block identified..."
             if allow_unsigned:
                 clear_strippedlrawmessage = clear_lrawmessage
+                signed = False
             else:
                 return False
         #### Step 3 - Is it a valid JSON message?
@@ -183,7 +184,7 @@ class Messaging():
             return False
         else:
             # Finally make sure the sender keyid matches the signing keyid
-            if not verify_signature.key_id == message.sender:
+            if signed and not (verify_signature.key_id == message.sender):
                 print "WARNING! Apparent spoofed message - claiming to be from " + message.sender
                 return False
             if input_message_encrypted:

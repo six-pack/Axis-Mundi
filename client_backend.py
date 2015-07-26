@@ -57,6 +57,7 @@ class messaging_loop(threading.Thread):
         self.pub_profile = str("user/" + self.mypgpkeyid + "/profile")
         self.pub_key = str("user/" + self.mypgpkeyid + "/key")
         self.pub_items = str("user/" + self.mypgpkeyid + "/items")
+        self.pub_directory = str("user/" + self.mypgpkeyid + "/directory")
         self.storageDB = Storage
         self.connected = False
         self.workoffline = workoffline
@@ -66,6 +67,7 @@ class messaging_loop(threading.Thread):
         self.task_state_messages=defaultdict(defaultdict)  # This will hold the state of any outstanding message tasks
         self.task_state_pgpkeys=defaultdict(defaultdict)  # This will hold the state of any outstanding key retrieval tasks
         self.memcache_listing_items=defaultdict(defaultdict)  # This will hold cached listing items, entries will be created as needed
+        self.publish_identity = True
         threading.Thread.__init__ (self)
 
     def on_connect(self, client, userdata, flags, rc):  # TODO: Check that these parameters are right, had to add "flags" which may break "rc"
@@ -100,8 +102,7 @@ class messaging_loop(threading.Thread):
         print "On subscribe for " + str(mid) + " " + str(userdata)
 
     def on_message(self, client, userdata, msg):
-        print msg.topic
-        # Key blocks are a special case because they are not signed so we check for them first
+        # Key blocks and directory entries are a special case because they are not signed so we check for them first
         if re.match('user\/[A-F0-9]{16}\/key',msg.topic):
             # Here is a key, store it and unsubscribe
             print "Key Retrieved from " + str(msg.topic)
@@ -126,7 +127,29 @@ class messaging_loop(threading.Thread):
                 #TODO: Shall we just always allow keys to be received?
             return None
 #            imp_res = self.gpg.import_keys(msg.payload) # we could import it here but we use the local keyserver
+        elif re.match('user\/[A-F0-9]{16}\/directory',msg.topic):
+            # Here is a directory entry, store it and unsubscribe
+            client.unsubscribe(msg.topic)
+            keyid = msg.topic[msg.topic.index('/')+1:msg.topic.rindex('/')]
+            print "Directory entry: " + msg.payload + " " + msg.topic
+            #TODO: Use a memcache rather than write direct to database, use a periodic task to save memcache to cacheDirectory table (every 30 seconds or so)
+            #TODO: This memory cache will be necessary to deal with a large number of users in the directory
+            print "Adding directory entry "
+            display_dict=json.loads(msg.payload)
+            session = self.storageDB.DBSession()
+            if session.query(self.storageDB.cacheDirectory).filter(self.storageDB.cacheDirectory.key_id == keyid).count() > 0: # If it already exists then update
+                direntry = session.query(self.storageDB.cacheDirectory).filter(self.storageDB.cacheDirectory.key_id == keyid).update({
+                                                                self.storageDB.cacheDirectory.updated:datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S"),
+                                                                self.storageDB.cacheDirectory.display_name:display_dict['display_name']
+                                                            })
+            else:
+                direntry = self.storageDB.cacheDirectory(key_id=keyid,
+                                                            updated=datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S"),
+                                                            display_name=display_dict['display_name'])
 
+                session.add(direntry)
+            session.commit()
+            return
         #  let us see if we can parse the base message and have the necessary public key to check signature, if any
         incoming_message = self.myMessaging.GetMessage(msg.payload,self,msg.topic,allow_unsigned=self.allow_unsigned)
         # If this message was deferred lets stack it...
@@ -293,6 +316,16 @@ class messaging_loop(threading.Thread):
         # build and send listings message
         listings_out_message = Messaging.PrepareMessage(self.myMessaging,self.create_listings_msg())
         client.publish(self.pub_items,listings_out_message,1,True)      # Our published items queue, qos=1, durable
+        # build and send directory entry if user selected to publish
+        if self.publish_identity:
+#           directory_message = Message()
+#            directory_message.type = 'Directory Message'
+#            directory_message.sender = self.mypgpkeyid
+            directory_dict = {}
+            directory_dict['display_name'] = self.display_name
+            str_directory = json.dumps(directory_dict)
+            print "Directory string to publish : " + str_directory
+            client.publish(self.pub_directory,str_directory,1,True)      # Our published items queue, qos=1, durable
 
     def create_listings_msg(self):
         listings_message = Message()
@@ -556,6 +589,8 @@ class messaging_loop(threading.Thread):
             self.avatar_image =''
         self.retention_period = message_retention
         self.allow_unsigned = bool(allow_unsigned)
+        if publish_identity.value:
+            self.publish_identity = publish_identity
         # TODO: Read and assign all config options
         return True
 
@@ -670,7 +705,7 @@ class messaging_loop(threading.Thread):
                     self.task_state_pgpkeys[pending_key]['state']=KEY_LOOKUP_STATE_INITIAL # create task request for a lookup
                     self.task_state_messages[pending_message]['state']=MSG_STATE_KEY_REQUESTED
                 elif pending_message_state == MSG_STATE_KEY_REQUESTED:
-                    print "Message is waiting on a key " + pending_key
+#                    print "Message is waiting on a key " + pending_key
                     if self.task_state_pgpkeys[pending_key]['state']==KEY_LOOKUP_STATE_FOUND:
                         self.task_state_messages[pending_message]['state']=MSG_STATE_READY_TO_PROCESS
 #                        del self.task_state_pgpkeys[pending_key]
@@ -772,9 +807,9 @@ class messaging_loop(threading.Thread):
                     self.q_res.put(flash_msg)
                 elif task.command == 'get_directory':
                         # Request list of all users
-                        key_topic = 'user/+/profile'
+                        key_topic = 'user/+/directory'
                         client.subscribe(str(key_topic),1)
-                        print "Requesting profiles for all users"
+                        print "Requesting directory of users"
                 elif task.command == 'new_contact':
                     contact = Contact()
                     contact.displayname = task.data['displayname']

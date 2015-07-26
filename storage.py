@@ -98,6 +98,14 @@ class Storage():
         updated = Column(DateTime, nullable=False)
         keyblock = Column(String(8192))
 
+    class cacheDirectory(Base):
+        __tablename__ = 'cachedirectory'
+        id = Column(Integer, primary_key=True)
+        key_id = Column(String(16), nullable=False)
+        updated = Column(DateTime, nullable=False)
+        display_name = Column(String())
+        #TODO: Add other key fields but keep it light
+
     class cacheListings(Base):
         __tablename__ = 'cachelistings'
         id = Column(Integer, primary_key=True)

@@ -169,10 +169,11 @@ def cart():
 @app.route('/directory/<int:page>')
 @login_required
 def directory(page=1):
-  task = queue_task(1,'get_directory',None)
-  messageQueue.put(task)
   checkEvents()
-  return render_template('not_yet.html')
+  session = app.roStorageDB.DBSession()
+  directory = session.query(app.roStorageDB.cacheDirectory)
+  page_results = SqlalchemyOrmPage(directory, page=page, items_per_page=pager_items)
+  return render_template('directory.html', directory=page_results)
 
 
 @app.route('/listings')
@@ -500,6 +501,7 @@ def createidentity():                                               # This is a 
      flash('There was a problem creating the storage database '+ 'storage.db',category="error")
   session = installStorageDB.DBSession()
   # Now populate the config database with defaults + user specified data
+  # TODO: take account of user selection when setting publish_id
   defaults = create_defaults(installStorageDB,session,app.pgp_keyid,app.display_name,app.publish_id,wallet_seed)
   if not defaults:
     flash('There was a problem creating the initial configuration in the storage database '+ 'storage.db',category="error")

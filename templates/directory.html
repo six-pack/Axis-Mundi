@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% set active_page = "Contacts" %}
+
+{% block content %}
+  <h2>Directory</h2>
+
+    <div class="datagrid">
+    <table cellpadding="10" width="100%">
+        <tr>
+        <th width="350px" align="left"><strong>Name</strong></th>
+        <th width="170px"><strong>PGP Key</strong></th>
+        <th ><strong>Actions</strong></th>
+        </tr>
+        {% for entry in directory %}
+        <tr>
+        <td width="350px">{{entry.display_name}}</td>
+        <td width="170px">{{entry.key_id}}</td>
+        <td align="center">
+             <a class="btn" href="{{ url_for('new_message')}}{{entry.key_id}}">Message</a>
+             <a class="btn" href="{{ url_for('profile')}}{{entry.key_id}}">Profile</a>
+             <a class="btn" href="{{ url_for('external_listings',keyid=entry.key_id)}}">Listings</a></p></td>
+        </td>
+        </tr>
+        {% endfor %}
+        <tr>
+        <td align="left">
+        {% if directory.previous_page %}
+            <a href="/directory/{{directory.previous_page}}"><b>&lt;Previous</b></a>
+        {% endif %}
+        </td>
+        <td colspan="2"></td></td>
+        <td align="right">
+        {% if directory.next_page %}
+            <a href="/directory/{{directory.next_page}}"><b>Next&gt;</b></a>
+        {% endif %}
+        </td>
+        </tr>
+    </table>
+    </div>
+
+
+{% endblock %}
