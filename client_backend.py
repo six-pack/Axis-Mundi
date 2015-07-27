@@ -23,7 +23,8 @@ import string
 from platform import system as get_os
 import textwrap
 from constants import *
-
+import pybitcointools as btc
+from btc_utils import *
 
 class messaging_loop(threading.Thread):
 # Authentication shall set the password to a PGP clear-signed message containing the follow data only
@@ -68,6 +69,7 @@ class messaging_loop(threading.Thread):
         self.task_state_pgpkeys=defaultdict(defaultdict)  # This will hold the state of any outstanding key retrieval tasks
         self.memcache_listing_items=defaultdict(defaultdict)  # This will hold cached listing items, entries will be created as needed
         self.publish_identity = True
+        self.btc_master_key = ''
         threading.Thread.__init__ (self)
 
     def on_connect(self, client, userdata, flags, rc):  # TODO: Check that these parameters are right, had to add "flags" which may break "rc"
@@ -302,6 +304,8 @@ class messaging_loop(threading.Thread):
     def setup_message_queues(self,client):
         client.subscribe(self.sub_inbox,1)                      # Our generic incoming queue, qos=1
         client.publish(self.pub_key,self.gpg.export_keys(self.mypgpkeyid,False,minimal=True),  1,True)      # Our published pgp key block, qos=1, durable
+        # Calculate stealth address from the first child key of the master key
+        stealth_address = create_stealth_address(btc.privkey_to_pubkey(btc.bip32_extract_key(btc.bip32_ckd(self.btc_master_key,1))))
         # build and send profile message
         profile_message = Message()
         profile_message.type = 'Profile Message'
@@ -310,6 +314,7 @@ class messaging_loop(threading.Thread):
         profile_dict['display_name'] = self.display_name
         profile_dict['profile'] = self.profile_text
         profile_dict['avatar_image'] = self.avatar_image
+        profile_dict['stealth_address'] = stealth_address
         profile_message.sub_messages = profile_dict # todo: use .append to add a submessage instead
         profile_out_message = Messaging.PrepareMessage(self.myMessaging,profile_message)
         client.publish(self.pub_profile,profile_out_message,1,True)      # Our published profile queue, qos=1, durable
@@ -331,7 +336,8 @@ class messaging_loop(threading.Thread):
         listings_message = Message()
         listings_message.type = 'Listings Message'
         listings_message.sender = self.mypgpkeyid
-        # TODO: Loop and append listings (if any) to our message
+        # Calculate stealth address from the first child key of the master key
+        stealth_address = create_stealth_address(btc.privkey_to_pubkey(btc.bip32_extract_key(btc.bip32_ckd(self.btc_master_key,1))))
         session = self.storageDB.DBSession()
         listings = session.query(self.storageDB.Listings).filter_by(public=True).all()  # We're only going to publish listings marked as public=True  # .filter_by(public=True)
         if not listings:
@@ -351,6 +357,7 @@ class messaging_loop(threading.Thread):
                 listings_dict['qty'] = listing_item.qty_available
                 listings_dict['max_order_qty'] = listing_item.order_max_qty
                 listings_dict['publish_date'] = current_time()
+                listings_dict['stealth_address'] = stealth_address
                 # listings_dict_str = json.dumps(listings_dict)
                 listings_dict_str = json.dumps(listings_dict,sort_keys=True)
                 listings_dict_str = textwrap.fill(listings_dict_str, 80, drop_whitespace=False)
@@ -561,8 +568,14 @@ class messaging_loop(threading.Thread):
             avatar_image = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "avatar_image").first()
             message_retention = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "message_retention").first()
             allow_unsigned = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "accept_unsigned").first()
+            wallet_seed = session.query(self.storageDB.Config.value).filter(self.storageDB.Config.name == "wallet_seed").first()
         except:
             return False
+        # Calculate btc master key from wallet seed
+        if wallet_seed.value:
+            self.btc_master_key = btc.bip32_master_key(wallet_seed.value)
+        else:
+            print "ERROR: Failed to generate Bitcoin master key, no seed found in database"
         # Tor SOCKS proxy
         self.proxy = socks_proxy.value
         self.proxy_port = socks_proxy_port.value

@@ -134,7 +134,8 @@ def external_listings(keyid='none',id='none'):
         return redirect('/listings')
     # View anther users listings
     cmd_data={"keyid":keyid,"id":id}
-    messageQueue_data.empty()
+    with messageQueue_data.mutex:
+        messageQueue_data.queue.clear() # flush the queue incase there is residual crap
     task = queue_task(1,'get_listings',cmd_data)
     messageQueue.put(task)
     # now, we wait...
@@ -171,7 +172,7 @@ def cart():
 def directory(page=1):
   checkEvents()
   session = app.roStorageDB.DBSession()
-  directory = session.query(app.roStorageDB.cacheDirectory)
+  directory = session.query(app.roStorageDB.cacheDirectory).order_by(app.roStorageDB.cacheDirectory.display_name.asc())
   page_results = SqlalchemyOrmPage(directory, page=page, items_per_page=pager_items)
   return render_template('directory.html', directory=page_results)
 
@@ -495,6 +496,7 @@ def createidentity():                                               # This is a 
      return redirect(url_for('install'))
   # Now generate initial Bitcoin keys
   wallet_seed = generate_seed(18) # todo: ensure wordcount reflects size of wordlist
+  # Our published stealth address will be derived from a child key (index 1) which will be generated on the fly
   ## Now create & populate DB with initial values
   installStorageDB = Storage(app.dbsecretkey,'storage.db',app.appdir)
   if not installStorageDB.Start():
