@@ -30,37 +30,3 @@ DO NOT LOSE THE 'secret' file OR YOUR PGP KEY. ANYTHING IN YOUR LOCAL DATABASE W
 
 
 Six Pack 2015
-
-
-lose keyserver.(probably)
-get alt keyring working properly
-
-INCOMING MESSAGES
-when we get an onmessage for a directed message (pm or txn) -
-  - decompress if compressed
-  - decrypt if encrypted
-  - if signed - use gpg.verify to see if we get a valid fingerprint (we need the key already)
-  - if verify OK (we must hvae the key) then append to message dict and show as ready_to_process
-    else if we get no fingerprint but do get a keyid then append to key dict the keyid, append to the message dict and show key_needed
-    - send SUB to target key then update the message (and/or key) dict to show key requested
-  - exit onmessage and return to main loop
-
-when onmessage comes in for a pgp key then
-  - update key dict with (state = retreived) for the keyid in question
-  - exit onmessage and return to mainloop
-
-mainloop
- - enumerate message dict, for each message in dict
-   - is the message ready_to_process - if so then process it
-   - is the message key_requested if so we got to keep wating
-   - is the
-
-OUTGOING MESSAGES
-Wehen we get a send message
- - if we need to encrypt, do we have the recipients key? (check keyring and/or check pgpcache)
-    - if we do then preparemessage
-    - if we dont have the key then append to the message dict to show key_needed and append to the key dict the key_id
-         - send SUB to target key then update the message (and/or key) dict to show key requested
- - else this is an unencrypted broadcast message
-
-
