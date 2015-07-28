@@ -5,7 +5,7 @@ from flask_login import LoginManager,UserMixin,login_user,current_user,logout_us
 from functools import wraps, update_wrapper
 import gnupg
 from os.path import expanduser, isfile, isdir, dirname
-from os import makedirs
+from os import makedirs, sys
 import string
 import random
 from storage import Storage, SqlalchemyOrmPage
@@ -150,8 +150,7 @@ def external_listings(keyid='none',id='none'):
         sleep(0.5)
         timer = timer + 0.5
     if not listings_data:
-        resp = make_response("Listings not found", 404) # TODO - pretty this up
-        return resp
+        return render_template('no_listing.html')
     if not id == 'none':
         # This is a specific listing response
         return render_template('listing.html',listing=listings_data,pgp_key=keyid)
@@ -164,7 +163,9 @@ def external_listings(keyid='none',id='none'):
 @login_required
 def cart():
   checkEvents()
-  return render_template('not_yet.html')
+  session = app.roStorageDB.DBSession()
+  shopping_cart = session.query(app.roStorageDB.Cart)
+  return render_template('cart.html', shopping_cart=shopping_cart)
 
 @app.route('/directory')
 @app.route('/directory/<int:page>')
@@ -173,7 +174,7 @@ def directory(page=1):
   checkEvents()
   session = app.roStorageDB.DBSession()
   directory = session.query(app.roStorageDB.cacheDirectory).order_by(app.roStorageDB.cacheDirectory.display_name.asc())
-  page_results = SqlalchemyOrmPage(directory, page=page, items_per_page=pager_items)
+  page_results = SqlalchemyOrmPage(directory, page=page, items_per_page=pager_items*2)
   return render_template('directory.html', directory=page_results)
 
 
@@ -495,7 +496,8 @@ def createidentity():                                               # This is a 
      flash("Error creating identity - secret file not created",category="error")
      return redirect(url_for('install'))
   # Now generate initial Bitcoin keys
-  wallet_seed = generate_seed(18) # todo: ensure wordcount reflects size of wordlist
+  wordlist_path = app.bin_path+'/words.txt' # todo: make windows compatible
+  wallet_seed = generate_seed(wordlist_path,words=18) # todo: ensure wordcount reflects size of wordlist
   # Our published stealth address will be derived from a child key (index 1) which will be generated on the fly
   ## Now create & populate DB with initial values
   installStorageDB = Storage(app.dbsecretkey,'storage.db',app.appdir)
@@ -597,7 +599,7 @@ def setup(page=''):
           i2p_socks_proxy.value = request.form['i2p_proxy']
           i2p_socks_proxy_port.value = request.form['i2p_proxy_port']
           new_hubnodes = str(request.form['hubnodes']).splitlines()
-          session.query(app.roStoracgeDB.Config.value).filter(app.roStorageDB.Config.name == "hubnodes").delete()
+          session.query(app.roStorageDB.Config.value).filter(app.roStorageDB.Config.name == "hubnodes").delete()
           for node in new_hubnodes:
             new_conf_item = app.roStorageDB.Config(name="hubnodes")
             new_conf_item.value = node
@@ -803,6 +805,7 @@ if __name__ == '__main__':
   app.jinja_env.globals['csrf_token'] = generate_csrf_token
   app.SetupDone = False
   app.pgp_keyid = ""
+  app.bin_path = dirname(sys.argv[0]) # path of the module/executable - should work for both source and binary
   app.publish_id = True
   app.roStorageDB = Storage
   app.display_name = ""

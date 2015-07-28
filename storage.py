@@ -91,6 +91,17 @@ class Storage():
         code = Column(String(4), primary_key=True, nullable=False)
         name = Column(String(40), nullable=False)
 
+    class Cart(Base):
+        __tablename__ = 'shopping_cart'
+        id = Column(Integer, primary_key=True)
+        seller_key_id = Column(String(16), nullable=False)
+        raw_item = Column(String()) # raw signed item message text
+        item = Column(String()) # json
+        quantity = Column(Integer)
+        shipping = Column(String())
+
+
+
     class cachePGPKeys(Base):
         __tablename__ = 'cachepgpkeys'
         id = Column(Integer, primary_key=True)

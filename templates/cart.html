@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% set active_page = "Trade" %}
+
+{% block content %}
+  <h2>Shopping Cart</h2>
+  {% if shopping_cart %}
+    <div class="datagrid">
+
+    <table cellpadding="10">
+        <tr>
+            <th></th>
+        <th width="150px" align="left"><strong>Seller</strong></th>
+        <th width="400px"><strong>Item</strong></th>
+        <th width="80px"><strong>Qty</strong></th>
+        <th width="200px"><strong>Price</strong></th>
+        </tr>
+        {% for item in shopping_cart %}
+        <tr>
+        <td>{{item.seller}}</td>
+        <td>{{item.item}}</td>
+        <td>{{item.quantity}}</td>
+        <td>{{item.unit_price}} {{item.currency}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    </div>
+  {% else %}
+        <h3><center>Your shopping cart is empty</center></h3>
+  {% endif %}
+
+{% endblock %}

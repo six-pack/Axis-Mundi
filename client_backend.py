@@ -238,7 +238,7 @@ class messaging_loop(threading.Thread):
             #print msg.payload
             listings_message = incoming_message # self.myMessaging.GetMessage(msg.payload,self,allow_unsigned=False) # Never allow unsigned listings
             if listings_message:
-                print listings_message
+#                print listings_message
                 if not keyid==listings_message.sender:
                     print "Listings were signed by a different key - discarding..."
                 else:
@@ -302,6 +302,8 @@ class messaging_loop(threading.Thread):
 
 
     def setup_message_queues(self,client):
+        # Sub to directory each conenction for now
+        client.subscribe('user/+/directory',1)  # TODO: We definitely don't want to do this each time user connects - put such SUBs in an one time client SUB setup
         client.subscribe(self.sub_inbox,1)                      # Our generic incoming queue, qos=1
         client.publish(self.pub_key,self.gpg.export_keys(self.mypgpkeyid,False,minimal=True),  1,True)      # Our published pgp key block, qos=1, durable
         # Calculate stealth address from the first child key of the master key

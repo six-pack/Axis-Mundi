@@ -77,9 +77,9 @@ def parse_user_name(name):
         return None
    # display_name =
 
-def generate_seed(words=12):
+def generate_seed(wordlist_path,words=12):
     seed=''
-    wordlist = getWords('words.txt') # TODO: allow user specified wordlist AND handle different locations/non-existant words
+    wordlist = getWords(wordlist_path) # TODO: allow user specified wordlist AND handle different locations/non-existant words
     if words<12: words=12
     for x in range(0, words-1):
         seed = ' '.join(random.SystemRandom().choice(wordlist) for _ in range(words))
