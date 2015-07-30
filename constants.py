@@ -8,3 +8,6 @@ KEY_LOOKUP_STATE_INITIAL = 0
 KEY_LOOKUP_STATE_REQUESTED = 1
 KEY_LOOKUP_STATE_FOUND = 2
 KEY_LOOKUP_STATE_NOTFOUND = 3
+
+CACHE_EXPIRY_LIMIT = 3600 # After CACHE_EXPIRY_LIMIT seconds any cached listings, profiles etc will be refetched when requested
+

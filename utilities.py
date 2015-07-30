@@ -39,6 +39,10 @@ def current_time():
     utc_datetime = datetime.utcnow()
     return utc_datetime.strftime("%Y-%m-%d %H:%M")+":00" # always zero seconds to reduce impact of clock time skew leakage
 
+def get_age(when):
+    age=datetime.utcnow()-when
+    return age.seconds
+
 def encode_image(buf,size):
     im = Image.open(cStringIO.StringIO(buf))
     im.thumbnail(size, Image.ANTIALIAS)

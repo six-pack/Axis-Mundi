@@ -9,7 +9,7 @@ from mqtt_client import Client as mqtt
 from storage import Storage
 import gnupg
 from messaging import Message, Messaging, Contact
-from utilities import queue_task, current_time, got_pgpkey,parse_user_name, full_name, Listing
+from utilities import queue_task, current_time, got_pgpkey,parse_user_name, full_name, Listing, get_age
 import json
 import socks
 import socket
@@ -217,13 +217,29 @@ class messaging_loop(threading.Thread):
                 else:
                     profile_text = profile_message.sub_messages['profile']
                     session = self.storageDB.DBSession()
+
                     if 'display_name' in profile_message.sub_messages and 'profile' in profile_message.sub_messages and 'avatar_image' in profile_message.sub_messages:
-                        cachedprofile = self.storageDB.cacheProfiles(key_id=keyid,
-                                                            updated=datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S"),
-                                                            display_name=profile_message.sub_messages['display_name'],
-                                                            profile_text=profile_message.sub_messages['profile'],
-                                                            avatar_base64=profile_message.sub_messages['avatar_image'])
-                        session.add(cachedprofile)
+                        if session.query(self.storageDB.cacheProfiles).filter(self.storageDB.cacheProfiles.key_id == keyid).count() > 0: # If it already exists then update
+                            cachedprofile = session.query(self.storageDB.cacheProfiles).filter(self.storageDB.cacheProfiles.key_id == keyid).update({
+                                                                            self.storageDB.cacheProfiles.updated:datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S"),
+                                                                            self.storageDB.cacheProfiles.display_name:profile_message.sub_messages['display_name'],
+                                                                            self.storageDB.cacheProfiles.profile_text:profile_message.sub_messages['profile'],
+                                                                            self.storageDB.cacheProfiles.avatar_base64:profile_message.sub_messages['avatar_image']
+                                                                        })
+                        else:
+                            cachedprofile = self.storageDB.cacheProfiles(key_id=keyid,
+                                                updated=datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S"),
+                                                display_name=profile_message.sub_messages['display_name'],
+                                                profile_text=profile_message.sub_messages['profile'],
+                                                avatar_base64=profile_message.sub_messages['avatar_image'])
+                            session.add(cachedprofile)
+                        session.commit()
+
+
+
+
+
+
                         session.commit()
                     else:
                         print "Profile message did not contain mandatory fields"
@@ -234,7 +250,6 @@ class messaging_loop(threading.Thread):
             # Here is a listings message, store it and unsubscribe
             client.unsubscribe(msg.topic)
             keyid = msg.topic[msg.topic.index('/')+1:msg.topic.rindex('/')]
-            #TODO: Check we have really been sent a valid listings message for the key indicated
             #print msg.payload
             listings_message = incoming_message # self.myMessaging.GetMessage(msg.payload,self,allow_unsigned=False) # Never allow unsigned listings
             if listings_message:
@@ -242,11 +257,26 @@ class messaging_loop(threading.Thread):
                 if not keyid==listings_message.sender:
                     print "Listings were signed by a different key - discarding..."
                 else:
-                    listings = listings_message.sub_messages
+                    listings = json.dumps(listings_message.sub_messages)
                     print "Listings message received from " + keyid
-                    session = self.storageDB.DBSession()
-                    # TODO : Write listings to cache
-                    # TODO: check if requested listing is cached in the db
+                    # add this to the cachelistings table
+
+                    if listings_message.type == 'Listings Message' and listings:
+                        session = self.storageDB.DBSession()
+                        if session.query(self.storageDB.cacheListings).filter(self.storageDB.cacheListings.key_id == keyid).count() > 0: # If it already exists then update
+                            print "There appears to be an existing listings message in the db cache for user " + keyid
+                            cachedlistings = session.query(self.storageDB.cacheListings).filter(self.storageDB.cacheListings.key_id == keyid).update({
+                                                                            self.storageDB.cacheListings.updated:datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S"),
+                                                                            self.storageDB.cacheListings.listings_block:listings
+                                                                        })
+                        else:
+                            print "There is nothing in the listings cache for user, creating new cache entry"
+                            cachedlistings= self.storageDB.cacheListings(key_id=keyid,
+                                                                updated=datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S"),
+                                                                listings_block=listings)
+                            session.add(cachedlistings)
+                        session.commit()
+
                     verified_listings = []
                     if not listings_message.sub_messages:
                         self.q_data.put ('none')
@@ -272,7 +302,7 @@ class messaging_loop(threading.Thread):
                                     continue
                                 # Add this listing (or update if already present) in the listings item memory cache
                                 self.memcache_listing_items[keyid][str(verified_item['id'])]= (item,verified_item) # Bit shitty - tuple containing raw, signed msg & validate python object
-                                print self.memcache_listing_items[keyid]
+                                #print self.memcache_listing_items[keyid]
                                 #self.memcache_listing_items[keyid]['raw_msg']= verified_item
                         self.q_data.put (verified_listings)
 
@@ -757,9 +787,7 @@ class messaging_loop(threading.Thread):
                     state = None
                 if state == KEY_LOOKUP_STATE_INITIAL:
                     key_topic = 'user/' + pgp_key + '/key'
-                    print "Subscribing to requested PGP key topic " + key_topic
                     res = client.subscribe(str(key_topic),1)
-                    print "Subscribing to requested PGP key topic " + key_topic + " ...Subscribe sent"
                     if res[0] == MQTT_ERR_SUCCESS:
                         self.task_state_pgpkeys[pgp_key]['state'] = KEY_LOOKUP_STATE_REQUESTED
                         print "Subscribing to requested PGP key topic " + key_topic + " ...Subscribe Done"
@@ -800,21 +828,73 @@ class messaging_loop(threading.Thread):
                     key_id = task.data['keyid']
                     print "Get_listings command received : " + key_id + "/" + item_id
                     if item_id == 'none':
-                        key_topic = 'user/' + key_id + '/items'
-                        client.subscribe(str(key_topic),1)
-                        print "Requesting listings for " + key_id
+                        # TODO check cache first
+
+
+
+                        session = self.storageDB.DBSession()
+                        cachelistings = session.query(self.storageDB.cacheListings).filter_by(key_id=key_id).first()
+                        if not cachelistings: # no existing listings found in cache, request it
+                            key_topic = 'user/' + key_id + '/items'
+                            client.subscribe(str(key_topic),1)
+                            print "Requesting listings for " + key_id
+                        else: # we have returned an existing listings from the cache - check age of cached listings
+                            if get_age(cachelistings.updated) > CACHE_EXPIRY_LIMIT:
+                                # cached listings too old - get latest listings
+                                key_topic = 'user/' + key_id + '/items'
+                                client.subscribe(str(key_topic),1)
+                                print "Requesting updated listings for " + key_id
+                            else:
+                                # we have an unexpired cacehd copy of this listing so just return listings from db -
+                                print "Request for listings ignored...we have a copy in cache that has not expired..."
+                                print "Extracting listings from cached copy"
+                                verified_listings=[]
+                                listings_dict = json.loads(cachelistings.listings_block)
+                                if not listings_dict:
+                                    print "No items in the cached listingns block for " + key_id
+                                    self.q_data.put ('none')
+                                else:
+                                    for item in listings_dict:
+                                        verify_item = self.gpg.verify(item)
+                                        item = item.replace('\n', '') # remove the textwrapping we applied when encoding this submessage
+                                        if verify_item.key_id == key_id: # TODO - this is a weak check - check the fingerprint is set
+                                            try:
+                                                stripped_item = item[item.index('{'):item.rindex('}')+1]
+                                            except:
+                                                stripped_item = ''
+                                                print "Error: item not extracted from signed sub-message"
+                                                continue
+                                            try:
+                                                verified_item = json.loads(stripped_item) # TODO: Additional input validation required here
+                                                verified_listings.append(verified_item)
+                                            except:
+                                                print "Error: item json not extracted from signed sub-message"
+                                                print item
+                                                continue
+                                            # Add this listing (or update if already present) in the listings item memory cache
+                                            self.memcache_listing_items[key_id][str(verified_item['id'])]= (item,verified_item) # Bit shitty - tuple containing raw, signed msg & validate python object
+                                            #print self.memcache_listing_items[key_id]
+                                            #self.memcache_listing_items[keyid]['raw_msg']= verified_item
+                                        else:
+                                            print "Error: Item signture not verified for listing message held in cache db"
+                                    self.q_data.put (verified_listings)
 
                     else:
                     # Looks like user is viewing a specific item
+                    #TODO when a user attempts to view an item without first retrieving listings it shows as blank, user must refresh - FIX IT
                         try:
-                            print self.memcache_listing_items
-                            print self.memcache_listing_items[key_id]
+                            #print self.memcache_listing_items
+                            #print self.memcache_listing_items[key_id]
                             if not self.memcache_listing_items[key_id][item_id] == '':
                                 print "Entry found in listing item memcache..."
-                                print self.memcache_listing_items[key_id][item_id][1] # [0] is the raw, signed copy of the listiing, [1] is stripped
+#                                print self.memcache_listing_items[key_id][item_id][1] # [0] is the raw, signed copy of the listiing, [1] is stripped
                                 self.q_data.put (self.memcache_listing_items[key_id][item_id][1])
-                        except: # TODO: Reduce scope to just keyerror
+                        except KeyError:
                             print "Could not find  memcache entry for " + str(key_id + ' ' + item_id)
+                            # Try refreshing listings for this user (this can happen when the user clicks a direct link to an item without viewing listigns first)
+                            key_topic = 'user/' + key_id + '/items'
+                            client.subscribe(str(key_topic),1)
+                            print "Requesting updated listings for " + key_id
                 elif task.command == 'publish_listings':
                     listings_out_message = Messaging.PrepareMessage(self.myMessaging,self.create_listings_msg())
                     client.publish(self.pub_items,listings_out_message,1,True)      # Our published items queue, qos=1, durable

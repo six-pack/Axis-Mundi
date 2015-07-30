@@ -7,9 +7,9 @@
             <tr><td width="300" rowspan="6" ><img width="256" height="256" alt="{{listing.item}}" src={% if listing.image %}"data:image/png;base64,{{listing.image}}"{% else %}"/static/img/none.png"{% endif %} /></td>
             <tr><td width="200"><b>Price</b></td><td><b>{{listing.unit_price}} {{listing.currency}} (x.xx BTC)</b></td><td><form method="post" action="{{ url_for('cart') }}">
                 <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
-                <input type="hidden" name="pgpkey_id" value="{{listing.key_id}}"><div style="btn"><button type="submit" class = "btn">Add to Cart</button></div></form></td></tr>
+                <input type="hidden" name="pgpkey_id" value="{{pgp_key}}"><input type="hidden" name="listing_id" value="{{listing.id}}"><div style="btn"><button type="submit" class = "btn">Add to Cart</button></div></form></td></tr>
             <tr><td width="200"><B>Quantity Available </b></td><td>{{listing.qty}}</td></tr>
-            <tr><td width="200"><B>Seller</b></td><td>{{pgp_key}}</td><td><a class="btn" href="{{ url_for('new_message')}}{{pgp_key}}">Send Message</a></td></tr>
+            <tr><td width="200"><B>Seller</b></td><td><a href="/profile/{{ pgp_key }}">{{ pgp_key }}</a></td><td><a class="btn" href="{{ url_for('new_message')}}{{pgp_key}}">Send Message</a></td></tr>
             <tr><td width="200"><B>Ships From</b></td><td>Not Specified</td></tr>
             <tr><td width="200"><B>Ships To</b></td><td>Worldwide</td></tr>
 

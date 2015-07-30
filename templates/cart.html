@@ -6,21 +6,29 @@
   {% if shopping_cart %}
     <div class="datagrid">
 
-    <table cellpadding="10">
-        <tr>
-            <th></th>
-        <th width="150px" align="left"><strong>Seller</strong></th>
-        <th width="400px"><strong>Item</strong></th>
-        <th width="80px"><strong>Qty</strong></th>
-        <th width="200px"><strong>Price</strong></th>
-        </tr>
-        {% for item in shopping_cart %}
-        <tr>
-        <td>{{item.seller}}</td>
-        <td>{{item.item}}</td>
-        <td>{{item.quantity}}</td>
-        <td>{{item.unit_price}} {{item.currency}}</td>
-        </tr>
+        {% for user in shopping_cart %}
+            <table cellpadding="10">
+            <h4>Seller: {{user}}</h4>
+            <tr>
+            <th width="100px" align="left"><strong></strong></th>
+            <th width="300px" align="left"><strong>Item</strong></th>
+            <th width="50px"><strong>Qty</strong></th>
+            <th width="150px"><strong>Shipping</strong></th>
+            <th width="150px"><strong>Price</strong></th>
+            </tr>
+
+            {% for item in shopping_cart[user]%}
+            <tr>
+                <td></td>
+                {% set item_dict = shopping_cart[user][item] %}
+                {% set shipping_options_dict = item_dict['dict_item'] %}
+            <td>{{ item_dict['item'] }}</td>
+            <td><input type="text" name="quantity" size="2" class="inputs" placeholder="Qty" required value="{{ item_dict['quantity'] }}"></td>
+            <td>{{ item_dict['shipping'] }}</td>
+
+
+            </tr>
+            {%endfor%}
         {% endfor %}
     </table>
     </div>

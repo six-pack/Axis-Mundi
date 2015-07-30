@@ -16,6 +16,7 @@
         <li{% if active_page == 'home' %} class="current-menu-item" {% endif %}><a href="{{ url_for('home') }}">Home</a></li>
         <li{% if active_page == 'Orders' %} class="current-menu-item" {% endif %}><a href="{{ url_for('orders') }}">Trade</a>
           <ul>
+            <li><a href="{{ url_for('cart') }}">Shopping Cart</a></li>
             <li><a href="{{ url_for('orders') }}/buying">Buying</a></li>
             <li><a href="{{ url_for('orders') }}/selling">Selling</a></li>
             <li><a href="{{ url_for('listings') }}">My Listings</a></li>

@@ -11,12 +11,15 @@ import random
 from storage import Storage, SqlalchemyOrmPage
 from client_backend import messaging_loop
 import Queue
-from utilities import queue_task,encode_image,generate_seed
+from utilities import queue_task,encode_image,generate_seed,current_time, get_age
 from defaults import create_defaults
 from time import sleep
 import base64
 from platform import system as get_os
 import pybitcointools as btc
+from collections import defaultdict
+import json
+from constants import *
 
  # /////////// patch socket module to attempt to fix bug #12 -  "socket.error: [Errno 98] Address already in use"
  # This fixes re-use error but results in multiple cliet.py instances which is very undesirable
@@ -132,10 +135,10 @@ def export_listings():
 def external_listings(keyid='none',id='none'):
     if keyid == 'none':
         return redirect('/listings')
-    # View anther users listings
-    cmd_data={"keyid":keyid,"id":id}
+    # View another users listings
     with messageQueue_data.mutex:
         messageQueue_data.queue.clear() # flush the queue incase there is residual crap
+    cmd_data={"keyid":keyid,"id":id}
     task = queue_task(1,'get_listings',cmd_data)
     messageQueue.put(task)
     # now, we wait...
@@ -143,12 +146,12 @@ def external_listings(keyid='none',id='none'):
     while timer <20: # todo: this chunk of code is deeply crap - rewrite.
         listings_data = checkDataQ()
         if listings_data=='none':
-            listings_data=None
+            listings_data=None # an empty listing message has arrived, break and process it
             break
         elif listings_data:
-            break
-        sleep(0.5)
-        timer = timer + 0.5
+            break # a listing message has arrived, break and process it
+        sleep(0.25)
+        timer = timer + 0.25
     if not listings_data:
         return render_template('no_listing.html')
     if not id == 'none':
@@ -159,12 +162,44 @@ def external_listings(keyid='none',id='none'):
         return render_template('listings.html',listings=listings_data,pgp_key=keyid)
 
 @app.route('/cart',methods=["GET","POST"])
-@app.route('/cart/add',methods=["GET","POST"])
+@app.route('/cart/<string:action>',methods=["GET","POST"])
 @login_required
-def cart():
+def cart(action=''):
+    # todo calculate price here based on current exchange rates
+  shopping_cart = defaultdict(defaultdict) # lol...
   checkEvents()
   session = app.roStorageDB.DBSession()
-  shopping_cart = session.query(app.roStorageDB.Cart)
+  cart_items = session.query(app.roStorageDB.Cart).order_by(app.roStorageDB.Cart.seller_key_id.asc())
+  if request.method == 'POST':
+        if action == 'add':
+            # New item in cart - add it to database along with default quantity & shipping options unless
+            # quantuty and shipping were selected on the listings page TODO add qty and shipping to listing page
+            seller_key = request.form['seller_key']
+            item_id = request.form['item_id']
+            new_item={"key_id":seller_key,"item_id":item_id}  # todo read seller key and item id from form data'
+            task = queue_task(1,'add_to_cart',new_item)
+        if action == 'remove':
+            # delete item from cart - remove it from database
+            seller_key = request.form['seller_key']
+            item_id = request.form['item_id']
+            del_item={"key_id":seller_key,"item_id":item_id}
+            task = queue_task(1,'remove_from_cart',new_item)
+        else:
+            # User is updating something in the cart - find out what and then update db
+            # possible changes are Quantity or shipping
+            quantity_list= [0,1,2,0,1,1] # todo - get from form data - list of selected quantities
+            shipping_list= [1,1,1,1,1,1] # todo - get from form data - list of selected shipping options
+            cart_updates={"quantitiy_list":quantity_list,"shipping_list":shipping_list}
+            task = queue_task(1,'update_cart',cart_updates)
+        # Now send the relevant cart_update message to backend and await response - then return page
+        messageQueue.put(task)
+        # now, we wait...
+        timer = 0
+        # todo - add wait for message_queue data to be returned (or just re-read the database)
+
+  # convert the results into a format usable by the cart page
+  for cart_item in cart_items:
+     shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
   return render_template('cart.html', shopping_cart=shopping_cart)
 
 @app.route('/directory')
@@ -193,18 +228,16 @@ def listings(page=1):
 @login_required
 def profile(keyid=None):
     checkEvents()
-    # TODO:Implement caching for (previously viewed) profiles in the local database
     # TODO:Check to see if this user is in our contacts list
     # TODO:Message to client_backend to SUB target user profile and target user listings
     if keyid is None:
       keyid = app.pgp_keyid # if no key specified by user then look up our own profile
 #    task = queue_task(1,'get_profile',keyid)
 #    messageQueue.put(task)
-    # TODO: show the cached page so the user doesn't have to wait for the response
     # for now wait for the response for up to [timeout] seconds
     session = app.roStorageDB.DBSession()
     profile = session.query(app.roStorageDB.cacheProfiles).filter_by(key_id=keyid).first()
-    if not profile:
+    if not profile: # no existing profile found in cache, request it
         key={"keyid":keyid}
         task = queue_task(1,'get_profile',key)
         messageQueue.put(task)
@@ -219,7 +252,16 @@ def profile(keyid=None):
             resp = make_response("Profile not found", 404) # TODO - pretty this up
             return resp
     else: # we have returned an existing profile from the cache
-        print "Existing entry found in profile cache..." # Todo : deal with updating profile by sending background get_profile
+        print "Existing entry found in profile cache..."
+        # how old is the cached data
+        age=get_age(profile.updated)
+        if age > CACHE_EXPIRY_LIMIT:
+            print 'Cached profile is too old, requesting latest copy'
+            key={"keyid":keyid}
+            task = queue_task(1,'get_profile',key)
+            messageQueue.put(task)
+            flash("Cached profile has expired, the latest profile has been requested in the background. Refresh the page.",category="message")
+
     return render_template('profile.html',profile=profile)
 
 @app.route('/contacts')
@@ -822,7 +864,7 @@ if __name__ == '__main__':
   app.current_broker = None
   app.current_broker_users = None
   if isfile(app.appdir + "/secret") and isfile (app.appdir + "/storage.db") :   app.SetupDone = True # TODO: A better check is needed here
-  app.run(debug=True,threaded=True) # Enable threading, primarily for pks keyserver support until the keyserver is moved to client_backend
+  app.run(debug=True,threaded=True) # TODO: turn off threading - either move PKS lookup handler to backend thread or inject retreived keys directly into keyring
 
 
 
