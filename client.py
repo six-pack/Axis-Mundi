@@ -174,11 +174,12 @@ def cart(action=''):
         if action == 'add':
             # New item in cart - add it to database along with default quantity & shipping options unless
             # quantuty and shipping were selected on the listings page TODO add qty and shipping to listing page
-            seller_key = request.form['seller_key']
-            item_id = request.form['item_id']
-            new_item={"key_id":seller_key,"item_id":item_id}  # todo read seller key and item id from form data'
+            seller_key = request.form['pgpkey_id']
+            item_id = request.form['listing_id']
+            new_item={"key_id":seller_key,"item_id":item_id}
+            print "Adding to cart " + new_item.__str__()
             task = queue_task(1,'add_to_cart',new_item)
-        if action == 'remove':
+        elif action == 'remove':
             # delete item from cart - remove it from database
             seller_key = request.form['seller_key']
             item_id = request.form['item_id']
@@ -190,6 +191,7 @@ def cart(action=''):
             quantity_list= [0,1,2,0,1,1] # todo - get from form data - list of selected quantities
             shipping_list= [1,1,1,1,1,1] # todo - get from form data - list of selected shipping options
             cart_updates={"quantitiy_list":quantity_list,"shipping_list":shipping_list}
+            print "Updating cart " + cart_updates.__str__()
             task = queue_task(1,'update_cart',cart_updates)
         # Now send the relevant cart_update message to backend and await response - then return page
         messageQueue.put(task)
@@ -199,7 +201,10 @@ def cart(action=''):
 
   # convert the results into a format usable by the cart page
   for cart_item in cart_items:
+     print cart_item.__dict__['item']
+     cart_item.__dict__['item'] =  json.loads(cart_item.__dict__['item'] )
      shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
+ # print "cart flask route paramateres to jinja:" + shopping_cart[cart_item.seller_key_id][cart_item.id].__str__()
   return render_template('cart.html', shopping_cart=shopping_cart)
 
 @app.route('/directory')

@@ -95,6 +95,7 @@ class Storage():
         __tablename__ = 'shopping_cart'
         id = Column(Integer, primary_key=True)
         seller_key_id = Column(String(16), nullable=False)
+        item_id = Column(String(16), nullable=False)
         raw_item = Column(String()) # raw signed item message text
         item = Column(String()) # json
         quantity = Column(Integer)

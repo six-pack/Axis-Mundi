@@ -483,3 +483,13 @@ label.filebtn input[type="file"] {
   border-top: #eaeaea solid 1px;
   text-align: right;
 }
+
+/* Box style */
+.round_box {
+    background-color: #fAfAfA;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid lightgrey;
+    margin: 5px;
+    border-radius: 25px;
+}

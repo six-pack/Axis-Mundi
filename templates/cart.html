@@ -6,31 +6,39 @@
   {% if shopping_cart %}
     <div class="datagrid">
 
+        <form method="post" action="{{ url_for('cart',action='update') }}">
+        <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
         {% for user in shopping_cart %}
-            <table cellpadding="10">
-            <h4>Seller: {{user}}</h4>
+        <div class="round_box">
+        <table cellpadding="5">
+            <tr><td colspan="4"><p style="font-size:20px"><b>Seller: {{user}}</b></p></td><td><button type="submit" style="float:right" class = "btn">Checkout</button></td></tr>
             <tr>
             <th width="100px" align="left"><strong></strong></th>
             <th width="300px" align="left"><strong>Item</strong></th>
             <th width="50px"><strong>Qty</strong></th>
-            <th width="150px"><strong>Shipping</strong></th>
+            <th width="250px"><strong>Shipping</strong></th>
             <th width="150px"><strong>Price</strong></th>
             </tr>
 
             {% for item in shopping_cart[user]%}
-            <tr>
-                <td></td>
                 {% set item_dict = shopping_cart[user][item] %}
                 {% set shipping_options_dict = item_dict['dict_item'] %}
-            <td>{{ item_dict['item'] }}</td>
-            <td><input type="text" name="quantity" size="2" class="inputs" placeholder="Qty" required value="{{ item_dict['quantity'] }}"></td>
-            <td>{{ item_dict['shipping'] }}</td>
+                <tr>
+                <td><img width="64" height="64" alt="{{item_dict.item['item']}}" src={% if item_dict.item['image'] %}"data:image/png;base64,{{item_dict.item['image']}}"{% else %}"/static/img/none.png"{% endif %} /></td>
+                <td>{{ item_dict.item['item'] }}</td>
+                <td><input type="text" name="quantity_{{ item_dict.item['id'] }}" size="2" class="inputs" placeholder="Qty" required value="{{ item_dict['quantity'] }}"></td>
+                <td><div class = "select_style"><select name="shipping_{{ item_dict.item['id'] }}" style="width: 250px">
+                {% for key in key_list %} <!--TODO: get rid of key references and replace with shipping-->
+                    <option value="{{ key.keyid }}">({{ key.keyid}}) &nbsp; {{ item_dict['shipping'] }}</option>
+            {% endfor %}
+            </select></div></td></tr>
+        {%endfor%}
+         </table>
+         </div>
+         <br>
+    {% endfor %}
+    </form>
 
-
-            </tr>
-            {%endfor%}
-        {% endfor %}
-    </table>
     </div>
   {% else %}
         <h3><center>Your shopping cart is empty</center></h3>
