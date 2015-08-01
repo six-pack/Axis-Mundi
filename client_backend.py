@@ -639,7 +639,7 @@ class messaging_loop(threading.Thread):
         cart_res=dict(msg)
         session = self.storageDB.DBSession()
 
-        cart_db_res = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).count() > 0 # If it already exists then update
+        cart_db_res = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).filter(self.storageDB.Cart.item_id == cart_res['id']).count() > 0 # If it already exists then update
         if cart_db_res:
             print "Updating existing cart entry with another add"
             # TODO - since item is alrea in cart, we should add new quantity to exsintng quantity  - for now we overwrite exisiting entry

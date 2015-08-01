@@ -6,12 +6,15 @@
   {% if shopping_cart %}
     <div class="datagrid">
 
-        <form method="post" action="{{ url_for('cart',action='update') }}">
-        <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
         {% for user in shopping_cart %}
         <div class="round_box">
         <table cellpadding="5">
-            <tr><td colspan="4"><p style="font-size:20px"><b>Seller: {{user}}</b></p></td><td><button type="submit" style="float:right" class = "btn">Checkout</button></td></tr>
+        <form method="post" action="{{ url_for('cart',action='update') }}">
+            <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+            <tr><td colspan="3"><p style="font-size:20px"><b>Seller: {{user}}</b></p></td><td colspan="2">
+                <button type="submit" style="float:right" class = "btn" name ="action" value="delete">Delete</button>
+                <button type="submit" style="float:right" class = "btn" name ="action" value="update">Update</button>
+                <button type="submit" style="float:right" class = "btn" name ="action" value="checkout">Checkout</button></td></tr>
             <tr>
             <th width="100px" align="left"><strong></strong></th>
             <th width="300px" align="left"><strong>Item</strong></th>
@@ -31,13 +34,14 @@
                 {% for key in key_list %} <!--TODO: get rid of key references and replace with shipping-->
                     <option value="{{ key.keyid }}">({{ key.keyid}}) &nbsp; {{ item_dict['shipping'] }}</option>
             {% endfor %}
-            </select></div></td></tr>
+            </select></div></td><td style="text-align: center">{{ item_dict.item['unit_price'] }} {{ item_dict.item['currency'] }}</td></tr>
         {%endfor%}
-         </table>
-         </div>
-         <br>
+        </form>
+        </table>
+        </div>
+        <br>
     {% endfor %}
-    </form>
+
 
     </div>
   {% else %}

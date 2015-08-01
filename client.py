@@ -161,13 +161,12 @@ def external_listings(keyid='none',id='none'):
         # This is a full listings response
         return render_template('listings.html',listings=listings_data,pgp_key=keyid)
 
-@app.route('/cart',methods=["GET","POST"])
+@app.route('/cart',methods=["GET"])
 @app.route('/cart/<string:action>',methods=["GET","POST"])
 @login_required
 def cart(action=''):
     # todo calculate price here based on current exchange rates
   shopping_cart = defaultdict(defaultdict) # lol...
-  checkEvents()
   session = app.roStorageDB.DBSession()
   cart_items = session.query(app.roStorageDB.Cart).order_by(app.roStorageDB.Cart.seller_key_id.asc())
   if request.method == 'POST':
@@ -177,34 +176,29 @@ def cart(action=''):
             seller_key = request.form['pgpkey_id']
             item_id = request.form['listing_id']
             new_item={"key_id":seller_key,"item_id":item_id}
-            print "Adding to cart " + new_item.__str__()
             task = queue_task(1,'add_to_cart',new_item)
         elif action == 'remove':
-            # delete item from cart - remove it from database
+            # delete sellers items from cart - remove them from database
             seller_key = request.form['seller_key']
-            item_id = request.form['item_id']
-            del_item={"key_id":seller_key,"item_id":item_id}
-            task = queue_task(1,'remove_from_cart',new_item)
-        else:
+            del_seller={"key_id":seller_key}
+            task = queue_task(1,'remove_from_cart',del_seller)
+        elif action == 'update':
             # User is updating something in the cart - find out what and then update db
             # possible changes are Quantity or shipping
-            quantity_list= [0,1,2,0,1,1] # todo - get from form data - list of selected quantities
-            shipping_list= [1,1,1,1,1,1] # todo - get from form data - list of selected shipping options
-            cart_updates={"quantitiy_list":quantity_list,"shipping_list":shipping_list}
-            print "Updating cart " + cart_updates.__str__()
+            quantity = request.form['quantity']
+            shipping_option = request.form['shipping']
+            cart_updates={"quantitiy_list":quantity,"shipping_list":shipping_option}
             task = queue_task(1,'update_cart',cart_updates)
         # Now send the relevant cart_update message to backend and await response - then return page
         messageQueue.put(task)
-        # now, we wait...
-        timer = 0
-        # todo - add wait for message_queue data to be returned (or just re-read the database)
-
+        sleep(0.2)
+        cart_items = session.query(app.roStorageDB.Cart).order_by(app.roStorageDB.Cart.seller_key_id.asc())
   # convert the results into a format usable by the cart page
   for cart_item in cart_items:
      print cart_item.__dict__['item']
      cart_item.__dict__['item'] =  json.loads(cart_item.__dict__['item'] )
      shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
- # print "cart flask route paramateres to jinja:" + shopping_cart[cart_item.seller_key_id][cart_item.id].__str__()
+  checkEvents()
   return render_template('cart.html', shopping_cart=shopping_cart)
 
 @app.route('/directory')
