@@ -174,7 +174,7 @@ inputs-moz-placeholder {
 .select_style select {
    /* Select type style */
     width: 450px;
-    padding: 5px 15px;
+    padding: 5px 5px;
     font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
     font-weight: 400;
     font-size: 16px;

@@ -64,7 +64,7 @@ class Storage():
     #    country_id = Column(Integer, ForeignKey('countries.id'))
     #    ships_from = relationship(country_id)
     #    ships_to = relationship(country_id)
-        # shipping?
+        shipping_options = Column(String()) # will hold json list of shipping options
         image_base64 = Column(String())
 
     class Orders(Base):

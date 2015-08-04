@@ -23,6 +23,7 @@ class Listing(object):
         self.order_max_qty = 0
         self.ships_from = ''
         self.ships_to = []
+        self.shipping_options = ''
         
 class full_name(object):
     def __init__(self,display_name,pgpkey_id):

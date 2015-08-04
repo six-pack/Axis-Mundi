@@ -9,8 +9,8 @@
         <form method="post" action="{{ url_for('new_listing') }}" enctype="multipart/form-data">
         <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
         <tr>
-          <td width="200px"><b>Category</b></td>
-          <td colspan="2"><div class = "select_style"><select name="category">
+          <td width="150px"><b>Category</b></td>
+          <td colspan="3"><div class = "select_style"><select name="category">
             {% if categories %} {% for category in categories %}
                 <option value="{{ category }}">{{ category }}</option>
             {% endfor %}
@@ -23,38 +23,92 @@
 
         <tr>
           <td><b>Title</b></td>
-          <td colspan="2"><input type="text" class="inputs full-width" name="title" placeholder="Type the title of the listing here" required></td>
+          <td colspan="3"><input type="text" class="inputs full-width" name="title" placeholder="Type the title of the listing here" required></td>
         </tr>
         <tr>
             <td><b>Description</b></td>
-            <td colspan="2"><div id="container">
+            <td colspan="3"><div id="container">
                 <div class="twrap"><textarea class="inputs" name="description" cols="80" rows="10" placeholder="Type the item description here"></textarea></div>
             </div></td>
         </tr>
         <tr>
+
           <td><b>Price</b></td>
-          <td><input type="text" class="inputs full-width" name="price" placeholder="Type the base price here" required></td>
-          <td><div class = "select_style"><select name="currency">
+          <td><input type="text" class="inputs" name="price" placeholder="Type the base price here" required></td>
+          <td>    <div class = "select_style"><select name="currency" style="width:230px">
             {% for currency in currencies %}
                 <option value="{{ currency.code }}">&nbsp; {{ currency.name }} ({{ currency.code }})</option>
             {% endfor %}
             </select></div></td>
+            <td><label class="btn" for="modal-one">Add shipping</label></td>
         </tr>
         <tr><td><label><b>Order Types</b></label></td> <td><input type="checkbox" name="order_direct" value="True" checked><b>Allow Direct Transactions</b></td><td><input type="checkbox" name="order_escrow" value="True" checked><b>Allow Escrow Transactions</b></td></tr>
         <tr>
-          <td><b>Quantity</b></td>
-          <td><input type="text" class="inputs full-width" name="quantity" placeholder="Quantity available"></td>
-          <td><b>Max. Items/Order</b><input type="text" class="inputs" style="margin-left:20px" name="max_order" placeholder="Maximum items per order"></td>
+            <td><b>Quantity</b></td>
+            <td><input type="text" class="inputs full-width" name="quantity" placeholder="Quantity available"></td>
+            <td colspan="2"><b>Max. Items/Order</b><input type="text" class="inputs" style="margin-left:20px" name="max_order" placeholder="Maximum items per order"></td>
         </tr>
         <tr>
             <td><label><b>Image</b></label></td> <td><input type="file" name="listing_image"  class="inputs-file" style="float:left;vertical-align:middle" placeholder="Optionally select an image for this item"></td>
         </tr>
-        <tr><td colspan="3">
+
+        <tr><td colspan="4">
             <div style="btn"><a href="{{ url_for('listings') }}"><input type="button" style="float:right" class = "btn" value="Cancel"></a></div>
             <div style="btn"><button type="submit" style="float:right" class = "btn">Create Listing</button></div></td></tr>
-        </form>
+
     </table>
     </div>
+
+<!-- Modal One -->
+<div class="modal">
+  <input class="modal-open" id="modal-one" type="checkbox" hidden>
+  <div class="modal-wrap" aria-hidden="true" role="dialog">
+    <label class="modal-overlay" for="modal-one"></label>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2>Configure shipping options</h2>
+        <label class="btn-close" for="modal-one" aria-hidden="true">×</label>
+      </div>
+      <div class="modal-body">
+        <div class="datagrid">
+        <table cellpadding="5">
+       <tr>
+          <th>Shipping Type</th>
+          <th width = "100px">Cost (+/-)</th>
+          <th width="50px">Enabled</th>
+        </tr>
+        <tr>
+          <td><input type="text"  class="inputs" name="shipping_1" style="width:290px" placeholder="e.g. Express" value="Standard shipping"></td>
+          <td><input type="text" class="inputs" style="margin-left:20px;width:80px" name="shipping_cost_1" placeholder="Cost" value="0"></td>
+          <td align="middle"><input type="checkbox" name="shipping_enabled_1" value="True" checked></td>
+        </tr>
+        <tr>
+          <td><input type="text"  class="inputs" name="shipping_2" style="width:290px" placeholder="e.g. Express"></td>
+          <td><input type="text" class="inputs" style="margin-left:20px;width:80px" name="shipping_cost_2" placeholder="Cost"></td>
+          <td align="middle"><input type="checkbox" name="shipping_enabled_2" value="True"></td>
+        </tr>
+        <tr>
+          <td><input type="text"  class="inputs" name="shipping_3" style="width:290px" placeholder="e.g. Express"></td>
+          <td><input type="text" class="inputs" style="margin-left:20px;width:80px" name="shipping_cost_3" placeholder="Cost"></td>
+          <td align="middle"><input type="checkbox" name="shipping_enabled_3" value="True"></td>
+        </tr>
+        <tr>
+          <td><input type="text"  class="inputs" name="shipping_4" style="width:290px" placeholder="e.g. Express"></td>
+          <td><input type="text" class="inputs" style="margin-left:20px;width:80px" name="shipping_cost_4" placeholder="Cost"></td>
+          <td align="middle"><input type="checkbox" name="shipping_enabled_4" value="True"></td>
+        </tr>
+        </table>
+
+      </div>
+      <div class="modal-footer">
+        <label class="btn" for="modal-one">OK</label>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+</form>
+
 
 {% endblock %}
 

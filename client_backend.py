@@ -352,6 +352,7 @@ class messaging_loop(threading.Thread):
                 listings_dict['max_order_qty'] = listing_item.order_max_qty
                 listings_dict['publish_date'] = current_time()
                 listings_dict['stealth_address'] = stealth_address
+                listings_dict['shipping_options'] = listing_item.shipping_options
                 # listings_dict_str = json.dumps(listings_dict)
                 listings_dict_str = json.dumps(listings_dict,sort_keys=True)
                 listings_dict_str = textwrap.fill(listings_dict_str, 80, drop_whitespace=False)
@@ -506,7 +507,8 @@ class messaging_loop(threading.Thread):
                                                     qty_available = int(listing.quantity_available),
                                                     order_max_qty = int(listing.order_max_qty),
                                                     image_base64 = listing.image_str,
-                                                    public = bool(listing.is_public)
+                                                    public = bool(listing.is_public),
+                                                    shipping_options = listing.shipping_options
                                                     # TODO: Add other fields
                                                  )
         session.add(new_listing)
@@ -519,6 +521,7 @@ class messaging_loop(threading.Thread):
         else:
             return False
         session = self.storageDB.DBSession()
+        print "UPDATE LISTING DB " + listing.shipping_options
         db_listing = session.query(self.storageDB.Listings).filter_by(id=listing.id).first()
         db_listing.id=listing.id
         db_listing.title=listing.title
@@ -530,7 +533,7 @@ class messaging_loop(threading.Thread):
         db_listing.order_max_qty = int(listing.order_max_qty)
         db_listing.image_base64 = listing.image_str
         db_listing.public = bool(listing.is_public)
-        # TODO: Add other fields
+        db_listing.shipping_options= listing.shipping_options
         session.commit()
         flash_msg = queue_task(0,'flash_message','Updated listing ' + listing.title)
         self.q_res.put(flash_msg)
@@ -615,6 +618,9 @@ class messaging_loop(threading.Thread):
                     continue
                 try:
                     verified_item = json.loads(stripped_item) # TODO: Additional input validation required here
+                    print verified_item
+                    item_shipping_options = json.loads(verified_item['shipping_options']) # TODO: Additional input validation required here
+                    verified_item['shipping_options'] = item_shipping_options
                     verified_listings.append(verified_item)
                 except:
                     print "Error: item json not extracted from signed sub-message"
@@ -635,10 +641,10 @@ class messaging_loop(threading.Thread):
         except:
             print "ERROR: item could not be added to cart because it is not cached- try viewing the item first..."
             return False
-        print "Add_to_cart " + msg.__str__()
         cart_res=dict(msg)
         session = self.storageDB.DBSession()
-
+        # TODO : error handling and input validation on this json
+        item_from_msg = json.dumps(cart_res)
         cart_db_res = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).filter(self.storageDB.Cart.item_id == cart_res['id']).count() > 0 # If it already exists then update
         if cart_db_res:
             print "Updating existing cart entry with another add"
@@ -646,7 +652,7 @@ class messaging_loop(threading.Thread):
             cart_entry = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).filter(self.storageDB.Cart.item_id == cart_res['id']).update({
                                                             self.storageDB.Cart.item_id:cart_res['id'],
                                                             self.storageDB.Cart.raw_item:raw_msg,
-                                                            self.storageDB.Cart.item:json.dumps(msg), # item:msg.__str__(),
+                                                            self.storageDB.Cart.item:item_from_msg,  # json.dumps(msg) # item:msg.__str__(),
                                                             self.storageDB.Cart.quantity:1, #(1 + cart_db_res['quantity']), # todo: add quantity to existing quantity
                                                             self.storageDB.Cart.shipping:1
                                                         })
@@ -655,7 +661,7 @@ class messaging_loop(threading.Thread):
             cart_entry = self.storageDB.Cart(seller_key_id=key_id,
                                                         item_id=cart_res['id'],
                                                         raw_item=raw_msg,
-                                                        item=json.dumps(msg), #.__str__(),
+                                                        item=item_from_msg, # json.dumps(msg), #.__str__(),
                                                         quantity=1, # ToDO read quantity from listing form if given
                                                         shipping=1) # ToDO read shipping choice from listing form if given                                                       )
 
@@ -860,12 +866,28 @@ class messaging_loop(threading.Thread):
                             client.subscribe(str(key_topic),1)
                             print "Requesting listings for " + key_id
                         else: # we have returned an existing listings from the cache - check age of cached listings
-                            if get_age(cachelistings.updated) > CACHE_EXPIRY_LIMIT and not self.workoffline:
+                            if get_age(cachelistings.updated) > CACHE_EXPIRY_LIMIT:
                                 # cached listings too old - get latest listings
                                 # TODO - return cached listing if we have one and flash a message telling user it is cached and a background update has been initiated
-                                key_topic = 'user/' + key_id + '/items'
-                                client.subscribe(str(key_topic),1)
-                                print "Requesting updated listings for " + key_id
+
+                                if self.workoffline:
+                                    flash_msg = queue_task(0,'flash_message','Cached listings for this seller have expired, you should go online to get the latest listings.')
+                                    print "Extracting listings from cached copy"
+    #                                verified_listings=[]
+                                    listings_dict = json.loads(cachelistings.listings_block)
+                                    if not listings_dict:
+                                        print "No items in the cached listings block for " + key_id
+                                        self.q_data.put ('none')
+                                    else:
+                                        verified_listings = self.get_items_from_listings(key_id,listings_dict)
+                                        self.q_data.put (verified_listings)
+                                else:
+                                    flash_msg = queue_task(0,'flash_message','Cached listings for this seller have expired, the latest listings have been requested in the background. Refresh the page.')
+                                    self.q_res.put(flash_msg)
+                                    self.q_res.put(flash_msg)
+                                    key_topic = 'user/' + key_id + '/items'
+                                    client.subscribe(str(key_topic),1)
+                                    print "Requesting updated listings for " + key_id
                             else:
                                 # we have an unexpired cacehd copy of this listing so just return listings from db -
                                 print "Request for listings ignored...we have a copy in cache that has not expired..."
@@ -873,7 +895,7 @@ class messaging_loop(threading.Thread):
 #                                verified_listings=[]
                                 listings_dict = json.loads(cachelistings.listings_block)
                                 if not listings_dict:
-                                    print "No items in the cached listingns block for " + key_id
+                                    print "No items in the cached listings block for " + key_id
                                     self.q_data.put ('none')
                                 else:
                                     verified_listings = self.get_items_from_listings(key_id,listings_dict)
@@ -936,6 +958,7 @@ class messaging_loop(threading.Thread):
                     listing.is_public=task.data['is_public']
                     listing.quantity_available=task.data['quantity']
                     listing.order_max_qty=task.data['max_order']
+                    listing.shipping_options=task.data['shipping_options']
                     #TODO: add other listing fields
                     self.new_listing(listing)
                 elif task.command == 'update_listing':
@@ -951,6 +974,7 @@ class messaging_loop(threading.Thread):
                     listing.is_public=task.data['is_public']
                     listing.quantity_available=task.data['quantity']
                     listing.order_max_qty=task.data['max_order']
+                    listing.shipping_options=task.data['shipping_options']
                     #TODO: add other listing fields
                     self.update_listing(listing)
                 elif task.command == 'delete_listing':

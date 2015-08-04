@@ -177,6 +177,7 @@ def cart(action=''):
             item_id = request.form['listing_id']
             new_item={"key_id":seller_key,"item_id":item_id}
             task = queue_task(1,'add_to_cart',new_item)
+            flash("Item added to cart",category="message") # todo - do this from bakend so that item naem can be included
         elif action == 'remove':
             # delete sellers items from cart - remove them from database
             seller_key = request.form['seller_key']
@@ -187,16 +188,18 @@ def cart(action=''):
             # possible changes are Quantity or shipping
             quantity = request.form['quantity']
             shipping_option = request.form['shipping']
-            cart_updates={"quantitiy_list":quantity,"shipping_list":shipping_option}
+            cart_updates={"quantity_list":quantity,"shipping_list":shipping_option}
             task = queue_task(1,'update_cart',cart_updates)
         # Now send the relevant cart_update message to backend and await response - then return page
         messageQueue.put(task)
         sleep(0.2)
-        cart_items = session.query(app.roStorageDB.Cart).order_by(app.roStorageDB.Cart.seller_key_id.asc())
+        return redirect(url_for('cart'))
   # convert the results into a format usable by the cart page
   for cart_item in cart_items:
-     print cart_item.__dict__['item']
      cart_item.__dict__['item'] =  json.loads(cart_item.__dict__['item'] )
+#     print cart_item.__dict__['item']['shipping_options']['1'][0]
+#     print json.loads(cart_item.__dict__['item']['shipping_options'])
+#     cart_item.__dict__['item']['shipping_options'] = json.loads(cart_item.__dict__['item']['shipping_options'])
      shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
   checkEvents()
   return render_template('cart.html', shopping_cart=shopping_cart)
@@ -384,7 +387,19 @@ def new_listing(id=0):
             image = str(encode_image(listing_image_file.read(),(128,128))) # TODO - maintain aspect ratio
         else:
             image = ''
-        message={"category":category,"title":title,"description":description,"price":price,"currency":currency_code,"image": image,"is_public":is_public,"quantity":qty_available,"max_order":max_order,"order_direct":order_direct,"order_escrow":order_escrow}
+        print "Checking shipping options..."
+        # Now shipping options
+        shipping = defaultdict()
+        for x in range(1,4):
+            if request.form.get('shipping_enabled_' + str(x)) == 'True':
+                s_type = request.form.get('shipping_' + str(x))
+                s_cost = request.form.get('shipping_cost_' + str(x))
+                if s_type and s_cost:
+                    #TODO additional sanity checks on shipping options
+                    shipping[x]=(s_type,s_cost)
+
+        # crete message for backend
+        message={"category":category,"title":title,"description":description,"price":price,"currency":currency_code,"image": image,"is_public":is_public,"quantity":qty_available,"max_order":max_order,"order_direct":order_direct,"order_escrow":order_escrow,"shipping_options":json.dumps(shipping)}
         print message
         task = queue_task(1,'new_listing',message)
         messageQueue.put(task)
@@ -429,8 +444,21 @@ def edit_listing(id=0):
             image = str(encode_image(listing_image_file.read(),(128,128))) # TODO - maintain aspect ratio
         else:
             image = ''
-        message={"id":id,"category":category,"title":title,"description":description,"price":price,"currency":currency_code,"image": image,"is_public":is_public,"quantity":qty_available,"max_order":max_order,"order_direct":order_direct,"order_escrow":order_escrow}
-        print message
+
+        print "Checking shipping options..."
+        # Now shipping options
+        shipping = defaultdict()
+        for x in range(1,4):
+            if request.form.get('shipping_enabled_' + str(x)) == 'True':
+                s_type = request.form.get('shipping_' + str(x))
+                s_cost = request.form.get('shipping_cost_' + str(x))
+                if s_type and s_cost:
+                    #TODO additional sanity checks on shipping options
+                    shipping[x]=(s_type,s_cost)
+
+
+        message={"id":id,"category":category,"title":title,"description":description,"price":price,"currency":currency_code,"image": image,"is_public":is_public,"quantity":qty_available,"max_order":max_order,"order_direct":order_direct,"order_escrow":order_escrow,"shipping_options":json.dumps(shipping)}
+        print "Update Listing message: " + message.__str__()
         task = queue_task(1,'update_listing',message)
         messageQueue.put(task)
         sleep(0.1)  # it's better for the user to get a flashed message now rather than on the next page load so
@@ -442,7 +470,8 @@ def edit_listing(id=0):
         categories = None # session.query(app.roStorageDB.Contacts).all() # TODO: Query list of categories currently known
         currencies = session.query(app.roStorageDB.currencies).all()
         listing_item=session.query(app.roStorageDB.Listings).filter_by(id=id).first()
-        return render_template('listing-edit.html',categories=categories, currencies=currencies, listing=listing_item)
+        listing_shipping_options=json.loads(listing_item.shipping_options)
+        return render_template('listing-edit.html',categories=categories, currencies=currencies, listing=listing_item,shipping_options=listing_shipping_options)
 
 
 @app.route('/listings/delete/<int:id>',methods=["GET"])
