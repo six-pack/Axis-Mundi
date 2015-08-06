@@ -5,7 +5,7 @@ from flask_login import LoginManager,UserMixin,login_user,current_user,logout_us
 from functools import wraps, update_wrapper
 import gnupg
 from os.path import expanduser, isfile, isdir, dirname
-from os import makedirs, sys
+from os import makedirs, sys, unsetenv, putenv, sep
 import string
 import random
 from storage import Storage, SqlalchemyOrmPage
@@ -20,6 +20,11 @@ import pybitcointools as btc
 from collections import defaultdict
 import json
 from constants import *
+from multiprocessing import Process,freeze_support
+import multiprocessing.forking
+import webbrowser
+import trayicon_gui, wx
+import os
 
  # /////////// patch socket module to attempt to fix bug #12 -  "socket.error: [Errno 98] Address already in use"
  # This fixes re-use error but results in multiple cliet.py instances which is very undesirable
@@ -197,9 +202,6 @@ def cart(action=''):
   # convert the results into a format usable by the cart page
   for cart_item in cart_items:
      cart_item.__dict__['item'] =  json.loads(cart_item.__dict__['item'] )
-#     print cart_item.__dict__['item']['shipping_options']['1'][0]
-#     print json.loads(cart_item.__dict__['item']['shipping_options'])
-#     cart_item.__dict__['item']['shipping_options'] = json.loads(cart_item.__dict__['item']['shipping_options'])
      shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
   checkEvents()
   return render_template('cart.html', shopping_cart=shopping_cart)
@@ -558,7 +560,7 @@ def createidentity():                                               # This is a 
   # Now create or overwrite the secret db key file in the app data dir
   try:
      file = open(app.appdir+'/secret', 'w')
-     encrypted_dbsecretkey = gpg.encrypt(app.dbsecretkey, app.pgp_keyid)
+     encrypted_dbsecretkey = app.gpg.encrypt(app.dbsecretkey, app.pgp_keyid)
      file.write(str(encrypted_dbsecretkey))
      file.close()
      app.SetupDone = True
@@ -566,7 +568,10 @@ def createidentity():                                               # This is a 
      flash("Error creating identity - secret file not created",category="error")
      return redirect(url_for('install'))
   # Now generate initial Bitcoin keys
-  wordlist_path = app.bin_path+'/words.txt' # todo: make windows compatible
+  if get_os() == 'Windows':
+      wordlist_path = app.bin_path + '\words.txt' # todo: make windows compatible
+  else:
+      wordlist_path = app.bin_path +'/words.txt' # todo: make windows compatible
   wallet_seed = generate_seed(wordlist_path,words=18) # todo: ensure wordcount reflects size of wordlist
   # Our published stealth address will be derived from a child key (index 1) which will be generated on the fly
   ## Now create & populate DB with initial values
@@ -580,6 +585,8 @@ def createidentity():                                               # This is a 
   if not defaults:
     flash('There was a problem creating the initial configuration in the storage database '+ 'storage.db',category="error")
     #return False
+  session.commit()
+  sleep(0.1)
   # Now set the proxy settings specified on the install page
   socks_proxy = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "proxy").first()
   socks_proxy_port = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "proxy_port").first()
@@ -608,7 +615,7 @@ def createidentity():                                               # This is a 
 @app.route('/install')
 def install():
   if app.SetupDone : return redirect(url_for('home'))
-  private_keys = gpg.list_keys(True) # True => private keys
+  private_keys = app.gpg.list_keys(True) # True => private keys
   return render_template('install.html',key_list=private_keys)
 
 @app.route('/setup', methods=["GET","POST"])
@@ -757,7 +764,7 @@ def logout():
 @app.route('/login', methods=['GET','POST'])
 def login():
   if not app.SetupDone : return redirect(url_for('install'))
-  private_keys = gpg.list_keys(True) # True => private keys
+  private_keys = app.gpg.list_keys(True) # True => private keys
   if request.method == "POST":
     # check that secret can be decrypted
     try:
@@ -771,7 +778,7 @@ def login():
         app.workoffline = True
     else:
         app.workoffline = False
-    decrypted_data = gpg.decrypt_file(stream,False,app.pgp_passphrase)
+    decrypted_data = app.gpg.decrypt_file(stream,False,app.pgp_passphrase)
     if not str(decrypted_data):
         flash('Your passphrase or PGP key is not correct',category="error")
         return render_template('login.html',key_list=private_keys)
@@ -866,7 +873,7 @@ def checkDataQ():
 def client_shutdown(sender, **extra):
     print "Client_Shutdown called....exiting"
 
-if __name__ == '__main__':
+def run():
   app.storageThreadID = ""
   app.pgpkeycache = {}
   app.dbsecretkey = ""
@@ -883,16 +890,108 @@ if __name__ == '__main__':
   app.homedir = expanduser("~")
   if get_os() == 'Windows':
     app.appdir = app.homedir + '\\application data\\.dnmng' # This is the default appdir location
-    gpg = gnupg.GPG(gnupghome=app.homedir + '/application data/gnupg',options={'--throw-keyids','--no-emit-version','--trust-model=always'}) # we want to encrypt the secret with throw keys
+    app.gpg = gnupg.GPG(gnupghome=app.homedir + '/application data/gnupg',options={'--throw-keyids','--no-emit-version','--trust-model=always'}) # we want to encrypt the secret with throw keys
   else:
     app.appdir = app.homedir + '/.dnmng' # This is the default appdir location
-    gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg',options={'--throw-keyids','--no-emit-version','--trust-model=always'}) # we want to encrypt the secret with throw keys
-  print app.homedir
+    app.gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg',options={'--throw-keyids','--no-emit-version','--trust-model=always'}) # we want to encrypt the secret with throw keys
   app.connection_status = "Off-line"
   app.current_broker = None
   app.current_broker_users = None
   if isfile(app.appdir + "/secret") and isfile (app.appdir + "/storage.db") :   app.SetupDone = True # TODO: A better check is needed here
-  app.run(debug=True,threaded=True) # TODO: turn off threading - either move PKS lookup handler to backend thread or inject retreived keys directly into keyring
+  app.run(debug=True,threaded=True, use_reloader=False) # TODO: turn off threading - either move PKS lookup handler to backend thread or inject retreived keys directly into keyring
+ # use_reloader added to prevent initialization running twice when in flask debug mode
 
+
+# Windows doess not support fork so we need to extend Multiprocessing on Windows
+
+class _Popen(multiprocessing.forking.Popen):
+    def __init__(self, *args, **kw):
+        if hasattr(sys, 'frozen'):
+            # We have to set original _MEIPASS2 value from sys._MEIPASS
+            # to get --onefile mode working.
+            # Last character is stripped in C-loader. We have to add
+            # '/' or '\\' at the end.
+            os.putenv('_MEIPASS2', sys._MEIPASS + sep)
+        try:
+            super(_Popen, self).__init__(*args, **kw)
+        finally:
+            if hasattr(sys, 'frozen'):
+                # On some platforms (e.g. AIX) 'os.unsetenv()' is not
+                # available. In those cases we cannot delete the variable
+                # but only set it to the empty string. The bootloader
+                # can handle this case.
+                if hasattr(os, 'unsetenv'):
+                    unsetenv('_MEIPASS2')
+                else:
+                    putenv('_MEIPASS2', '')
+
+
+class Process(multiprocessing.Process):
+    _Popen = _Popen
+
+
+class SendeventProcess(Process):
+    def __init__(self, resultQueue):
+        self.resultQueue = resultQueue
+
+        multiprocessing.Process.__init__(self)
+        self.start()
+
+    def run(self):
+        print 'SendeventProcess'
+        self.resultQueue.put((1, 2))
+        print 'SendeventProcess'
+
+
+
+if __name__ == '__main__':
+    if get_os() == 'Windows':
+        freeze_support()
+
+    print """
+ AA  X   X III  SSS   M   M U   U N   N DDD  III
+A  A  X X   I  S      MM MM U   U NN  N D  D  I
+AAAA   X    I   SSS   M M M U   U N N N D  D  I
+A  A  X X   I      S  M   M U   U N  NN D  D  I
+A  A X   X III SSSS   M   M  UUU  N   N DDD  III
+    """
+    print "Version " + VERSION + " starting up..."
+
+    running = True
+    option_nogui = False
+    option_nobrowser = False
+    # By default try to start the status gui in the system tray
+    if not option_nogui:
+        try:
+            gui = wx.App()
+            frame = wx.Frame(None) # empty frame
+            trayicon_gui.TaskBarIcon()
+        except: # If that fails assume nogui mode
+            print "No display detected, disabling status gui"
+            option_nogui = True
+            option_nobrowser = True
+    # Start the front end thread of the client
+    front_end = Process(target=run)
+    front_end.start()
+    print "Axis Mundi local web-server now accessible on http://127.0.0.1:5000"
+    if not option_nobrowser:
+        webbrowser.open_new_tab('http://127.0.0.1:5000/')
+    # main loop
+    while running:
+        try:
+           if option_nogui:
+                sleep(0.5)
+           else:
+               gui.MainLoop()
+               running = False
+        except KeyboardInterrupt:
+            break
+    print "Axis Mundi shutting down..."
+    # TODO : give frontend and backend (if running) a chance to close down gracefully
+    front_end.terminate()
+    front_end.join()
+    gui.Exit()
+    # TODO - overwrite and then delete temp pubkeyring if used
+    print "Axis Mundi exiting..."
 
 

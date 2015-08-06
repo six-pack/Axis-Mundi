@@ -295,6 +295,7 @@ class messaging_loop(threading.Thread):
 
     def setup_message_queues(self,client):
         # Sub to directory each conenction for now
+        # TODO ONLY PUB IF WE NEED TO, check our topics with subs first and only publish if there is a difference with the local db copy
         client.subscribe('user/+/directory',1)  # TODO: We definitely don't want to do this each time user connects - put such SUBs in an one time client SUB setup
         client.subscribe(self.sub_inbox,1)                      # Our generic incoming queue, qos=1
         client.publish(self.pub_key,self.gpg.export_keys(self.mypgpkeyid,False,minimal=True),  1,True)      # Our published pgp key block, qos=1, durable
