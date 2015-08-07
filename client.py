@@ -166,8 +166,7 @@ def external_listings(keyid='none',id='none'):
         # This is a full listings response
         return render_template('listings.html',listings=listings_data,pgp_key=keyid)
 
-@app.route('/cart',methods=["GET"])
-@app.route('/cart/<string:action>',methods=["GET","POST"])
+@app.route('/cart',methods=["GET","POST"])
 @login_required
 def cart(action=''):
     # todo calculate price here based on current exchange rates
@@ -175,6 +174,7 @@ def cart(action=''):
   session = app.roStorageDB.DBSession()
   cart_items = session.query(app.roStorageDB.Cart).order_by(app.roStorageDB.Cart.seller_key_id.asc())
   if request.method == 'POST':
+        action = request.form['action']
         if action == 'add':
             # New item in cart - add it to database along with default quantity & shipping options unless
             # quantuty and shipping were selected on the listings page TODO add qty and shipping to listing page
@@ -185,19 +185,31 @@ def cart(action=''):
             flash("Item added to cart",category="message") # todo - do this from bakend so that item naem can be included
         elif action == 'remove':
             # delete sellers items from cart - remove them from database
-            seller_key = request.form['seller_key']
+            print "Front end requesting to delete sellers items from cart"
+            seller_key = request.form['pgpkey_id']
             del_seller={"key_id":seller_key}
             task = queue_task(1,'remove_from_cart',del_seller)
         elif action == 'update':
             # User is updating something in the cart - find out what and then update db
             # possible changes are Quantity or shipping
+            # TODO: Each quanity and shipping form field must have a unique name that can be tied to the orderid to deal with multiple items from same seller
+            seller_key = request.form['pgpkey_id']
+            item_id = request.form['listing_id']
             quantity = request.form['quantity']
             shipping_option = request.form['shipping']
-            cart_updates={"quantity_list":quantity,"shipping_list":shipping_option}
+            cart_updates={"key_id":seller_key,"item_id":item_id,"quantity":quantity,"shipping":shipping_option}
             task = queue_task(1,'update_cart',cart_updates)
+        elif action == "checkout":
+            # user is checking out one or more items in their cart from a single seller
+            seller_key = request.form['pgpkey_id']
+            cart_checkout={"key_id":seller_key}
+            task = queue_task(1,'checkout',cart_checkout)
+            sleep(0.25)
+#            return redirect(url_for('checkout'))
+            return render_template('not_yet.html')
         # Now send the relevant cart_update message to backend and await response - then return page
         messageQueue.put(task)
-        sleep(0.2)
+        sleep(0.25)
         return redirect(url_for('cart'))
   # convert the results into a format usable by the cart page
   for cart_item in cart_items:
@@ -205,6 +217,10 @@ def cart(action=''):
      shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
   checkEvents()
   return render_template('cart.html', shopping_cart=shopping_cart)
+
+
+
+
 
 @app.route('/directory')
 @app.route('/directory/<int:page>')
@@ -990,7 +1006,8 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
     # TODO : give frontend and backend (if running) a chance to close down gracefully
     front_end.terminate()
     front_end.join()
-    gui.Exit()
+    if not option_nogui:
+        gui.Exit()
     # TODO - overwrite and then delete temp pubkeyring if used
     print "Axis Mundi exiting..."
 

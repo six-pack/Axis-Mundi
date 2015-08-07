@@ -650,13 +650,20 @@ class messaging_loop(threading.Thread):
         if cart_db_res:
             print "Updating existing cart entry with another add"
             # TODO - since item is alrea in cart, we should add new quantity to exsintng quantity  - for now we overwrite exisiting entry
-            cart_entry = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).filter(self.storageDB.Cart.item_id == cart_res['id']).update({
-                                                            self.storageDB.Cart.item_id:cart_res['id'],
-                                                            self.storageDB.Cart.raw_item:raw_msg,
-                                                            self.storageDB.Cart.item:item_from_msg,  # json.dumps(msg) # item:msg.__str__(),
-                                                            self.storageDB.Cart.quantity:1, #(1 + cart_db_res['quantity']), # todo: add quantity to existing quantity
-                                                            self.storageDB.Cart.shipping:1
-                                                        })
+            cart_entry =  session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).filter(self.storageDB.Cart.item_id == cart_res['id']).first()
+#            cart_entry = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).filter(self.storageDB.Cart.item_id == cart_res['id']).update({
+#                                                            self.storageDB.Cart.item_id:cart_res['id'],
+#                                                            self.storageDB.Cart.raw_item:raw_msg,
+#                                                            self.storageDB.Cart.item:item_from_msg,  # json.dumps(msg) # item:msg.__str__(),
+#                                                            self.storageDB.Cart.quantity:(1 + cart_entry.quantity), # todo: add quantity to existing quantity
+#                                                            self.storageDB.Cart.shipping:1
+#                                                        })
+            # cart_entry.iten_id = cart_res['id'] # this should not need to be updated
+            cart_entry.raw_item = raw_msg
+            cart_entry.item = item_from_msg
+            cart_entry.quantity =  cart_entry.quantity + 1
+            # cart_entry.shipping = 1 # cart_res['shipping'] # leave shipping as it is
+
         else:
             print "Adding new cart entry"
             cart_entry = self.storageDB.Cart(seller_key_id=key_id,
@@ -669,6 +676,18 @@ class messaging_loop(threading.Thread):
             session.add(cart_entry)
         session.commit()
 
+    def update_cart(self,item_id,key_id,quantity,shipping):
+        # TODO error checking...
+        session = self.storageDB.DBSession()
+        cart_entry =  session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).filter(self.storageDB.Cart.item_id == item_id).first()
+        cart_entry.quantity = quantity
+        cart_entry.shipping = shipping
+        session.commit()
+
+    def remove_from_cart(self,key_id):
+        session = self.storageDB.DBSession()
+        cart_entry =  session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).delete()
+        session.commit()
 
     def run(self):
         # TODO: Clean up this flow
@@ -928,7 +947,15 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'update_cart':
                     item_id = task.data['item_id']
                     key_id = task.data['key_id']
+                    quantity = task.data['quantity']
+                    shipping = task.data['shipping']
                     print "Backend received update cart request for " + key_id + '/' + item_id
+                    self.update_cart(item_id,key_id,quantity,shipping)
+
+                elif task.command == 'remove_from_cart':
+                    key_id = task.data['key_id']
+                    print "Backend received delete from cart request for items from seller " + key_id
+                    self.remove_from_cart(key_id)
 
                 elif task.command == 'publish_listings':
                     listings_out_message = Messaging.PrepareMessage(self.myMessaging,self.create_listings_msg())
