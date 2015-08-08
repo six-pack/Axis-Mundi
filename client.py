@@ -200,13 +200,13 @@ def cart(action=''):
             cart_updates={"key_id":seller_key,"item_id":item_id,"quantity":quantity,"shipping":shipping_option}
             task = queue_task(1,'update_cart',cart_updates)
         elif action == "checkout":
-            # user is checking out one or more items in their cart from a single seller
+            # user is checking out their cart from a single seller
             seller_key = request.form['pgpkey_id']
             cart_checkout={"key_id":seller_key}
             task = queue_task(1,'checkout',cart_checkout)
             sleep(0.25)
-#            return redirect(url_for('checkout'))
-            return render_template('not_yet.html')
+            #return redirect(url_for('checkout'))
+            render_template('not_yet.html')
         # Now send the relevant cart_update message to backend and await response - then return page
         messageQueue.put(task)
         sleep(0.25)
