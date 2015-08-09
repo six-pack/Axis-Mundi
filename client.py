@@ -584,10 +584,7 @@ def createidentity():                                               # This is a 
      flash("Error creating identity - secret file not created",category="error")
      return redirect(url_for('install'))
   # Now generate initial Bitcoin keys
-  if get_os() == 'Windows':
-      wordlist_path = app.bin_path + '\words.txt' # todo: make windows compatible
-  else:
-      wordlist_path = app.bin_path +'/words.txt' # todo: make windows compatible
+  wordlist_path = resource_path('words.txt')
   wallet_seed = generate_seed(wordlist_path,words=18) # todo: ensure wordcount reflects size of wordlist
   # Our published stealth address will be derived from a child key (index 1) which will be generated on the fly
   ## Now create & populate DB with initial values
@@ -602,7 +599,7 @@ def createidentity():                                               # This is a 
     flash('There was a problem creating the initial configuration in the storage database '+ 'storage.db',category="error")
     #return False
   session.commit()
-  sleep(0.1)
+  sleep(0.2)
   # Now set the proxy settings specified on the install page
   socks_proxy = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "proxy").first()
   socks_proxy_port = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "proxy_port").first()
@@ -1009,14 +1006,14 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
     option_nobrowser = False
     # By default try to start the status gui in the system tray
     if not option_nogui:
-#        try:
+        try:
             gui = wx.App()
             frame = wx.Frame(None) # empty frame
             trayicon_gui.TaskBarIcon()
-#        except: # If that fails assume nogui mode
-#            print "No display detected, disabling status gui"
-#            option_nogui = True
-#            option_nobrowser = True
+        except: # If that fails assume nogui mode
+            print "No display detected, disabling status gui"
+            option_nogui = True
+            option_nobrowser = True
     # Start the front end thread of the client
     front_end = Process(target=run)
     front_end.start()

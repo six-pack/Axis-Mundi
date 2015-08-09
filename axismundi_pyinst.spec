@@ -8,8 +8,9 @@ a = Analysis(['client.py'],
              hiddenimports=[],
              hookspath=None,
              runtime_hooks=None,
-             excludes=None,
-             cipher=block_cipher)
+             excludes=None)
+#             cipher=block_cipher)
+
 ##### include mydir in distribution #######
 def extra_datas(mydir):
     def rec_glob(p, files):
@@ -35,8 +36,7 @@ a.datas += extra_datas('templates')
 
 print a.datas
 
-pyz = PYZ(a.pure,
-             cipher=block_cipher)
+pyz = PYZ(a.pure) # , cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
           a.binaries,
@@ -44,7 +44,7 @@ exe = EXE(pyz,
           a.datas,
           name='axismundi',
           debug=False,
-          strip=True,
+          strip=False,
           upx=True,
           console=True,
           icon='icon.ico')

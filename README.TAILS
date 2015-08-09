@@ -1,0 +1,36 @@
+Instructions for Tails users
+
+Using the binary version of Axis Mundi is easier than running from source code because of the stripped down nature of Tails.
+However if you wish to build from source then follow these step by step instructions. It is assumed that you are using a fresh, unmodified version of Tails.
+
+Firstly you must start Tails and login using the additional settings option. Set an administrative password.
+
+Then the following steps are necessary
+
+1) Open a terminal and enter the following commands, entering your administrative password when prompted:
+    sudo apt-get update
+    sudo apt-get install build-essential python-wxtools python-pip python-dev libjpeg-dev zlib1g-dev
+    sudo pip uninstall PIL
+    git clone https://github.com/six-pack/axis-mundi
+    cd axis-mundi
+    sudo torsocks pip install -r requirements.txt
+
+2) Tails uses very restrictive file-permissions when installing the python modules and they end up being inaccessible to anyone other than root. To fix this you must run the following command in the terminal:
+    sudo chmod -R o+r,o+X /usr/local/lib/python2.7/dist-packages
+
+3) Axis Mundi is now ready, however you must configure Tails firewall to permit access as follows:
+    sudo iptables -I OUTPUT 2 -p tcp -s 127.0.0.1 -d 127.0.0.1 -m owner --uid-owner amnesia -j ACCEPT
+
+4) Finally, Torbrowser needs a proxy exception for localhost as by default there isn't one. To make this change from inside Tor Browser:
+    Click Preferences > Advanced Tab > Click Network sub-tab
+    Now click 'settings' button
+    Add '127.0.0.1' to the list in the 'No proxy for' box.
+    Click OK
+
+5) You can now start axismundi.
+
+If you wish to create an Axis Mundi binary from source then simply execute the following command from your Axis Mundi directory:
+    pyinstaller axismundi-pyinst.spec
+
+The binary will be built and placed into the dist directory. Keep a copy of it on a persistent volume for easy use and is self-contained.
+
