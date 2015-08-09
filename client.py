@@ -11,7 +11,7 @@ import random
 from storage import Storage, SqlalchemyOrmPage
 from client_backend import messaging_loop
 import Queue
-from utilities import queue_task,encode_image,generate_seed,current_time, get_age
+from utilities import queue_task,encode_image,generate_seed,current_time, get_age, resource_path
 from defaults import create_defaults
 from time import sleep
 import base64
@@ -632,6 +632,32 @@ def createidentity():                                               # This is a 
 def install():
   if app.SetupDone : return redirect(url_for('home'))
   private_keys = app.gpg.list_keys(True) # True => private keys
+  if not private_keys:
+      # It looks like there is no private pgpkey - offer to create one for user
+      return render_template('new_pgp_key.html')
+  return render_template('install.html',key_list=private_keys)
+
+@app.route('/create_pgpkey',methods=["POST"])
+def create_pgpkey():
+  if app.SetupDone : return redirect(url_for('home'))
+  # now try to create key
+  key_type="RSA"
+  key_length = 4096
+  name_real = request.form['displayname']
+  name_comment = ""
+  name_email = request.form['email']
+  passphrase=request.form['pgppassphrase']
+  passphrase2=request.form['pgppassphrase2']
+  if passphrase <> passphrase2:
+      flash('Passphrases did not match, try again','error')
+      return render_template('new_pgp_key.html')
+  input_data = app.gpg.gen_key_input(key_type=key_type,key_length=key_length, name_real=name_real, name_comment=name_comment, name_email=name_email, passphrase=passphrase)
+  app.gpg.gen_key(input_data)
+  # if successful we can now contineu to intall
+  private_keys = app.gpg.list_keys(True) # True => private keys
+  if not private_keys:
+      # It looks like there is still no private pgpkey - offer to create one for user
+      return render_template('new_pgp_key.html')
   return render_template('install.html',key_list=private_keys)
 
 @app.route('/setup', methods=["GET","POST"])
@@ -896,6 +922,11 @@ def run():
   app.workoffline = False
   app.secret_key = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16))
   app.jinja_env.globals['csrf_token'] = generate_csrf_token
+  print 'Translate paths for Flask if running from binary (onefile)'
+  print 'before:' + app.template_folder
+  app.template_folder = resource_path('templates')
+  app.static_folder = resource_path('static')
+  print 'after:' + app.template_folder
   app.SetupDone = False
   app.pgp_keyid = ""
   app.bin_path = dirname(sys.argv[0]) # path of the module/executable - should work for both source and binary
@@ -978,14 +1009,14 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
     option_nobrowser = False
     # By default try to start the status gui in the system tray
     if not option_nogui:
-        try:
+#        try:
             gui = wx.App()
             frame = wx.Frame(None) # empty frame
             trayicon_gui.TaskBarIcon()
-        except: # If that fails assume nogui mode
-            print "No display detected, disabling status gui"
-            option_nogui = True
-            option_nobrowser = True
+#        except: # If that fails assume nogui mode
+#            print "No display detected, disabling status gui"
+#            option_nogui = True
+#            option_nobrowser = True
     # Start the front end thread of the client
     front_end = Process(target=run)
     front_end.start()

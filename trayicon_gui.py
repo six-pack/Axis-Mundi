@@ -1,4 +1,5 @@
 import wx
+from utilities import resource_path
 
 TRAY_TOOLTIP = 'Axis Mundi'
 TRAY_ICON = 'icon.png'
@@ -14,7 +15,7 @@ def create_menu_item(menu, label, func):
 class TaskBarIcon(wx.TaskBarIcon):
     def __init__(self):
         super(TaskBarIcon, self).__init__()
-        self.set_icon(TRAY_ICON)
+        self.set_icon(resource_path(TRAY_ICON))
         self.Bind(wx.EVT_TASKBAR_LEFT_DOWN, self.on_left_down)
 
     def CreatePopupMenu(self):

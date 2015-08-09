@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% set active_page = "" %}
+
+{% block content %}
+  <h2>No PGP key found</h2>
+  <p>This appears to be the first time Axis Mundi has been run on this system. Before you can continue you need to be in possession of a valid PGP key.</p>
+  <p>Axis Mundi can create a strong PGP key for you now if you want with minimal fuss, if you want to proceed with creating a key then complete the fields
+     below. Both the display name and e-mail address, if given, will be available for anyone to see who has a copy of the key so ensure that you are happy with
+     the name and e-mail address being visible to everyone.</p>
+   <h1>Create New PGP Key</h1>
+    <p><b>PGP key generation can be very slow on some systems, in particular virtual machines. See the README file for advice</b></p>
+    <form method="post" action="{{ url_for('create_pgpkey') }}">
+    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+        <table cellpadding="10">
+            <tr><td><label>Display Name :</label></td> <td colspan="2"><input type="text" name="displayname" size="44" class="inputs" placeholder="Display Name" required></td></tr>
+            <tr><td><label>E-mail address :</label></td> <td colspan="2"><input type="text" name="email" size="44" class="inputs" placeholder="Not recommended unless anonymous" required></td></tr>
+            <tr><td><label>PGP Passphrase:</label></td> <td><input type="password" name="pgppassphrase" size="44" class="inputs" placeholder="PGP Passphrase (will not be saved)"  required></td></tr>
+            <tr><td><label>PGP Passphrase (confirm):</label></td> <td><input type="password" name="pgppassphrase2" size="44" class="inputs" placeholder="PGP Passphrase (will not be saved)"  required></td></tr>
+            <tr><td><div style="btn"><button type="submit" class = "btn">Create PGP Key</button></div> (This may take a while)</td></tr>
+        </table></form>
+
+{% endblock %}
+

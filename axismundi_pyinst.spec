@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['client.py'],
-             pathex=['./'],
+             pathex=['.'],
              hiddenimports=[],
              hookspath=None,
              runtime_hooks=None,
@@ -27,9 +27,14 @@ def extra_datas(mydir):
 
     return extra_datas
 
+
+a.datas += [('icon.png','icon.png','DATA')]
+a.datas += [('words.txt','words.txt','DATA')]
 a.datas += extra_datas('static')
 a.datas += extra_datas('templates')
+
 print a.datas
+
 pyz = PYZ(a.pure,
              cipher=block_cipher)
 exe = EXE(pyz,
@@ -37,8 +42,9 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name='client',
+          name='axismundi',
           debug=False,
           strip=True,
           upx=True,
-          console=True )
+          console=True,
+          icon='icon.ico')
