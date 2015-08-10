@@ -8,7 +8,7 @@ a = Analysis(['client.py'],
              hiddenimports=[],
              hookspath=None,
              runtime_hooks=None,
-             excludes=None),
+             excludes=None)
 #             cipher=block_cipher)
 
 ##### include mydir in distribution #######
