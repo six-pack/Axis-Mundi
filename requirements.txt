@@ -8,4 +8,3 @@ pysocks>=1.5.4
 paho-mqtt
 pybitcointools
 pillow
-

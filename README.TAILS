@@ -27,9 +27,16 @@ Then the following steps are necessary
     Add '127.0.0.1' to the list in the 'No proxy for' box.
     Click OK
 
-5) You can now start axismundi.
+5) You can now start Axis Mundi from your axis-mundi directory
+    python client.py
 
-If you wish to create an Axis Mundi binary from source then simply execute the following command from your Axis Mundi directory:
+If you wish to create an Axis Mundi binary from source then you must download and install latest development version of PyInstaller - https://github.com/pyinstaller/pyinstaller/archive/develop.zip
+    unzip develop.zip
+    cd pyinstaller-develop
+    sudo python setup.py install
+    sudo chmod -R o+r,o+X /usr/local/lib/python2.7/dist-packages
+
+Now that Pyinstaller is installed simply execute the following command from your Axis Mundi directory:
     pyinstaller axismundi-pyinst.spec
 
 The binary will be built and placed into the dist directory. Keep a copy of it on a persistent volume for easy use and is self-contained.
