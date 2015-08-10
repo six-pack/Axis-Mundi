@@ -599,7 +599,7 @@ def createidentity():                                               # This is a 
     flash('There was a problem creating the initial configuration in the storage database '+ 'storage.db',category="error")
     #return False
   session.commit()
-  sleep(0.2)
+  sleep(1) # TODO find cause of socks_enabled.value being None and causing failed install - for now add delay
   # Now set the proxy settings specified on the install page
   socks_proxy = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "proxy").first()
   socks_proxy_port = session.query(app.roStorageDB.Config).filter(app.roStorageDB.Config.name == "proxy_port").first()

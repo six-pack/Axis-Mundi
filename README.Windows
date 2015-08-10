@@ -1,0 +1,28 @@
+Running the pre-built binary on Windows is very straightforward. Simply download the Windows Axis Mundi pre-built binary and run it.
+
+If you don't have PGP already installed then you will need to install at least GnuPG - ftp://ftp.gnupg.org/gcrypt/binary/gnupg-w32cli-1.4.19.exe (if you already have gpg4win installed then you are already tgood to go)
+
+However if you wish to run from source or build your own binary executables then there are a number of requirements that must be installed as follows (choose 32 or 64 bit as required) :
+
+ - python2.7 - https://www.python.org/downloads/release/python-2710/
+ - pywin32 - http://sourceforge.net/projects/pywin32/files/pywin32/
+ - wxpython3.0 - http://www.wxpython.org/download.php
+ - GnuPG (unless you want gpg4win) ftp://ftp.gnupg.org/gcrypt/binary/gnupg-w32cli-1.4.19.exe
+
+Now download the latest release of the Axis Mundi source - https://github.com/six-pack/Axis-Mundi/archive/master.zip
+
+Extract Axis Mundi to a folder. Now go back to a command prompt and change to the directory containing Axis Mundi. Install Python requirements using pip by typing the following at the command prompt:
+c:\python27\python -m pip install -r requirements.txt
+
+Once this has completed you can run Axis Mundi using:
+c:\python27\python client.py
+
+If you want to build a binary executable the following extra steps are required:
+
+Download and install latest development version of PyInstaller - https://github.com/pyinstaller/pyinstaller/archive/develop.zip
+
+Extract pyinstaller and from a command prompt run "c:\python27\python setup.py install" in the pyinstaller directory. This will install pyInstaller.
+
+In the command prompt change back to the Axis Mundi directory and type the following:
+c:\python27\scripts\pyinstaller axismundi_w32.spec
+This should build axismundi.exe in the dist directory. Take a copy of the executable - you can now use it on any Windows system.
