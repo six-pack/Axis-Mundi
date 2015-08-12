@@ -8,7 +8,7 @@ However if you wish to run from source or build your own binary executables then
  - pywin32 - http://sourceforge.net/projects/pywin32/files/pywin32/
  - wxpython3.0 - http://www.wxpython.org/download.php
  - GnuPG (unless you want gpg4win) ftp://ftp.gnupg.org/gcrypt/binary/gnupg-w32cli-1.4.19.exe
-
+ - SQLite Windows DLL - https://www.sqlite.org/download.html
 Now download the latest release of the Axis Mundi source - https://github.com/six-pack/Axis-Mundi/archive/master.zip
 
 Extract Axis Mundi to a folder. Now go back to a command prompt and change to the directory containing Axis Mundi. Install Python requirements using pip by typing the following at the command prompt:

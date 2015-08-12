@@ -27,6 +27,8 @@ a.datas += [('words.txt','words.txt','DATA')]
 a.datas += extra_datas('static')
 a.datas += extra_datas('templates')
 
+# SQLITE3 DLL must be present in the Axis Mundi base directory - download 32 or 64 bit sqlite DLL from https://www.sqlite.org/download.html
+
 print a.datas
 
 pyz = PYZ(a.pure)

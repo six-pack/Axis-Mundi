@@ -21,8 +21,8 @@ class TaskBarIcon(wx.TaskBarIcon):
 
     def CreatePopupMenu(self):
         menu = wx.Menu('Axis Mundi')
-# create_menu_item(menu, 'Restart', self.on_restart) # TODO: implement
-# restart function
+        # create_menu_item(menu, 'Restart', self.on_restart) # TODO: implement
+        # restart function
         create_menu_item(menu, 'Shutdown', self.on_exit)
         return menu
 

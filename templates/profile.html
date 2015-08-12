@@ -4,20 +4,21 @@
 {% block content %}
       <br>
         <table cellpadding="10">
-            <tr><td width="200"><img width="256" height="256" alt="{{profile.display_name}}" src={% if profile.avatar_base64 %}"data:image/png;base64,{{profile.avatar_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
-               <td width="400"><h2>&nbsp;&nbsp;{{profile.display_name}}</h2></td>
-               <td width="200"><form method="post" action="{{ url_for('new_contact') }}">
+            <tr><td width="300" rowspan="2"><img width="256" height="256" alt="{{profile.display_name}}" src={% if profile.avatar_base64 %}"data:image/png;base64,{{profile.avatar_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
+               <td width="600"><h2>&nbsp;&nbsp;{{profile.display_name}}</h2></td></tr>
+            <tr><td><form method="post" action="{{ url_for('new_contact') }}">
                    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
                    <input type="hidden" name="name" value="{{profile.display_name}}">
                    <input type="hidden" name="pgpkey_id" value="{{profile.key_id}}">
                    <input type="hidden" name="pgpkey_block">
-
-            </tr>
+                   <button type="submit" class = "btn" style="float:right">Add to Contacts</button></form>
+                    <div style="float:right;margin-top: 12px"><a class="btn"  href="{{ url_for('new_message')}}{{profile.key_id}}">Send Message</a></div>
+                    <div style="float:right;margin-top: 12px"><a class="btn" style="margin-top: 109px" href="{{ url_for('external_listings',keyid=profile.key_id)}}">View Listings</a></div>
+                    <div style="float:right;margin-top: 12px"><a class="btn"  href="{{ url_for('not_yet')}}">Block User</a></div>
+            </td></tr>
             <tr>
-               <td colspan="2" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;">{{profile.profile_text}}</td>
-               <td><p></p><div style="btn"><button type="submit" class = "btn">Add to Contacts</button></div></form></p>
-                <p><a class="btn" href="{{ url_for('new_message')}}{{profile.key_id}}">Send Message</a></p>
-                <p><a class="btn" href="{{ url_for('external_listings',keyid=profile.key_id)}}">View Listings</a></p></td>
+               <td colspan="2" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;"><div class="round_box"> {{profile.profile_text}}</div</td>
+               <td></td>
             </tr>
             <tr><td><label>PGP Key :</label></td>
             <td><label>{{profile.key_id}}</label></td></tr>

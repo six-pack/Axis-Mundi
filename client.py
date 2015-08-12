@@ -251,6 +251,10 @@ def cart(action=''):
     checkEvents()
     return render_template('cart.html', shopping_cart=shopping_cart)
 
+@app.route('/not_yet')
+@login_required
+def not_yet():
+    return render_template('not_yet.html')
 
 @app.route('/directory')
 @app.route('/directory/<int:page>')
