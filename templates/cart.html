@@ -30,13 +30,13 @@
                 <tr>
                 <td><img width="64" height="64" alt="{{item_dict.item['item']}}" src={% if item_dict.item['image'] %}"data:image/png;base64,{{item_dict.item['image']}}"{% else %}"/static/img/none.png"{% endif %} /></td>
                 <td>{{ item_dict.item['item'] }}</td>
-                <td><input type="text" name="quantity" size="2" class="inputs" placeholder="Qty" required value="{{ item_dict['quantity'] }}"></td>
-                <td><div class = "select_style"><select name="shipping" style="width: 250px">
+                <td><input type="text" name="quantity_{{item_dict.item['id']}}" size="2" class="inputs" placeholder="Qty" required value="{{ item_dict['quantity'] }}"></td>
+                <td><div class = "select_style"><select name="shipping_{{item_dict.item['id']}}" style="width: 250px">
                 {% for shipping_option in shipping_options %}
                 {%   set shipping_option_dict = shipping_options[shipping_option] %}
-                    <option value="{{ shipping_option }} ">{{ shipping_option_dict[0] }}&nbsp;({{ shipping_option_dict[1] }} {{item_dict.item['currency']}}) </option>
+                    <option value="{{ shipping_option }}" {% if item_dict.shipping == shipping_option %}selected{%endif%}>{{ shipping_option_dict[0] }}&nbsp;({{ shipping_option_dict[1] }} {{item_dict.item['currency']}}) </option>
             {% endfor %}
-            </select></div></td><td style="text-align: center">{{ item_dict.item['unit_price'] }} {{ item_dict.item['currency'] }}</td></tr>
+            </select></div></td><td style="text-align: center">{{ item_dict.total_price }} {{ item_dict.item['currency'] }}</td></tr>
             <input name="pgpkey_id" type=hidden value="{{ user }}">
             <input name="listing_id" type=hidden value="{{ item_dict.item['id'] }}">
         {%endfor%}

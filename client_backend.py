@@ -785,20 +785,23 @@ class messaging_loop(threading.Thread):
             session.add(cart_entry)
         session.commit()
 
-    def update_cart(self, item_id, key_id, quantity, shipping):
-        # TODO error checking...
-        session = self.storageDB.DBSession()
-        cart_entry = session.query(self.storageDB.Cart).filter(
-            self.storageDB.Cart.seller_key_id == key_id).filter(self.storageDB.Cart.item_id == item_id).first()
-        cart_entry.quantity = quantity
-        cart_entry.shipping = shipping
-        session.commit()
-
     def remove_from_cart(self, key_id):
         session = self.storageDB.DBSession()
         cart_entry = session.query(self.storageDB.Cart).filter(
             self.storageDB.Cart.seller_key_id == key_id).delete()
         session.commit()
+
+    def update_cart(self, key_id, items):
+        # TODO error checking...
+        session = self.storageDB.DBSession()
+        for item in items:
+            print "Update_cart is updating " + str(item) + " with " + str(items[item])
+            cart_entry = session.query(self.storageDB.Cart).filter(
+                self.storageDB.Cart.seller_key_id == key_id).filter(self.storageDB.Cart.item_id == item).first()
+            (qty,shipping) = (items[item])
+            cart_entry.quantity = qty
+            cart_entry.shipping = shipping
+            session.commit()
 
     def run(self):
         # TODO: Clean up this flow
@@ -1109,12 +1112,18 @@ class messaging_loop(threading.Thread):
                     self.add_to_cart(item_id, key_id)
 
                 elif task.command == 'update_cart':
-                    item_id = task.data['item_id']
                     key_id = task.data['key_id']
-                    quantity = task.data['quantity']
-                    shipping = task.data['shipping']
-                    print "Backend received update cart request for " + key_id + '/' + item_id
-                    self.update_cart(item_id, key_id, quantity, shipping)
+                    items = task.data['items']
+                    self.update_cart(key_id, items)
+
+                elif task.command == 'checkout':
+                    key_id = task.data['key_id']
+                    items = task.data['items']
+                    transaction_type = task.data['transaction_type']
+                    self.update_cart(key_id, items) # first capture any updates made to the cart before processing checkout
+                    self.q_data.put("checkout_done") # TODO: Find a better way, a much better way
+                    print "Backend handled checkout message"
+#                    self.checkout_cart(key_id)
 
                 elif task.command == 'remove_from_cart':
                     key_id = task.data['key_id']
@@ -1130,11 +1139,13 @@ class messaging_loop(threading.Thread):
                     flash_msg = queue_task(
                         0, 'flash_message', 'Re-publishing listings')
                     self.q_res.put(flash_msg)
+
                 elif task.command == 'get_directory':
                         # Request list of all users
                     key_topic = 'user/+/directory'
                     client.subscribe(str(key_topic), 1)
                     print "Requesting directory of users"
+
                 elif task.command == 'new_contact':
                     contact = Contact()
                     contact.displayname = task.data['displayname']
@@ -1142,6 +1153,7 @@ class messaging_loop(threading.Thread):
                     contact.pgpkeyid = task.data['pgpkeyid']
                     contact.flags = ''  # task.data['flags']
                     self.new_contact(contact)
+
                 elif task.command == 'new_listing':
                     print "New listing: " + task.data['title']
                     listing = Listing()
@@ -1157,6 +1169,7 @@ class messaging_loop(threading.Thread):
                     listing.shipping_options = task.data['shipping_options']
                     # TODO: add other listing fields
                     self.new_listing(listing)
+
                 elif task.command == 'update_listing':
                     print "Update listing: " + task.data['title']
                     listing = Listing()
@@ -1175,9 +1188,11 @@ class messaging_loop(threading.Thread):
                     listing.shipping_options = task.data['shipping_options']
                     # TODO: add other listing fields
                     self.update_listing(listing)
+
                 elif task.command == 'delete_listing':
                     listing_to_del = task.data['id']
                     self.delete_listing(listing_to_del)
+
                 elif task.command == 'shutdown':
                     self.shutdown = True
         try:

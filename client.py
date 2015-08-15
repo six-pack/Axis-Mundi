@@ -194,7 +194,7 @@ def external_listings(keyid='none', id='none'):
 @app.route('/cart', methods=["GET", "POST"])
 @login_required
 def cart(action=''):
-    # todo calculate price here based on current exchange rates
+    # todo check items from same seller are in same currency or deal with it
     shopping_cart = defaultdict(defaultdict)  # lol...
     session = app.roStorageDB.DBSession()
     cart_items = session.query(app.roStorageDB.Cart).order_by(
@@ -224,34 +224,71 @@ def cart(action=''):
             # name that can be tied to the orderid to deal with multiple items
             # from same seller
             seller_key = request.form['pgpkey_id']
-            item_id = request.form['listing_id']
-            quantity = request.form['quantity']
-            shipping_option = request.form['shipping']
-            cart_updates = {"key_id": seller_key, "item_id": item_id,
-                            "quantity": quantity, "shipping": shipping_option}
+            # Loop through each item in the cart and recover form values
+            seller_cart_items = session.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
+            cart_item_list = {}
+            for seller_cart_item in seller_cart_items:
+                item_id =  seller_cart_item.__dict__['item_id']
+                cart_item_list[item_id]=(request.form['quantity_' + item_id],request.form['shipping_' + item_id])
+            cart_updates = {"key_id": seller_key, "items": cart_item_list}
             task = queue_task(1, 'update_cart', cart_updates)
         elif action == "checkout":
             # user is checking out their cart from a single seller
             seller_key = request.form['pgpkey_id']
-            cart_checkout = {"key_id": seller_key}
+            transaction_type = request.form['transaction_type'] # TODO: check selected transaction type is allowed for each cart item
+            print "User is checking out from a cart from seller " + seller_key
+            seller_cart_items = session.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
+            cart_item_list = {}
+            for seller_cart_item in seller_cart_items:
+                item_id =  seller_cart_item.__dict__['item_id']
+                cart_item_list[item_id]=(request.form['quantity_' + item_id],request.form['shipping_' + item_id])
+            cart_checkout = {"key_id": seller_key, "transaction_type": transaction_type, "items": cart_item_list}
             task = queue_task(1, 'checkout', cart_checkout)
-            sleep(0.25)
             # return redirect(url_for('checkout'))
-            render_template('not_yet.html')
+            # TODO : find  a better way to do this
+            messageQueue.put(task)
+            sleep(0.25)
+            if checkDataQ() == 'checkout_done':
+                pass
+            else:
+                print "Checkout did not proceed in 0.25 seconds, wating another 1 second"
+                sleep (1) # This might not be enough - as above this mechanism is shit
+            cart_items = session.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
+            cart_item_list = {}
+            # convert the results into a format usable by the cart page
+            for cart_item in cart_items:
+                cart_item.__dict__['item'] = json.loads(cart_item.__dict__['item'])
+                shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
+                line_item_unit_price = float(cart_item.__dict__['item']['unit_price'])
+                x, line_item_shipping_price = (cart_item.__dict__['item']['shipping_options'][cart_item.__dict__['shipping']])
+                line_item_shipping_price = float(line_item_shipping_price)
+                line_item_qty = float(cart_item.__dict__['quantity'])
+                line_item_total_price = (line_item_unit_price * line_item_qty) + line_item_shipping_price
+                cart_item.__dict__['total_price'] = line_item_total_price
+                shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
+            checkEvents()
+            return render_template('checkout.html', shopping_cart=shopping_cart, seller_key=seller_key)
         # Now send the relevant cart_update message to backend and await
         # response - then return page
         messageQueue.put(task)
         sleep(0.25)
         return redirect(url_for('cart'))
-    # convert the results into a format usable by the cart page
+    # convert the results into a format usable by the cart
+    # todo calculate price here based on current exchange rates
     for cart_item in cart_items:
         cart_item.__dict__['item'] = json.loads(cart_item.__dict__['item'])
-        shopping_cart[cart_item.seller_key_id][
-            cart_item.id] = cart_item.__dict__
+        shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
+        line_item_unit_price = float(cart_item.__dict__['item']['unit_price'])
+        x, line_item_shipping_price = (cart_item.__dict__['item']['shipping_options'][cart_item.__dict__['shipping']])
+        line_item_shipping_price = float(line_item_shipping_price)
+        line_item_qty = float(cart_item.__dict__['quantity'])
+        line_item_total_price = (line_item_unit_price * line_item_qty) + line_item_shipping_price
+        cart_item.__dict__['total_price'] = line_item_total_price
+        shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
     checkEvents()
     return render_template('cart.html', shopping_cart=shopping_cart)
 
-@app.route('/not_yet')
+@app.route('/not_yet', methods=["GET", "POST"])
 @login_required
 def not_yet():
     return render_template('not_yet.html')
