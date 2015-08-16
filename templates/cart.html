@@ -14,7 +14,7 @@
             <tr><td colspan="3"><p style="font-size:20px"><b>Seller: {{user}}</b></p></td><td colspan="2">
                 <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Remove</button>
                 <button type="submit" style="float:right" class = "btn" name ="action" value="update">Update</button>
-                <label class="btn" for="modal-one" style="float:right">Checkout</label>
+                <label class="btn" for="modal-one-{{user}}" style="float:right">Checkout</label>
                 </td></tr>
             <tr>
             <th width="100px" align="left"><strong></strong></th>
@@ -43,6 +43,78 @@
         </table>
         </div>
         <br>
+        <!-- Modal One -->
+        <div class="modal">
+          <input class="modal-open" id="modal-one-{{user}}" type="checkbox" hidden>
+          <div class="modal-wrap" aria-hidden="true" role="dialog">
+            <label class="modal-overlay" for="modal-one-{{user}}">></label>
+            <div class="modal-dialog">
+              <div class="modal-header">
+                <h2>Select type of transaction</h2>
+                <label class="btn-close" for="modal-one-{{user}}" aria-hidden="true">×</label>
+              </div>
+              <div class="modal-body">
+                <div class="datagrid">
+                <div class="round_box" style="width:95%">
+                    <table cellpadding="5">
+                        <tr>
+                            <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="direct" value="direct" checked><label for="direct" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Direct</b></label></div></td>
+                            <td>Seller receives payment immediately
+                                <br>
+                                No feedback possible
+                                <br>
+                                Maximum privacy
+                                <br>
+                                No additional cost
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="round_box" style="width:95%">
+                    <table cellpadding="5">
+                        <tr>
+                            <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="notarized" value="notarized" disabled><label for="notarized" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Notarized</b></label></div></td>
+                            <td>Seller receives payment immediately
+                                <br>
+                                Buyer and seller can both leave feedback
+                                <br>
+                                Notary aware of order
+                                <br>
+                                Costs of around 1%
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="round_box" style="width:95%">
+                    <table cellpadding="5">
+                        <tr>
+                            <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="escrow" value="escrow" disabled><label for="escrow" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Escrow</b></label></div></td>
+                            <td>Seller receives payment after order is finalized
+                                <br>
+                                Buyer and seller can both leave feedback
+                                <br>
+                                Notary aware of order and bitcoin addresses
+                                <br>
+                                Arbiters can be used in the event of dispute
+                                <br>
+                                Costs of around 1% to 2%
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+              </div>
+              <div class="modal-footer" style="vertical-align:middle">
+
+                <label  style="float:right" class="btn" for="modal-one-{{user}}">Cancel</label>
+                    <button type="submit" style="float:right" class = "btn" name ="action" value="checkout">Continue Order</button>
+                  <br>
+              </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        </form>
+
     {% endfor %}
 
 
@@ -50,78 +122,5 @@
   {% else %}
         <h3><center>Your shopping cart is empty</center></h3>
   {% endif %}
-
-<!-- Modal One -->
-<div class="modal">
-  <input class="modal-open" id="modal-one" type="checkbox" hidden>
-  <div class="modal-wrap" aria-hidden="true" role="dialog">
-    <label class="modal-overlay" for="modal-one">></label>
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h2>Select type of transaction</h2>
-        <label class="btn-close" for="modal-one" aria-hidden="true">×</label>
-      </div>
-      <div class="modal-body">
-        <div class="datagrid">
-        <div class="round_box" style="width:95%">
-            <table cellpadding="5">
-                <tr>
-                    <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="direct" value="direct" checked><label for="direct" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Direct</b></label></div></td>
-                    <td>Seller receives payment immediately
-                        <br>
-                        No feedback possible
-                        <br>
-                        Maximum privacy
-                        <br>
-                        No additional cost
-                    </td>
-                </tr>
-            </table>
-        </div>
-        <div class="round_box" style="width:95%">
-            <table cellpadding="5">
-                <tr>
-                    <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="notarized" value="notarized" disabled><label for="notarized" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Notarized</b></label></div></td>
-                    <td>Seller receives payment immediately
-                        <br>
-                        Buyer and seller can both leave feedback
-                        <br>
-                        Notary aware of order
-                        <br>
-                        Costs of around 1%
-                    </td>
-                </tr>
-            </table>
-        </div>
-        <div class="round_box" style="width:95%">
-            <table cellpadding="5">
-                <tr>
-                    <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="escrow" value="escrow" disabled><label for="escrow" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Escrow</b></label></div></td>
-                    <td>Seller receives payment after order is finalized
-                        <br>
-                        Buyer and seller can both leave feedback
-                        <br>
-                        Notary aware of order and bitcoin addresses
-                        <br>
-                        Arbiters can be used in the event of dispute
-                        <br>
-                        Costs of around 1% to 2%
-                    </td>
-                </tr>
-            </table>
-        </div>
-      </div>
-      <div class="modal-footer" style="vertical-align:middle">
-
-        <label  style="float:right" class="btn" for="modal-one">Cancel</label>
-            <button type="submit" style="float:right" class = "btn" name ="action" value="checkout">Continue Order</button>
-          <br>
-      </div>
-      </div>
-    </div>
-  </div>
-</div>
-</form>
-
 
 {% endblock %}
