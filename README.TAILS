@@ -18,17 +18,10 @@ Then the following steps are necessary
 2) Tails uses very restrictive file-permissions when installing the python modules and they end up being inaccessible to anyone other than root. To fix this you must run the following command in the terminal:
     sudo chmod -R o+r,o+X /usr/local/lib/python2.7/dist-packages
 
-3) Axis Mundi is now ready, however you must configure Tails firewall to permit access as follows:
-    sudo iptables -I OUTPUT 2 -p tcp -s 127.0.0.1 -d 127.0.0.1 -m owner --uid-owner amnesia -j ACCEPT
-
-4) Finally, Torbrowser needs a proxy exception for localhost as by default there isn't one. To make this change from inside Tor Browser:
-    Click Preferences > Advanced Tab > Click Network sub-tab
-    Now click 'settings' button
-    Add '127.0.0.1' to the list in the 'No proxy for' box.
-    Click OK
-
-5) You can now start Axis Mundi from your axis-mundi directory
+3) You can now start Axis Mundi from your axis-mundi directory
     python client.py
+
+    Axis Mundi requires a change to the firewall rules (to permit localhost to localhost traffic) and also a proxy exclusion for localhost in Torbrowser. Axis Mundi will prompt you at start up if you are running on Tails and will offer to make these changes for you, although you are welcome to make them manually if you prefer.
 
 If you wish to create an Axis Mundi binary from source then you must download and install latest development version of PyInstaller - https://github.com/pyinstaller/pyinstaller/archive/develop.zip
     unzip develop.zip
@@ -37,7 +30,10 @@ If you wish to create an Axis Mundi binary from source then you must download an
     sudo chmod -R o+r,o+X /usr/local/lib/python2.7/dist-packages
 
 Now that Pyinstaller is installed simply execute the following command from your Axis Mundi directory:
-    pyinstaller axismundi-pyinst.spec
+    pyinstaller axismundi_pyinst.spec
 
-The binary will be built and placed into the dist directory. Keep a copy of it on a persistent volume for easy use and is self-contained.
+The binary will be built and placed into the dist directory. Keep a copy of it on a persistent volume for easy use:
+    cp dist/axismundi ~/Persistence
+
+Next time you want to execute Axis Mundi you will find it in the Persistence folder which you cna navigate to from 'Places'. Simply double click 'axismundi' to start.
 

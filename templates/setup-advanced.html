@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% set active_page = "Setup" %}
+
+{% block content %}
+  <h2>Configuration - Advanced</h2>
+  <p>You may perform advanced operations here - please be careful when using these functions.</p>
+ <!--   <h1>Configure</h1> -->
+    <form method="post" action="{{ url_for('setup') }}/advanced">
+    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+        <table cellpadding="10">
+            <tr><td width="200px"></td><td></td><td></td><td></td></tr>
+           <tr><td><label>Networking </label></td> <td><div style="btn"><button type="submit" class = "btn">Disconnect</button></div></td><td><div style="btn"><button type="submit" class = "btn">Connect</button></div></td></tr>
+            <tr><td><label>PGP Key Cache </label></td> <td colspan="3"><div style="btn"><button type="submit" class = "btn">Clear</button></div></td></tr>
+            <tr><td><label>User Profile Cache </label></td> <td colspan="3"><div style="btn"><button type="submit" class = "btn">Clear</button></div></td></tr>
+            <tr><td><label>User Listings Cache </label></td> <td colspan="3"><div style="btn"><button type="submit" class = "btn">Clear</button></div></td></tr>
+        </table>
+
+<div class="round_box">
+            <table>
+<tr><td width="200px"><label><b>Purge Everything</b></label></td><td><label class="btn" for="modal-one" style="background:red;color:black"><b>PURGE!</b></label></td><td><b>WARNING: </b>All Axis Mundi data will be removed from this system</td></tr>
+            </table>
+</div>
+
+        <!-- Modal One -->
+<div class="modal">
+  <input class="modal-open" id="modal-one" type="checkbox" hidden>
+  <div class="modal-wrap" aria-hidden="true" role="dialog">
+    <label class="modal-overlay" for="modal-one"></label>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2>PURGE WARNING!</h2>
+        <label class="btn-close" for="modal-one" aria-hidden="true">×</label>
+      </div>
+      <div class="modal-body">
+        <p><b>ARE YOU SURE YOU WISH TO PURGE ALL DATA?</b></p>
+          <p>Unless you have a backup of your storage.db and secret file you will lose all data including orders, messages and your Bitcoin wallet</p>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class = "btn">Yes, PURGE NOW!</button></form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+       </form>
+
+{% endblock %}

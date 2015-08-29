@@ -803,6 +803,16 @@ class messaging_loop(threading.Thread):
             cart_entry.shipping = shipping
             session.commit()
 
+    def create_order(self, key_id, buyer_address, buyer_note):
+        # TODO error checking...
+        print "Creating order to seller " + key_id
+        session = self.storageDB.DBSession()
+        cart_entries = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).all()
+        for entry in cart_entries:
+            print entry.__dict__
+
+        print "create_order finished..."
+
     def run(self):
         # TODO: Clean up this flow
         # make db connection
@@ -1124,6 +1134,12 @@ class messaging_loop(threading.Thread):
                     self.q_data.put("checkout_done") # TODO: Find a better way, a much better way
                     print "Backend handled checkout message"
 #                    self.checkout_cart(key_id)
+
+                elif task.command == 'create_order':
+                    key_id = task.data['key_id']
+                    buyer_address = task.data['buyer_address']
+                    buyer_note = task.data['buyer_note']
+                    self.create_order(key_id,buyer_address,buyer_note)
 
                 elif task.command == 'remove_from_cart':
                     key_id = task.data['key_id']

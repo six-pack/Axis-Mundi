@@ -21,7 +21,7 @@
             <th width="300px" align="left"><strong>Item</strong></th>
             <th width="50px"><strong>Qty</strong></th>
             <th width="250px"><strong>Shipping</strong></th>
-            <th width="150px"><strong>Price</strong></th>
+            <th width="200px"><strong>Price</strong></th>
             </tr>
 
             {% for item in shopping_cart[user]%}
@@ -36,7 +36,7 @@
                 {%   set shipping_option_dict = shipping_options[shipping_option] %}
                     <option value="{{ shipping_option }}" {% if item_dict.shipping == shipping_option %}selected{%endif%}>{{ shipping_option_dict[0] }}&nbsp;({{ shipping_option_dict[1] }} {{item_dict.item['currency']}}) </option>
             {% endfor %}
-            </select></div></td><td style="text-align: center">{{ item_dict.total_price }} {{ item_dict.item['currency'] }}</td></tr>
+            </select></div></td><td style="text-align: center">{{ item_dict.total_price }} {{ item_dict.item['currency'] }} ({{item_dict.total_btc_price}} BTC)</td></tr>
             <input name="pgpkey_id" type=hidden value="{{ user }}">
             <input name="listing_id" type=hidden value="{{ item_dict.item['id'] }}">
         {%endfor%}

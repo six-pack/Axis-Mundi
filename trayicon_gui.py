@@ -31,6 +31,7 @@ class TaskBarIcon(wx.TaskBarIcon):
         self.SetIcon(icon, TRAY_TOOLTIP)
 
     def on_left_down(self, event):
+        wx.MessageBox('Test', 'Indo', wx.OK)
         menu = self.CreatePopupMenu()
         self.PopupMenu(menu)
         menu.Destroy()

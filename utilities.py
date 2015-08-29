@@ -127,6 +127,26 @@ def getWords(filepath):
                     words.append(word)
     return sorted(words, key=pos.__getitem__)
 
+def os_is_tails():
+    # is this OS Tails
+    try:
+        with open('/etc/os-release') as f:
+            if re.match('TAILS_PRODUCT_NAME',f.readline()):
+                return True
+    except:
+        pass
+    return False
+
+def replace_in_file(path,text,subs,flags=0):
+    with open (path,"r+") as file:
+        file_contents=file.read()
+        text_pattern = re.compile(re.escape(text), flags)
+        file_contents = text_pattern.sub(subs,file_contents)
+        file.seek(0)
+        file.truncate()
+        file.write(file_contents)
+
+
 ########  Pyinstaller onefile need paths translation #####################
 
 

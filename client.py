@@ -11,7 +11,7 @@ import random
 from storage import Storage, SqlalchemyOrmPage
 from client_backend import messaging_loop
 import Queue
-from utilities import queue_task, encode_image, generate_seed, current_time, get_age, resource_path
+from utilities import queue_task, encode_image, generate_seed, current_time, get_age, resource_path, os_is_tails, replace_in_file
 from defaults import create_defaults
 from time import sleep
 import base64
@@ -264,10 +264,23 @@ def cart(action=''):
                 line_item_shipping_price = float(line_item_shipping_price)
                 line_item_qty = float(cart_item.__dict__['quantity'])
                 line_item_total_price = (line_item_unit_price * line_item_qty) + line_item_shipping_price
+                line_item_total_btc_price = line_item_total_price * 0.1  # TODO - use current BTC exchange rate multiplier for selected currency
                 cart_item.__dict__['total_price'] = line_item_total_price
+                cart_item.__dict__['total_btc_price'] = line_item_total_btc_price
                 shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
             checkEvents()
             return render_template('checkout.html', shopping_cart=shopping_cart, seller_key=seller_key)
+        elif action == "create_order":
+            seller_key = request.form['pgpkey_id']
+            buyer_address = request.form['address']
+            buyer_note = request.form['note']
+            order_details = {"key_id": seller_key, "buyer_address": buyer_address, "buyer_note": buyer_note}
+            task = queue_task(1, 'create_order', order_details)
+            messageQueue.put(task)
+            # order is submitted to backend - order must be built, wallet addresses generated, order message created, order committed to db
+            # TODO : Wait for order to appear in database then return page
+            return render_template('order.html', shopping_cart=shopping_cart, seller_key=seller_key) # TODO - payment address
+
         # Now send the relevant cart_update message to backend and await
         # response - then return page
         messageQueue.put(task)
@@ -283,7 +296,9 @@ def cart(action=''):
         line_item_shipping_price = float(line_item_shipping_price)
         line_item_qty = float(cart_item.__dict__['quantity'])
         line_item_total_price = (line_item_unit_price * line_item_qty) + line_item_shipping_price
+        line_item_total_btc_price = line_item_total_price * 0.1  # TODO - use current BTC exchange rate multiplier for selected currency
         cart_item.__dict__['total_price'] = line_item_total_price
+        cart_item.__dict__['total_btc_price'] = line_item_total_btc_price
         shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
     checkEvents()
     return render_template('cart.html', shopping_cart=shopping_cart)
@@ -693,7 +708,7 @@ def createidentity():                                               # This is a 
         try:
             makedirs(app.appdir, mode=0700)
         except:
-            flash("Error creating identity - client folder not created",
+            flash("Error creating identity - data folder not created",
                   category="error")
             return redirect(url_for('install'))
     app.dbsecretkey = ''.join(random.SystemRandom().choice(
@@ -965,7 +980,8 @@ def setup(page=''):
             return render_template('setup-trading.html', notaries=notaries)
         elif page == 'bitcoin':
             return render_template('setup-bitcoin.html', wallet_seed=wallet_seed, stratum_servers=stratum_servers)
-
+        elif page == 'advanced':
+            return render_template('setup-advanced.html')
 
 @app.route('/about')
 @login_required
@@ -1154,6 +1170,11 @@ def run():
                             '--throw-keyids', '--no-emit-version', '--trust-model=always'})  # we want to encrypt the secret with throw keys
     else:
         app.appdir = app.homedir + '/.dnmng'  # This is the default appdir location
+        if os_is_tails():
+            # If TAILS is being used and persistence is enabled we will use it as the default location
+            if isdir('/home/amnesia/Persistence'):
+                print "Tails persistence detected, Axis Mundi data store location defaulting to /home/amnesia/Persistence folder"
+                app.appdir = app.homedir + '/Persistence/.dnmng'  # This is the default appdir location
         # we want to encrypt the secret with throw keys
         app.gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg', options={
                             '--throw-keyids', '--no-emit-version', '--trust-model=always'})
@@ -1239,6 +1260,42 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
             print "No display detected, disabling status gui"
             option_nogui = True
             option_nobrowser = True
+    # If this is Tails - prepare system for Axis Mundi
+
+
+    if os_is_tails():
+        print "Tails OS detected "
+        # TODO : Check to see if tor browser and firewall change are already made, if they are don't bother user with dialogs
+        res = wx.MessageBox('TAILS OS has been detected\n\nIt is necessary to make two configuration changes for Axis Mundi to run.\n\nDo you want Axis Mundi to make the changes for you?','Axis Mundi- TAILS Detected',wx.YES_NO|wx.ICON_WARNING)
+        if res == wx.YES:
+            print "Making changes to TAILS OS to support Axis Mundi..."
+            #TODO: Check to see if Tor Browser is already running
+            wx.MessageBox('Please confirm Tor Browser is closed before continuing','Axis Mundi - Close Tor Browser', wx.ICON_WARNING)
+            # 1) Add proxyexception to Torbrowser for 127.0.0.1
+            try:
+                # TODO # This assumes a default Tails prefs.js - check to see if this line already exists
+                with open('/home/user/amtest.txt','a') as prefs_file:
+                # /home/amnesia/.tor-browser/profile.default/prefs.js
+                    prefs_file.write('user_pref("network.proxy.no_proxies_on", "10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1");\n')
+            except:
+                print "ERROR (Tails): Could not modify Tor Browser prefs with proxy exclusion for localhost "
+            # 2) Add firewall rule
+
+            def ask(parent=None, message=''):
+                dlg = wx.PasswordEntryDialog(parent, message)
+                dlg.ShowModal()
+                result = dlg.GetValue()
+                dlg.Destroy()
+                return result
+            admin_pass = ask(message = 'Provide Tails Administrative Password')
+            command = '/sbin/iptables -I OUTPUT 2 -p tcp -s 127.0.0.1 -d 127.0.0.1 -m owner --uid-owner amnesia -j ACCEPT'
+            p = os.system('echo %s|sudo -S %s' % (admin_pass, command))
+            if not p==0:
+                print "ERROR (Tails): Could not modify firewall configuration to allow localhost to localhost traffic"
+            admin_pass = ''
+        else:
+            wx.MessageBox('Please ensure you make the following two changes manually before continuing:\n\n1) Add a proxy exception in Tor Browser for 127.0.0.1\n2) Add a firewall rule to allow localhost to localhost using the following command :\nsudo iptables -I OUTPUT 2 -p tcp -s 127.0.0.1 -d 127.0.0.1 -m owner --uid-owner amnesia -j ACCEPT\n','Axis Mundi - Manual TAILS instructions')
+
     # Start the front end thread of the client
     front_end = Process(target=run)
     front_end.start()
