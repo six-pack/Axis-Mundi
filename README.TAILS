@@ -1,9 +1,36 @@
 Instructions for Tails users
+============================
 
-Using the binary version of Axis Mundi is easier than running from source code because of the stripped down nature of Tails.
-However if you wish to build from source then follow these step by step instructions. It is assumed that you are using a fresh, unmodified version of Tails.
+You should be using Tails with encrypted persistence enabled. Any version of Tails should work fine.
 
-Firstly you must start Tails and login using the additional settings option. Set an administrative password.
+You can either download and run the pre-built binaries (this is the simplest way) however if you wish to build your own binary rather from the source code rather than trust ours then follow these simple instructions. The "Build Your Own - Quick Start" method is the simplest and quickest. It is assumed that you are using Tails with encrypted persistence enabled.
+
+Pre-built Binaries - The Simplest Way
+=====================================
+
+Installing and using the pre-built binary version of Axis Mundi is very simple.
+
+1) Download the latest Axis Mundi 32-bit Linux executable/binary here : https://github.com/six-pack/Axis-Mundi/releases/download/0.0.8/axismundi-32
+2) Copy the downloaded file to your Persistence folder
+
+To use Axis Mundi simply double-click on the axismundi icon in your Persistence folder.
+
+Build Your Own - Quick Start Instructions (The quick and easy way)
+==================================================================
+
+1) Boot Tails making sure to select 'More Options' during start-up and setting an administrative password.
+2) Open a terminal then copy and paste the following line in and hit enter:
+    wget https://raw.githubusercontent.com/six-pack/Axis-Mundi/master/build_tails.sh; sh build_tails.sh
+3) Enter your administrative password when prompted (5 or 6 times) and select Y(es) when prompted
+
+Once complete, Axis Mundi should now be built and a copy should hve been placed in your Persistence folder.
+
+To use Axis Mundi simply double-click on the axismundi icon in your Persistence folder.
+
+Build Your Own - Detailed Instructions for set-up (The slower, step by step way)
+================================================================================
+
+Firstly you must start Tails and login using the additional settings option. Set an administrative password (you will need to enter it later once or twice)
 
 Then the following steps are necessary
 
@@ -23,17 +50,21 @@ Then the following steps are necessary
 
     Axis Mundi requires a change to the firewall rules (to permit localhost to localhost traffic) and also a proxy exclusion for localhost in Torbrowser. Axis Mundi will prompt you at start up if you are running on Tails and will offer to make these changes for you, although you are welcome to make them manually if you prefer.
 
-If you wish to create an Axis Mundi binary from source then you must download and install latest development version of PyInstaller - https://github.com/pyinstaller/pyinstaller/archive/develop.zip
+4) If you wish to create an Axis Mundi binary from source then you must download and install latest development version of PyInstaller -
+    wget https://github.com/pyinstaller/pyinstaller/archive/develop.zip
     unzip develop.zip
     cd pyinstaller-develop
     sudo python setup.py install
     sudo chmod -R o+r,o+X /usr/local/lib/python2.7/dist-packages
 
 Now that Pyinstaller is installed simply execute the following command from your Axis Mundi directory:
+    cd ..
     pyinstaller axismundi_pyinst.spec
 
 The binary will be built and placed into the dist directory. Keep a copy of it on a persistent volume for easy use:
     cp dist/axismundi ~/Persistence
 
 Next time you want to execute Axis Mundi you will find it in the Persistence folder which you cna navigate to from 'Places'. Simply double click 'axismundi' to start.
+
+
 

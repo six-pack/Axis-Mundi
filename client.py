@@ -1270,12 +1270,12 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
         if res == wx.YES:
             print "Making changes to TAILS OS to support Axis Mundi..."
             #TODO: Check to see if Tor Browser is already running
-            wx.MessageBox('Please confirm Tor Browser is closed before continuing','Axis Mundi - Close Tor Browser', wx.ICON_WARNING)
+            wx.MessageBox('Please confirm Tor Browser is closed before continuing','Axis Mundi - Close Tor Browser', wx.ICON_EXCLAMATION)
             # 1) Add proxyexception to Torbrowser for 127.0.0.1
             try:
                 # TODO # This assumes a default Tails prefs.js - check to see if this line already exists
-                with open('/home/user/amtest.txt','a') as prefs_file:
-                # /home/amnesia/.tor-browser/profile.default/prefs.js
+                with open('/home/amnesia/.tor-browser/profile.default/prefs.js','a') as prefs_file:
+                #
                     prefs_file.write('user_pref("network.proxy.no_proxies_on", "10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1");\n')
             except:
                 print "ERROR (Tails): Could not modify Tor Browser prefs with proxy exclusion for localhost "
