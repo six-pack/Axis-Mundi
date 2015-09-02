@@ -11,7 +11,6 @@ def create_menu_item(menu, label, func):
     menu.AppendItem(item)
     return item
 
-
 class TaskBarIcon(wx.TaskBarIcon):
 
     def __init__(self):
@@ -31,7 +30,6 @@ class TaskBarIcon(wx.TaskBarIcon):
         self.SetIcon(icon, TRAY_TOOLTIP)
 
     def on_left_down(self, event):
-        wx.MessageBox('Test', 'Indo', wx.OK)
         menu = self.CreatePopupMenu()
         self.PopupMenu(menu)
         menu.Destroy()
@@ -44,3 +42,25 @@ class TaskBarIcon(wx.TaskBarIcon):
         wx.CallAfter(self.Destroy)
         wx.GetApp().Exit()
 #        wx.GetApp().ExitMainLoop()
+
+# TODO: For unity we need an appindicator
+'''
+import appindicator
+from PyQt4 import QtGui
+class AppIndicatorIcon():
+
+    def __init__(self, frame):
+        # wx.Frame
+        self.frame = frame
+        # Application indicator
+        icon = resource_path(TRAY_ICON)
+        self.ind = appindicator.Indicator('Axis Mundi', icon,
+                               appindicator.CATEGORY_APPLICATION_STATUS)
+
+        self.ind.set_status(appindicator.STATUS_ACTIVE)
+        self.ind.set_attention_icon(icon)
+        # Gtk menu.
+#        self.menu_setup()
+        # Set menu to the indicator.
+#        self.ind.set_menu(self.menu)
+'''

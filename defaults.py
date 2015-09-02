@@ -112,7 +112,7 @@ def create_defaults(db, session, pgp_keyid, display_name, publish_id, btc_master
         new_conf_item.displayname = "Tor Proxy"
         session.add(new_conf_item)
         new_conf_item = db.Config(name="proxy_port")
-        new_conf_item.value = "9150"
+        new_conf_item.value = "9050" # TODO investigate on what systems this is 9150?
         new_conf_item.displayname = "Tor Proxy Port"
         session.add(new_conf_item)
         new_conf_item = db.Config(name="i2p_proxy")
@@ -120,7 +120,7 @@ def create_defaults(db, session, pgp_keyid, display_name, publish_id, btc_master
         new_conf_item.displayname = "i2p Proxy"
         session.add(new_conf_item)
         new_conf_item = db.Config(name="i2p_proxy_port")
-        new_conf_item.value = "9050"
+        new_conf_item.value = "1080"
         new_conf_item.displayname = "i2p Proxy Port"
         session.add(new_conf_item)
         # Security default settings

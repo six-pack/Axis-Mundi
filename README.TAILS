@@ -12,6 +12,7 @@ Installing and using the pre-built binary version of Axis Mundi is very simple.
 
 1) Download the latest Axis Mundi 32-bit Linux executable/binary here : https://github.com/six-pack/Axis-Mundi/releases/download/0.0.9/axismundi-32
 2) Copy the downloaded file to your Persistence folder
+3) Right-click on the axismundi file and click 'Properties'. On the 'Permissions' tab make sure the "Allow executing file as a program" box is checked.
 
 To use Axis Mundi simply double-click on the axismundi icon in your Persistence folder.
 

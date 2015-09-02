@@ -318,6 +318,25 @@ class messaging_loop(threading.Thread):
                         print "Extracting items from valid listings message..."
                         verified_listings = self.get_items_from_listings(
                             keyid, listings_message.sub_messages)
+                        # Purge any existing entries from table
+                        session.query(self.storageDB.cacheItems).filter(self.storageDB.cacheItems.key_id == keyid).delete()
+                        for verified_listing in verified_listings:
+                            cacheditem = self.storageDB.cacheItems(id=verified_listing['id'], key_id=keyid,
+                                                                          updated=datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
+                                                                          listings_block=verified_listing['raw_contract'],
+                                                                          title=verified_listing['item'],
+                                                                          category=verified_listing['category'],
+                                                                          description=verified_listing['description'],
+                                                                          qty_available = verified_listing['qty'],
+                                                                          order_max_qty = verified_listing['max_order_qty'],
+                                                                          price = verified_listing['unit_price'],
+                                                                          currency_code = verified_listing['currency'],
+                                                                          shipping_options = str(verified_listing['shipping_options']),
+                                                                          image_base64 = verified_listing['image'],
+                                                                          publish_date = datetime.strptime(verified_listing['publish_date'],"%Y-%m-%d %H:%M:%S"))
+
+                            session.add(cacheditem)
+                        session.commit()
                         self.q_data.put(verified_listings)
             else:
                 print "No items message found in listings returned from " + keyid
@@ -720,6 +739,7 @@ class messaging_loop(threading.Thread):
                     item_shipping_options = json.loads(
                         verified_item['shipping_options'])
                     verified_item['shipping_options'] = item_shipping_options
+                    verified_item['raw_contract'] = item
                     verified_listings.append(verified_item)
                 except:
                     print "Error: item json not extracted from signed sub-message"

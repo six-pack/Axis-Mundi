@@ -128,6 +128,24 @@ class Storage():
         updated = Column(DateTime, nullable=False)
         listings_block = Column(String())
 
+    class cacheItems(Base):
+        __tablename__ = 'cacheitems'
+        id = Column(Integer, primary_key=True)
+        key_id = Column(String(16), nullable=False)
+        updated = Column(DateTime, nullable=False)
+        listings_block = Column(String())
+        title = Column(String(80), nullable=False)
+        category = Column(String(255), nullable=False)
+        description = Column(String(4096), nullable=False)
+        qty_available = Column(Integer)
+        order_max_qty = Column(Integer)
+        price = Column(String(20), nullable=False)
+        currency_code = Column(String, ForeignKey('currencies.code'))
+        # will hold json list of shipping options
+        shipping_options = Column(String())
+        image_base64 = Column(String())
+        publish_date = Column(DateTime, nullable=False)
+
     class cacheProfiles(Base):
         __tablename__ = 'cacheprofiles'
         id = Column(Integer, primary_key=True)

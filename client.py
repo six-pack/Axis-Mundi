@@ -27,20 +27,6 @@ import trayicon_gui
 import wx
 import os
 
-# /////////// patch socket module to attempt to fix bug #12 -  "socket.error: [Errno 98] Address already in use"
-# This fixes re-use error but results in multiple cliet.py instances which is very undesirable
-# TODO : Fix by ensuring that client.py Flask threads exit when we want them to
-import socket
-socket.socket._bind = socket.socket.bind
-
-
-def my_socket_bind(self, *args, **kwargs):
-    self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-    return socket.socket._bind(self, *args, **kwargs)
-#socket.socket.bind = my_socket_bind
-# //////////// end socket patch
-
 app = Flask(__name__)
 # (8Mb maximum upload to local webserver) - make sure we dont need to use the disk
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
@@ -102,9 +88,11 @@ def get_connection_status():
 @app.after_request
 def add_header(response):
     #response.cache_control.max_age = 0
-    response.headers[
-        'Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    if not str(request).find('main.css'): # ok to cache the CSS - disable this for slightly enhanced deniability
+        response.headers[
+            'Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
     return response
+
 
 ########## Flask Routes ##################################
 
@@ -303,6 +291,12 @@ def cart(action=''):
     checkEvents()
     return render_template('cart.html', shopping_cart=shopping_cart)
 
+@app.route('/wait', methods=["GET", "POST"])
+@login_required
+def wait():
+    make_response()
+    return render_template('wait.html')
+
 @app.route('/not_yet', methods=["GET", "POST"])
 @login_required
 def not_yet():
@@ -350,22 +344,41 @@ def profile(keyid=None):
     profile = session.query(app.roStorageDB.cacheProfiles).filter_by(
         key_id=keyid).first()
     if not profile:  # no existing profile found in cache, request it
-        key = {"keyid": keyid}
-        task = queue_task(1, 'get_profile', key)
-        messageQueue.put(task)
+        if not request.args.get('wait'):
+            print "XXX - Profile to be requested"
+            timer = 0
+            key = {"keyid": keyid}
+            task = queue_task(1, 'get_profile', key)
+            messageQueue.put(task)
+            return redirect('/profile/'+keyid+'?wait='+str(timer),302)
+        else:
+            print "XXX - Incrementing wait by 1"
+            timer=int(request.args.get('wait')) + 1
+            if timer > 10: # TODO - get this working - currently wait is not updated so is not
+                print "XXX - timing out"
+                resp = make_response("Profile not found", 404)
+                return resp
+            else:
+                url=str(request).split()[1].strip("'")
+                url=url.rsplit('?')[0]
+                url = url + '?wait='+str(timer)
+                print url
+                return render_template('wait.html',url=url)
+
+
         # now, we wait...
-        timer = 0
-        profile = session.query(app.roStorageDB.cacheProfiles).filter_by(
-            key_id=keyid).first()
-        while (not profile) and (timer < 20):  # 20 second timeout for profile lookups
-            sleep(1)
-            profile = session.query(app.roStorageDB.cacheProfiles).filter_by(
-                key_id=keyid).first()
-            timer = timer + 1
-        if not profile:
-            # TODO - pretty this up
-            resp = make_response("Profile not found", 404)
-            return resp
+#        profile = session.query(app.roStorageDB.cacheProfiles).filter_by(
+#            key_id=keyid).first()
+#        while (not profile) and (timer < 20):  # 20 second timeout for profile lookups
+#            sleep(1)
+#            profile = session.query(app.roStorageDB.cacheProfiles).filter_by(
+#                key_id=keyid).first()
+#            timer = timer + 1
+#        if not profile:
+#            # TODO - pretty this up
+#            resp = make_response("Profile not found", 404)
+#            return resp
+
     else:  # we have returned an existing profile from the cache
         print "Existing entry found in profile cache..."
         # how old is the cached data
