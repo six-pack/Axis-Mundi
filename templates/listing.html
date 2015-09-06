@@ -1,23 +1,23 @@
 {% extends "layout.html" %}
 {% set active_page = "Trade" %}
 {% block content %}
-     <h2>{{listing.item}}</h2>
+     <h2>{{item.title}}</h2>
         <table cellpadding="10">
             <tr><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td width="300" rowspan="6" ><img width="256" height="256" alt="{{listing.item}}" src={% if listing.image %}"data:image/png;base64,{{listing.image}}"{% else %}"/static/img/none.png"{% endif %} /></td>
-            <tr><td width="200"><b>Price</b></td><td><b>{{listing.unit_price}} {{listing.currency}} (x.xx BTC)</b></td><td><form method="post" action="{{ url_for('cart') }}">
+            <tr><td width="300" rowspan="6" ><img width="256" height="256" alt="{{item.title}}" src={% if item.image_base64 %}"data:image/png;base64,{{item.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
+            <tr><td width="200"><b>Price</b></td><td><b>{{item.price}} {{item.currency_code}} (x.xx BTC)</b></td><td><form method="post" action="{{ url_for('cart') }}">
                 <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="add">
-                <input type="hidden" name="pgpkey_id" value="{{pgp_key}}"><input type="hidden" name="listing_id" value="{{listing.id}}"><div style="btn"><button type="submit" class = "btn">Add to Cart</button></div></form></td></tr>
-            <tr><td width="200"><B>Quantity Available </b></td><td>{{listing.qty}}</td></tr>
+                <input type="hidden" name="pgpkey_id" value="{{pgp_key}}"><input type="hidden" name="listing_id" value="{{item.id}}"><div style="btn"><button type="submit" class = "btn">Add to Cart</button></div></form></td></tr>
+            <tr><td width="200"><B>Quantity Available </b></td><td>{{item.qty_available}}</td></tr>
             <tr><td width="200"><B>Seller</b></td><td><a href="/profile/{{ pgp_key }}">{{ pgp_key }}</a></td><td><a class="btn" href="{{ url_for('new_message')}}{{pgp_key}}">Send Message</a></td></tr>
             <tr><td width="200"><B>Ships From</b></td><td>Not Specified</td></tr>
             <tr><td width="200"><B>Ships To</b></td><td>Worldwide</td></tr>
 
             <tr>
-               <td colspan="4" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;">{{listing.description}}</td>
+               <td colspan="4" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;">{{item.description}}</td>
             </tr>
-            <tr><td width="200"><B>Seller Stealth Address</b></td><td colspan="3">{{listing.stealth_address}}</td></tr>
+            <tr><td width="200"><B>Seller Stealth Address</b></td><td colspan="3">{{item.stealth_address}}</td></tr>
         </table>
 {% endblock %}
 

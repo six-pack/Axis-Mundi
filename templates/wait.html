@@ -6,5 +6,5 @@
 
 {% block content %}
 <h2>Working...please wait</h2>
-  <table align="center" cellpadding="10"><tr><td><progress id="progressbar" style="width:300px;height:30px;"></progress></td></tr></table>
+  <table align="center" cellpadding="10"><tr><td><progress id="progressbar" value="{{ request.args.get('wait') }}" max="20" style="width:300px;height:30px;"></progress></td></tr></table>
 {% endblock %}

@@ -34,6 +34,7 @@ class messaging_loop(threading.Thread):
     # server to be no more than +/- 5 minutes fromcurrent server time
 
     def __init__(self, pgpkeyid, pgppassphrase, dbpassphrase, database, homedir, appdir, q, q_res, q_data, workoffline=False):
+        print "NOTICE: Backend Thread Init"
         self.targetbroker = None
         self.mypgpkeyid = pgpkeyid
         self.q = q  # queue for client (incoming queue_task requests)
@@ -75,7 +76,7 @@ class messaging_loop(threading.Thread):
         self.task_state_pgpkeys = defaultdict(defaultdict)
         # This will hold cached listing items, entries will be created as
         # needed
-        self.memcache_listing_items = defaultdict(defaultdict)
+#        self.memcache_listing_items = defaultdict(defaultdict)
         self.publish_identity = True
         self.btc_master_key = ''
         threading.Thread.__init__(self)
@@ -331,7 +332,7 @@ class messaging_loop(threading.Thread):
                                                                           order_max_qty = verified_listing['max_order_qty'],
                                                                           price = verified_listing['unit_price'],
                                                                           currency_code = verified_listing['currency'],
-                                                                          shipping_options = str(verified_listing['shipping_options']),
+                                                                          shipping_options = json.dumps(verified_listing['shipping_options']),
                                                                           image_base64 = verified_listing['image'],
                                                                           publish_date = datetime.strptime(verified_listing['publish_date'],"%Y-%m-%d %H:%M:%S"))
 
@@ -366,6 +367,8 @@ class messaging_loop(threading.Thread):
         # Calculate stealth address from the first child key of the master key
         stealth_address = create_stealth_address(btc.privkey_to_pubkey(
             btc.bip32_extract_key(btc.bip32_ckd(self.btc_master_key, 1))))
+        # temporary buying keys will be generated from the second child of the master key
+
         # build and send profile message
         profile_message = Message()
         profile_message.type = 'Profile Message'
@@ -745,14 +748,6 @@ class messaging_loop(threading.Thread):
                     print "Error: item json not extracted from signed sub-message"
                     print item
                     continue
-                # Add this listing (or update if already present) in the
-                # listings item memory cache
-                # Bit shitty - tuple containing raw, signed msg & validate
-                # python object
-                self.memcache_listing_items[key_id][
-                    str(verified_item['id'])] = (item, verified_item)
-                # print self.memcache_listing_items[key_id]
-                #self.memcache_listing_items[keyid]['raw_msg']= verified_item
             else:
                 print "Error: Item signture not verified for listing message held in cache db"
         return verified_listings
@@ -760,15 +755,19 @@ class messaging_loop(threading.Thread):
     def add_to_cart(self, item_id, key_id):
         # TODO: At the moment this will only work if the listing has already
         # been retrieved (cached) - implement a fetch here if we need one
-        try:
-            raw_msg, msg = (self.memcache_listing_items[key_id][item_id])
-        except:
+        session = self.storageDB.DBSession()
+        item  = session.query(self.storageDB.cacheItems).filter(self.storageDB.cacheItems.key_id == key_id).filter(
+            self.storageDB.cacheItems.id == item_id).first()
+        if item:
+            print item
+            raw_msg = item.listings_block
+            cart_res = item.__dict__
+        else:
             print "ERROR: item could not be added to cart because it is not cached- try viewing the item first..."
             return False
-        cart_res = dict(msg)
-        session = self.storageDB.DBSession()
+#        cart_res = dict(msg)
         # TODO : error handling and input validation on this json
-        item_from_msg = json.dumps(cart_res)
+        item_from_msg = cart_res
         cart_db_res = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).filter(
             self.storageDB.Cart.item_id == cart_res['id']).count() > 0  # If it already exists then update
         if cart_db_res:
@@ -789,18 +788,35 @@ class messaging_loop(threading.Thread):
             cart_entry.raw_item = raw_msg
             cart_entry.item = item_from_msg
             cart_entry.quantity = cart_entry.quantity + 1
+            # calculate new line total price
+            cart_entry.line_total_price = (int(cart_entry.quantity)  * float(cart_entry.price)) + float(json.loads(cart_entry.shipping_options)[cart_entry.shipping][1])
+
             # cart_entry.shipping = 1 # cart_res['shipping'] # leave shipping
             # as it is
 
         else:
-            print "Adding new cart entry"
+            print "Adding new cart entry " + item.title
             cart_entry = self.storageDB.Cart(seller_key_id=key_id,
                                              item_id=cart_res['id'],
                                              raw_item=raw_msg,
-                                             # json.dumps(msg), #.__str__(),
-                                             item=item_from_msg,
+                                             title=item.title,
+                                             qty_available=item.qty_available,
+
+                                             order_max_qty = item.order_max_qty,
+                                             price = item.price,
+                                             currency_code = item.currency_code,
+                                             # will hold json list of shipping options
+                                             shipping_options = item.shipping_options,
+                                             image_base64 = item.image_base64,
+                                             publish_date = item.publish_date,
+
+
                                              quantity=1,  # ToDO read quantity from listing form if given
-                                             shipping=1)  # ToDO read shipping choice from listing form if given                                                       )
+                                             shipping=1,
+
+                                             # calculate new line total price
+                                             line_total_price = (1  * float(item.price)) + float(json.loads(item.shipping_options)['1'][1])
+            )  # ToDO read shipping choice from listing form if given                                                       )
 
             session.add(cart_entry)
         session.commit()
@@ -811,7 +827,7 @@ class messaging_loop(threading.Thread):
             self.storageDB.Cart.seller_key_id == key_id).delete()
         session.commit()
 
-    def update_cart(self, key_id, items):
+    def update_cart(self, key_id, items, transaction_type=None):
         # TODO error checking...
         session = self.storageDB.DBSession()
         for item in items:
@@ -821,6 +837,9 @@ class messaging_loop(threading.Thread):
             (qty,shipping) = (items[item])
             cart_entry.quantity = qty
             cart_entry.shipping = shipping
+            cart_entry.line_total_price = (int(cart_entry.quantity)  * float(cart_entry.price)) + float(json.loads(cart_entry.shipping_options)[cart_entry.shipping][1])
+            if transaction_type:
+                cart_entry.order_type = transaction_type
             session.commit()
 
     def create_order(self, key_id, buyer_address, buyer_note):
@@ -829,14 +848,43 @@ class messaging_loop(threading.Thread):
         session = self.storageDB.DBSession()
         cart_entries = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).all()
         for entry in cart_entries:
-            print entry.__dict__
+            # generate an order for each line item
+            orderid = ''.join(random.SystemRandom().choice(string.digits) for _ in range(9))
+            payment_address = 'x'
+            new_order = self.storageDB.Orders ( orderid = orderid,
+                                                seller_key = key_id,
+                                                buyer_key = self.mypgpkeyid,
+                                                notary_key = None,
+                                                order_date = datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
+                                                order_status = 1,
+                                                delivery_address = buyer_address,
+                                                order_note = buyer_note,
+                                                order_type = 'direct',
+                                                seller_btc_stealth = 'ADDRESS',
+                                                item_id = entry.item_id,
+                                                title = entry.title,
+                                                price = entry.price,
+                                                currency_code = entry.currency_code,
+                                                shipping_options = entry.shipping_options,
+                                                image_base64 = entry.image_base64,
+                                                publish_date = entry.publish_date,#datetime.strptime(entry.publish_date,"%Y-%m-%d %H:%M:%S"),
+                                                raw_item = None,
+                                                raw_seed = entry.raw_item,
+                                                quantity = entry.quantity,
+                                                shipping = entry.shipping,
+                                                line_total_price = entry.line_total_price
+                                                )
+            session.add(new_order)
+            session.commit()
+            # Purge entry from shopping cart
+
 
         print "create_order finished..."
 
     def run(self):
         # TODO: Clean up this flow
         # make db connection
-
+        print "NOTICE: Backend Thread Started"
         self.storageDB = Storage(self.dbsecretkey, "storage.db", self.appdir)
         if not self.storageDB.Start():
             print "Error: Unable to start storage database"
@@ -1057,84 +1105,12 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'get_listings':
                     item_id = task.data['id']
                     key_id = task.data['keyid']
-                    print "Get_listings command received : " + key_id + "/" + item_id
-                    if item_id == 'none':
-                        # no item - extract all listings
-                        session = self.storageDB.DBSession()
-                        cachelistings = session.query(
-                            self.storageDB.cacheListings).filter_by(key_id=key_id).first()
-                        if not cachelistings:  # no existing listings found in cache, request it
-                            key_topic = 'user/' + key_id + '/items'
-                            client.subscribe(str(key_topic), 1)
-                            print "Requesting listings for " + key_id
-                        else:  # we have returned an existing listings from the cache - check age of cached listings
-                            if get_age(cachelistings.updated) > CACHE_EXPIRY_LIMIT:
-                                # cached listings too old - get latest listings
-                                # TODO - return cached listing if we have one
-                                # and flash a message telling user it is cached
-                                # and a background update has been initiated
 
-                                if self.workoffline:
-                                    flash_msg = queue_task(
-                                        0, 'flash_message', 'Cached listings for this seller have expired, you should go online to get the latest listings.')
-                                    print "Extracting listings from cached copy"
-    #                                verified_listings=[]
-                                    listings_dict = json.loads(
-                                        cachelistings.listings_block)
-                                    if not listings_dict:
-                                        print "No items in the cached listings block for " + key_id
-                                        self.q_data.put('none')
-                                    else:
-                                        verified_listings = self.get_items_from_listings(
-                                            key_id, listings_dict)
-                                        self.q_data.put(verified_listings)
-                                else:
-                                    flash_msg = queue_task(
-                                        0, 'flash_message', 'Cached listings for this seller have expired, the latest listings have been requested in the background. Refresh the page.')
-                                    self.q_res.put(flash_msg)
-                                    self.q_res.put(flash_msg)
-                                    key_topic = 'user/' + key_id + '/items'
-                                    client.subscribe(str(key_topic), 1)
-                                    print "Requesting updated listings for " + key_id
-                            else:
-                                # we have an unexpired cacehd copy of this
-                                # listing so just return listings from db -
-                                print "Request for listings ignored...we have a copy in cache that has not expired..."
-                                print "Extracting listings from cached copy"
-#                                verified_listings=[]
-                                listings_dict = json.loads(
-                                    cachelistings.listings_block)
-                                if not listings_dict:
-                                    print "No items in the cached listings block for " + key_id
-                                    self.q_data.put('none')
-                                else:
-                                    verified_listings = self.get_items_from_listings(
-                                        key_id, listings_dict)
-                                    self.q_data.put(verified_listings)
-                    else:
-                        # Looks like user is viewing a specific item
-                        # TODO when a user attempts to view an item without
-                        # first retrieving listings it shows as blank, user
-                        # must refresh - FIX IT
-                        try:
-                            # print self.memcache_listing_items
-                            # print self.memcache_listing_items[key_id]
-                            if not self.memcache_listing_items[key_id][item_id] == '':
-                                print "Entry found in listing item memcache..."
-                                # TODO: Find casue of sporadic socket error serving the response for this back to the browser - its probably an exception here
-# print self.memcache_listing_items[key_id][item_id][1] # [0] is the raw,
-# signed copy of the listiing, [1] is stripped
-                                self.q_data.put(self.memcache_listing_items[
-                                                key_id][item_id][1])
-                        except KeyError:
-                            print "Could not find  memcache entry for " + str(key_id + ' ' + item_id)
-                            # Try refreshing listings for this user (this can
-                            # happen when the user clicks a direct link to an
-                            # item without viewing listigns first)
-                            key_topic = 'user/' + key_id + '/items'
-                            client.subscribe(str(key_topic), 1)
-                            print "Requesting updated listings for " + key_id
-
+                    key_topic = 'user/' + key_id + '/items'
+                    client.subscribe(str(key_topic), 1)
+                    print "Requesting listings for " + key_id
+########################################################################################################################- removed listing processing code to front end
+########################################################################################################################
                 elif task.command == 'add_to_cart':
                     item_id = task.data['item_id']
                     key_id = task.data['key_id']
@@ -1150,8 +1126,8 @@ class messaging_loop(threading.Thread):
                     key_id = task.data['key_id']
                     items = task.data['items']
                     transaction_type = task.data['transaction_type']
-                    self.update_cart(key_id, items) # first capture any updates made to the cart before processing checkout
-                    self.q_data.put("checkout_done") # TODO: Find a better way, a much better way
+                    self.update_cart(key_id, items,transaction_type=transaction_type) # first capture any updates made to the cart before processing checkout
+
                     print "Backend handled checkout message"
 #                    self.checkout_cart(key_id)
 

@@ -77,14 +77,30 @@ class Storage():
         id = Column(Integer, primary_key=True)
         orderid = Column(String(32), nullable=False)
         seller_key = Column(String(16), nullable=False)
-        seller_name = Column(String(64))
         buyer_key = Column(String(16), nullable=False)
-        buyer_name = Column(String(64))
         notary_key = Column(String(16))
-        notary_name = Column(String(64))
         order_date = Column(DateTime, nullable=False)
-        order_status = Column(String(64))
-        #, product title, prod description, quatity, seller, buyer, encrypted address(!), total price, notes, status, relevant timestamps
+        order_status = Column(String(64), nullable=False)
+        delivery_address = Column(String())
+        order_note = Column(String())
+        order_type = Column(String(16), nullable=False)
+        seller_btc_stealth = Column(String(80))
+        item_id = Column(String(16), nullable=False)
+        title = Column(String(80), nullable=False)
+        price = Column(String(20), nullable=False)
+        currency_code = Column(String, ForeignKey('currencies.code'))
+        # will hold json list of shipping options
+        shipping_options = Column(String())
+        image_base64 = Column(String())
+        publish_date = Column(DateTime, nullable=False)
+        raw_item = Column(String())  # raw signed item message text of current message chain with signing
+        raw_seed = Column(String(), nullable=False)  # raw signed item message text for seed contract
+        quantity = Column(Integer)
+        shipping = Column(String())
+        line_total_price = Column(String(20), nullable=False)
+        feedback_left = Column(String())
+        feedback_received = Column(String())
+        auxillary = Column(String()) # bucket for future use
 
     class Countries(Base):
         __tablename__ = 'countries'
@@ -101,10 +117,20 @@ class Storage():
         id = Column(Integer, primary_key=True)
         seller_key_id = Column(String(16), nullable=False)
         item_id = Column(String(16), nullable=False)
+        title = Column(String(80), nullable=False)
+        qty_available = Column(Integer)
+        order_max_qty = Column(Integer)
+        price = Column(String(20), nullable=False)
+        currency_code = Column(String, ForeignKey('currencies.code'))
+        # will hold json list of shipping options
+        shipping_options = Column(String())
+        image_base64 = Column(String())
+        publish_date = Column(DateTime, nullable=False)
         raw_item = Column(String())  # raw signed item message text
-        item = Column(String())  # json
         quantity = Column(Integer)
         shipping = Column(String())
+        line_total_price = Column(String(20), nullable=False)
+        order_type = Column(String(32))
 
     class cachePGPKeys(Base):
         __tablename__ = 'cachepgpkeys'
@@ -130,7 +156,8 @@ class Storage():
 
     class cacheItems(Base):
         __tablename__ = 'cacheitems'
-        id = Column(Integer, primary_key=True)
+        t_id = Column(Integer, primary_key=True)
+        id = Column(Integer, nullable=False) # Item id
         key_id = Column(String(16), nullable=False)
         updated = Column(DateTime, nullable=False)
         listings_block = Column(String())
@@ -160,6 +187,7 @@ class Storage():
         # This next one works although a numeric passphrase must be given
         #        self.engine = create_engine('sqlite+pysqlcipher://:' + passphrase + '/' + dbfilepath)
         print dbfilepath
+        #TODO : DATABASE ENCRYPTION SHOULD BE ENABLED HERE
         if get_os() == 'Windows':
             # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
             self.engine = create_engine(

@@ -16,10 +16,10 @@
         </tr>
         {% for listing in listings %}
         <tr>
-        <td style="width:66px"><img width="64" height="64" alt="{{listing.item}}" src={% if listing.image %}"data:image/png;base64,{{listing.image}}"{% else %}"/static/img/none.png"{% endif %} /></td>
-        <td><a href="/listings/view/{{pgp_key}}/{{listing.id}}">{{listing.item}}</a></td>
-        <td>{{listing.unit_price}} {{listing.currency}}</td>
-        <td>{{listing.qty}}</td>
+        <td style="width:66px"><img width="64" height="64" alt="{{listing.item}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
+        <td><a href="/listings/view/{{pgp_key}}/{{listing.id}}">{{listing.title}}</a></td>
+        <td>{{listing.price}} {{listing.currency_code}}</td>
+        <td>{{listing.qty_available}}</td>
         </tr>
         {% endfor %}
         <tr>

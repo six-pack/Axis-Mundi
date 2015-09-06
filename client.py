@@ -94,6 +94,27 @@ def add_header(response):
     return response
 
 
+######### JINJA FILTERS ##################################
+
+@app.template_filter('from_json')
+def from_json(value):
+    return (json.loads(value))
+
+@app.template_filter('display_name')
+# take a pgp keyid and return the displayname alongside the pgp key and any flags
+def display_name(value):
+    session = app.roStorageDB.DBSession()
+    filter = value
+    print filter
+    dname = session.query(app.roStorageDB.cacheDirectory).filter_by(key_id=filter).first()
+    print dname.display_name
+    return (dname.display_name) # TODO - check the contacts list and also add status flags/verfication status
+
+@app.template_filter('to_btc')
+# convert a given amount in a given currency to btc
+def to_btc(value): # tuple expected (ammount,currency_code)
+    return ('name: ' + value) # TODO - convert amount to btc
+
 ########## Flask Routes ##################################
 
 
@@ -150,33 +171,90 @@ def export_listings():
 @app.route('/listings/view/<string:keyid>/<string:id>')
 @login_required
 def external_listings(keyid='none', id='none'):
+    #todo remove listingscache (completely) and just work with itemcache
     if keyid == 'none':
         return redirect('/listings')
-    # View another users listings
-    with messageQueue_data.mutex:
-        messageQueue_data.queue.clear()  # flush the queue incase there is residual crap
-    cmd_data = {"keyid": keyid, "id": id}
-    task = queue_task(1, 'get_listings', cmd_data)
-    messageQueue.put(task)
-    # now, we wait...
-    timer = 0
-    while timer < 20:  # todo: this chunk of code is deeply crap - rewrite.
-        listings_data = checkDataQ()
-        if listings_data == 'none':
-            listings_data = None  # an empty listing message has arrived, break and process it
-            break
-        elif listings_data:
-            break  # a listing message has arrived, break and process it
-        sleep(0.25)
-        timer = timer + 0.25
-    if not listings_data:
-        return render_template('no_listing.html')
-    if not id == 'none':
-        # This is a specific listing response
-        return render_template('listing.html', listing=listings_data, pgp_key=keyid)
+    # View another users listings or listing
+    session = app.roStorageDB.DBSession()
+    if id == 'none':
+        # This is a request for a users listings (all items)
+        listings_cache = session.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
+        if not listings_cache:
+            if not request.args.get('wait'):
+                # We don't have anythng in the cache, make a request
+                cmd_data = {"keyid": keyid, "id": id}
+                task = queue_task(1, 'get_listings', cmd_data)
+                messageQueue.put(task)
+                timer = 0
+                return redirect('/listings/view/'+keyid+'?wait='+str(timer),302)
+            else:
+                timer=int(request.args.get('wait')) + 1
+                if timer > 20:
+                    resp = make_response("Listings request timed out", 200)
+                    return resp
+                else:
+                    url=str(request).split()[1].strip("'")
+                    url=url.rsplit('?')[0]
+                    url = url + '?wait='+str(timer)
+                    return render_template('wait.html',url=url) # return waiting page
+        else:
+            # There is a listings entry already in the cache - is it ok?
+            age = get_age(listings_cache.updated)
+            if age > CACHE_EXPIRY_LIMIT:
+                # Expired cached entry found
+                if app.workoffline:
+                    flash('Cached listings for this seller have expired, you should go online to get the latest listings.',category='message')
+                else:
+                    cmd_data = {"keyid": keyid, "id": id}
+                    task = queue_task(1, 'get_listings', cmd_data)
+                    messageQueue.put(task)
+                    flash('Cached listings for this seller have expired, the latest listings have been requested in the background. Refresh the page.', category='message')
+
+            # Even if listings are expired then show the items
+            if request.args.get('wait'):
+                return redirect('/listings/view/' + keyid) # Extra redirect to remove the ?wait=x from the URL
+            listings_data = session.query(app.roStorageDB.cacheItems).filter_by(key_id=keyid).all()
+            if not listings_data:
+                return render_template('no_listing.html')
+            else:
+                return render_template('listings.html', listings=listings_data, pgp_key=keyid)
     else:
-        # This is a full listings response
-        return render_template('listings.html', listings=listings_data, pgp_key=keyid)
+        # This is a request for a single item
+        item_cache = session.query(app.roStorageDB.cacheItems).filter_by(key_id=keyid).filter_by(id=id).first()
+        if not item_cache:
+            if not request.args.get('wait'):
+                # We don't have anythng in the cache, make a request
+                cmd_data = {"keyid": keyid, "id": id}
+                task = queue_task(1, 'get_listings', cmd_data)
+                messageQueue.put(task)
+                timer = 0
+                return redirect('/listings/view/'+keyid+'/'+id+'?wait='+str(timer),302)
+            else:
+                timer=int(request.args.get('wait')) + 1
+                if timer > 20:
+                    resp = make_response("Listings request timed out", 200)
+                    return resp
+                else:
+                    url=str(request).split()[1].strip("'")
+                    url=url.rsplit('?')[0]
+                    url = url + '?wait='+str(timer)
+                    return render_template('wait.html',url=url) # return waiting page
+        else:
+            # There are items already in the cache - is it ok?
+            age = get_age(item_cache.updated)
+            if age > CACHE_EXPIRY_LIMIT:
+                # Expired cached entry found
+                if app.workoffline:
+                    flash('Cached listings for this seller have expired, you should go online to get the latest listings.',category='message')
+                else:
+                    cmd_data = {"keyid": keyid, "id": id}
+                    task = queue_task(1, 'get_listings', cmd_data)
+                    messageQueue.put(task)
+                    flash('Cached listings for this seller have expired, the latest listings have been requested in the background. Refresh the page.', category='message')
+            # Even if listings are expired then show the item
+            if request.args.get('wait'):
+                return redirect('/listings/view/' + keyid + '/' + id) # Extra redirect to remove the ?wait=x from the URL
+            return render_template('listing.html', item=item_cache, pgp_key=keyid)
 
 
 @app.route('/cart', methods=["GET", "POST"])
@@ -208,15 +286,12 @@ def cart(action=''):
         elif action == 'update':
             # User is updating something in the cart - find out what and then update db
             # possible changes are Quantity or shipping
-            # TODO: Each quanity and shipping form field must have a unique
-            # name that can be tied to the orderid to deal with multiple items
-            # from same seller
             seller_key = request.form['pgpkey_id']
             # Loop through each item in the cart and recover form values
             seller_cart_items = session.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
             cart_item_list = {}
             for seller_cart_item in seller_cart_items:
-                item_id =  seller_cart_item.__dict__['item_id']
+                item_id =  seller_cart_item.item_id
                 cart_item_list[item_id]=(request.form['quantity_' + item_id],request.form['shipping_' + item_id])
             cart_updates = {"key_id": seller_key, "items": cart_item_list}
             task = queue_task(1, 'update_cart', cart_updates)
@@ -228,36 +303,18 @@ def cart(action=''):
             seller_cart_items = session.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
             cart_item_list = {}
             for seller_cart_item in seller_cart_items:
-                item_id =  seller_cart_item.__dict__['item_id']
+                item_id =  seller_cart_item.item_id
                 cart_item_list[item_id]=(request.form['quantity_' + item_id],request.form['shipping_' + item_id])
             cart_checkout = {"key_id": seller_key, "transaction_type": transaction_type, "items": cart_item_list}
             task = queue_task(1, 'checkout', cart_checkout)
             # return redirect(url_for('checkout'))
             # TODO : find  a better way to do this
             messageQueue.put(task)
-            sleep(0.25)
-            if checkDataQ() == 'checkout_done':
-                pass
-            else:
-                print "Checkout did not proceed in 0.25 seconds, wating another 1 second"
-                sleep (1) # This might not be enough - as above this mechanism is shit
-            cart_items = session.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
-            cart_item_list = {}
-            # convert the results into a format usable by the cart page
-            for cart_item in cart_items:
-                cart_item.__dict__['item'] = json.loads(cart_item.__dict__['item'])
-                shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
-                line_item_unit_price = float(cart_item.__dict__['item']['unit_price'])
-                x, line_item_shipping_price = (cart_item.__dict__['item']['shipping_options'][cart_item.__dict__['shipping']])
-                line_item_shipping_price = float(line_item_shipping_price)
-                line_item_qty = float(cart_item.__dict__['quantity'])
-                line_item_total_price = (line_item_unit_price * line_item_qty) + line_item_shipping_price
-                line_item_total_btc_price = line_item_total_price * 0.1  # TODO - use current BTC exchange rate multiplier for selected currency
-                cart_item.__dict__['total_price'] = line_item_total_price
-                cart_item.__dict__['total_btc_price'] = line_item_total_btc_price
-                shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
             checkEvents()
-            return render_template('checkout.html', shopping_cart=shopping_cart, seller_key=seller_key)
+            sleep(0.5)
+            cart_items = session.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
+            checkEvents()
+            return render_template('checkout.html', cart_items=cart_items, seller_key=seller_key)
         elif action == "create_order":
             seller_key = request.form['pgpkey_id']
             buyer_address = request.form['address']
@@ -274,22 +331,8 @@ def cart(action=''):
         messageQueue.put(task)
         sleep(0.25)
         return redirect(url_for('cart'))
-    # convert the results into a format usable by the cart
-    # todo calculate price here based on current exchange rates
-    for cart_item in cart_items:
-        cart_item.__dict__['item'] = json.loads(cart_item.__dict__['item'])
-        shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
-        line_item_unit_price = float(cart_item.__dict__['item']['unit_price'])
-        x, line_item_shipping_price = (cart_item.__dict__['item']['shipping_options'][cart_item.__dict__['shipping']])
-        line_item_shipping_price = float(line_item_shipping_price)
-        line_item_qty = float(cart_item.__dict__['quantity'])
-        line_item_total_price = (line_item_unit_price * line_item_qty) + line_item_shipping_price
-        line_item_total_btc_price = line_item_total_price * 0.1  # TODO - use current BTC exchange rate multiplier for selected currency
-        cart_item.__dict__['total_price'] = line_item_total_price
-        cart_item.__dict__['total_btc_price'] = line_item_total_btc_price
-        shopping_cart[cart_item.seller_key_id][cart_item.id] = cart_item.__dict__
     checkEvents()
-    return render_template('cart.html', shopping_cart=shopping_cart)
+    return render_template('cart.html',cart_items=cart_items)
 
 @app.route('/wait', methods=["GET", "POST"])
 @login_required
@@ -345,40 +388,21 @@ def profile(keyid=None):
         key_id=keyid).first()
     if not profile:  # no existing profile found in cache, request it
         if not request.args.get('wait'):
-            print "XXX - Profile to be requested"
             timer = 0
             key = {"keyid": keyid}
             task = queue_task(1, 'get_profile', key)
             messageQueue.put(task)
             return redirect('/profile/'+keyid+'?wait='+str(timer),302)
         else:
-            print "XXX - Incrementing wait by 1"
             timer=int(request.args.get('wait')) + 1
-            if timer > 10: # TODO - get this working - currently wait is not updated so is not
-                print "XXX - timing out"
-                resp = make_response("Profile not found", 404)
+            if timer > 20:
+                resp = make_response("Profile not found", 200)
                 return resp
             else:
                 url=str(request).split()[1].strip("'")
                 url=url.rsplit('?')[0]
                 url = url + '?wait='+str(timer)
-                print url
-                return render_template('wait.html',url=url)
-
-
-        # now, we wait...
-#        profile = session.query(app.roStorageDB.cacheProfiles).filter_by(
-#            key_id=keyid).first()
-#        while (not profile) and (timer < 20):  # 20 second timeout for profile lookups
-#            sleep(1)
-#            profile = session.query(app.roStorageDB.cacheProfiles).filter_by(
-#                key_id=keyid).first()
-#            timer = timer + 1
-#        if not profile:
-#            # TODO - pretty this up
-#            resp = make_response("Profile not found", 404)
-#            return resp
-
+                return render_template('wait.html',url=url) # return waiting page
     else:  # we have returned an existing profile from the cache
         print "Existing entry found in profile cache..."
         # how old is the cached data
@@ -389,7 +413,8 @@ def profile(keyid=None):
             task = queue_task(1, 'get_profile', key)
             messageQueue.put(task)
             flash("Cached profile has expired, the latest profile has been requested in the background. Refresh the page.", category="message")
-
+            if request.args.get('wait'):
+                return redirect('/profile/' + keyid) # Extra redirect to remove the ?wait=x from the URL
     return render_template('profile.html', profile=profile)
 
 
@@ -1045,8 +1070,7 @@ def login():
         app.dbsecretkey = str(decrypted_data)
         app.roStorageDB = Storage(app.dbsecretkey, "storage.db", app.appdir)
         if not app.roStorageDB.Start():
-            flash(
-                'You were authenticated however there is a problem with the storage database', category="error")
+            flash('You were authenticated however there is a problem with the storage database', category="error")
             return render_template('login.html', key_list=private_keys)
         user = User.get(app.pgp_keyid)
         login_user(user)
@@ -1058,9 +1082,26 @@ def login():
             # on the next page load so
             sleep(0.1)
             checkEvents()
-        return render_template('home.html')
+            if not app.workoffline:
+                timer = 0
+                return redirect('/login?wait='+str(timer),302)
+        return redirect ('/',302)
     else:
-        return render_template('login.html', key_list=private_keys)
+        if request.args.get('wait') :
+                if app.connection_status == "On-line":
+                    return redirect ('/',302)
+                timer=int(request.args.get('wait')) + 1
+                if timer > 20:
+                    flash('Connection to broker timed out, please logout and then login again','error')
+                    return redirect ('/',302)
+                    #TODO restart message thread
+                else:
+                    url=str(request).split()[1].strip("'")
+                    url=url.rsplit('?')[0]
+                    url = url + '?wait='+str(timer)
+                    return render_template('wait.html',url=url) # return waiting page
+        else:
+            return render_template('login.html', key_list=private_keys)
 
 # Minimalist PGP keyserver implementation (no auth required)
 # TODO: Move this whole function to client_backend and run as a small

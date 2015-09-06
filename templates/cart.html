@@ -1,20 +1,21 @@
 {% extends "layout.html" %}
 {% set active_page = "Trade" %}
-
+ {% set global_seller = [] %}<!-- jinja global hack needed -->
 {% block content %}
   <h2>Shopping Cart</h2>
-  {% if shopping_cart %}
+  {% if cart_items[0] %}
     <div class="datagrid">
-
-        {% for user in shopping_cart %}
+        {% set current_seller = cart_items[0]['seller_key_id'] %} <!-- Set first seller key and open display block-->
+        {% if global_seller.append(current_seller) %}{% endif %} <!-- hack to get a global for last block -->
+        <!--open seller block-->
         <div class="round_box">
         <table cellpadding="5">
         <form method="post" action="{{ url_for('cart') }}">
             <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
-            <tr><td colspan="3"><p style="font-size:20px"><b>Seller: {{user}}</b></p></td><td colspan="2">
+            <tr><td colspan="3"><p style="font-size:20px"><b>Seller: {{current_seller|display_name}} ({{current_seller}})</b></p></td><td colspan="2">
                 <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Remove</button>
                 <button type="submit" style="float:right" class = "btn" name ="action" value="update">Update</button>
-                <label class="btn" for="modal-one-{{user}}" style="float:right">Checkout</label>
+                <label class="btn" for="modal-one-{{current_seller}}" style="float:right">Checkout</label>
                 </td></tr>
             <tr>
             <th width="100px" align="left"><strong></strong></th>
@@ -23,35 +24,152 @@
             <th width="250px"><strong>Shipping</strong></th>
             <th width="200px"><strong>Price</strong></th>
             </tr>
+        {% for cart_item in cart_items %}
+            {% if not cart_item['seller_key_id'] == current_seller %}
+                <!-- close seller block -->
+                </table>
+                </div>
+                <br>
+                <!-- Modal One -->
+                <div class="modal">
+                  <input class="modal-open" id="modal-one-{{current_seller}}" type="checkbox" hidden>
+                  <div class="modal-wrap" aria-hidden="true" role="dialog">
+                    <label class="modal-overlay" for="modal-one-{{current_seller}}">></label>
+                    <div class="modal-dialog">
+                      <div class="modal-header">
+                        <h2>Select type of transaction</h2>
+                        <label class="btn-close" for="modal-one-{{current_seller}}" aria-hidden="true">×</label>
+                      </div>
+                      <div class="modal-body">
+                        <div class="datagrid">
+                        <div class="round_box" style="width:95%">
+                            <table cellpadding="5">
+                                <tr>
+                                    <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="direct" value="direct" checked><label for="direct" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Direct</b></label></div></td>
+                                    <td>Seller receives payment immediately
+                                        <br>
+                                        No feedback possible
+                                        <br>
+                                        Maximum privacy
+                                        <br>
+                                        No additional cost
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="round_box" style="width:95%">
+                            <table cellpadding="5">
+                                <tr>
+                                    <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="notarized" value="notarized" disabled><label for="notarized" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Notarized</b></label></div></td>
+                                    <td>Seller receives payment immediately
+                                        <br>
+                                        Buyer and seller can both leave feedback
+                                        <br>
+                                        Notary aware of order
+                                        <br>
+                                        Costs of around 1%
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="round_box" style="width:95%">
+                            <table cellpadding="5">
+                                <tr>
+                                    <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="escrow" value="escrow" disabled><label for="escrow" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Escrow</b></label></div></td>
+                                    <td>Seller receives payment after order is finalized
+                                        <br>
+                                        Buyer and seller can both leave feedback
+                                        <br>
+                                        Notary aware of order and bitcoin addresses
+                                        <br>
+                                        Arbiters can be used in the event of dispute
+                                        <br>
+                                        Costs of around 1% to 2%
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                      </div>
+                      <div class="modal-footer" style="vertical-align:middle">
 
-            {% for item in shopping_cart[user]%}
-                {% set item_dict = shopping_cart[user][item] %}
-                {% set shipping_options = item_dict.item['shipping_options'] %}
-                <tr>
-                <td><img width="64" height="64" alt="{{item_dict.item['item']}}" src={% if item_dict.item['image'] %}"data:image/png;base64,{{item_dict.item['image']}}"{% else %}"/static/img/none.png"{% endif %} /></td>
-                <td>{{ item_dict.item['item'] }}</td>
-                <td><input type="text" name="quantity_{{item_dict.item['id']}}" size="2" class="inputs" placeholder="Qty" required value="{{ item_dict['quantity'] }}"></td>
-                <td><div class = "select_style"><select name="shipping_{{item_dict.item['id']}}" style="width: 250px">
-                {% for shipping_option in shipping_options %}
-                {%   set shipping_option_dict = shipping_options[shipping_option] %}
-                    <option value="{{ shipping_option }}" {% if item_dict.shipping == shipping_option %}selected{%endif%}>{{ shipping_option_dict[0] }}&nbsp;({{ shipping_option_dict[1] }} {{item_dict.item['currency']}}) </option>
-            {% endfor %}
-            </select></div></td><td style="text-align: center">{{ item_dict.total_price }} {{ item_dict.item['currency'] }} ({{item_dict.total_btc_price}} BTC)</td></tr>
-            <input name="pgpkey_id" type=hidden value="{{ user }}">
-            <input name="listing_id" type=hidden value="{{ item_dict.item['id'] }}">
+                        <label  style="float:right" class="btn" for="modal-one-{{global_seller[-1]}}">Cancel</label>
+                            <button type="submit" style="float:right" class = "btn" name ="action" value="checkout">Continue Order</button>
+                          <br>
+                      </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                </form>
+                <!-- set current_seller -->
+                {% set current_seller = cart_item['seller_key_id'] %}
+                 {% if global_seller.append(current_seller) %}{% endif %} <!-- hack to get a global for last block -->
+                <!--open seller block -->
+                <div class="round_box">
+                <table cellpadding="5">
+                <form method="post" action="{{ url_for('cart') }}">
+                    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+                    <tr><td colspan="3"><p style="font-size:20px"><b>Seller: {{current_seller|display_name}} ({{current_seller}})</b></p></td><td colspan="2">
+                        <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Remove</button>
+                        <button type="submit" style="float:right" class = "btn" name ="action" value="update">Update</button>
+                        <label class="btn" for="modal-one-{{global_seller[-1]}}" style="float:right">Checkout</label>
+                        </td></tr>
+                    <tr>
+                    <th width="100px" align="left"><strong></strong></th>
+                    <th width="300px" align="left"><strong>Item</strong></th>
+                    <th width="50px"><strong>Qty</strong></th>
+                    <th width="250px"><strong>Shipping</strong></th>
+                    <th width="200px"><strong>Price</strong></th>
+                    </tr>
+                    <!-- item here -->
+
+                    {% set shipping_options = cart_item['shipping_options']|from_json %}
+                    <tr>
+                    <td><img width="64" height="64" alt="{{cart_item['title']}}" src={% if cart_item['image_base64'] %}"data:image/png;base64,{{cart_item['image_base64']}}"{% else %}"/static/img/none.png"{% endif %} /></td>
+                    <td>{{ cart_item['title'] }}</td>
+                    <td><input type="text" name="quantity_{{cart_item['item_id']}}" size="2" class="inputs" placeholder="Qty" required value="{{ cart_item['quantity'] }}"></td>
+                    <td><div class = "select_style"><select name="shipping_{{cart_item['item_id']}}" style="width: 250px">
+                    {% for shipping_option in shipping_options %}
+                        {%   set shipping_option_dict = shipping_options[shipping_option] %}
+                        <option value="{{ shipping_option }}" {% if cart_item['shipping'] == shipping_option %}selected{%endif%}>{{ shipping_option_dict[0] }}&nbsp;({{ shipping_option_dict[1] }} {{cart_item['currency_code']}}) </option>
+                    {% endfor %}
+                    </select></div></td><td style="text-align: center">{{ cart_item['line_total_price'] }} {{ cart_item['currency_code'] }} (xxx BTC)</td></tr>
+                    <input name="pgpkey_id" type=hidden value="{{ current_seller }}">
+                    <input name="listing_id" type=hidden value="{{ cart_item['item_id'] }}">
+
+
+            {% else %}
+                <!-- this item is from the same seller as the previous row, just continue -->
+                <!-- item here -->
+
+                    {% set shipping_options = cart_item['shipping_options']|from_json %}
+                    <tr>
+                    <td><img width="64" height="64" alt="{{cart_item['title']}}" src={% if cart_item['image_base64'] %}"data:image/png;base64,{{cart_item['image_base64']}}"{% else %}"/static/img/none.png"{% endif %} /></td>
+                    <td>{{ cart_item['title'] }}</td>
+                    <td><input type="text" name="quantity_{{cart_item['item_id']}}" size="2" class="inputs" placeholder="Qty" required value="{{ cart_item['quantity'] }}"></td>
+                    <td><div class = "select_style"><select name="shipping_{{cart_item['item_id']}}" style="width: 250px">
+                    {% for shipping_option in shipping_options %}
+                        {%   set shipping_option_dict = shipping_options[shipping_option] %}
+                        <option value="{{ shipping_option }}" {% if cart_item['shipping'] == shipping_option %}selected{%endif%}>{{ shipping_option_dict[0] }}&nbsp;({{ shipping_option_dict[1] }} {{cart_item['currency_code']}}) </option>
+                    {% endfor %}
+                    </select></div></td><td style="text-align: center">{{ cart_item['line_total_price'] }} {{ cart_item['currency_code'] }} (xxx BTC)</td></tr>
+                    <input name="pgpkey_id" type=hidden value="{{ current_seller }}">
+                    <input name="listing_id" type=hidden value="{{ cart_item['item_id'] }}">
+
+            {% endif %}
         {%endfor%}
         </table>
         </div>
         <br>
         <!-- Modal One -->
         <div class="modal">
-          <input class="modal-open" id="modal-one-{{user}}" type="checkbox" hidden>
+          <input class="modal-open" id="modal-one-{{global_seller[-1]}}" type="checkbox" hidden>
           <div class="modal-wrap" aria-hidden="true" role="dialog">
-            <label class="modal-overlay" for="modal-one-{{user}}">></label>
+            <label class="modal-overlay" for="modal-one-{{global_seller[-1]}}">></label>
             <div class="modal-dialog">
               <div class="modal-header">
                 <h2>Select type of transaction</h2>
-                <label class="btn-close" for="modal-one-{{user}}" aria-hidden="true">×</label>
+                <label class="btn-close" for="modal-one-{{global_seller[-1]}}" aria-hidden="true">×</label>
               </div>
               <div class="modal-body">
                 <div class="datagrid">
@@ -105,7 +223,7 @@
               </div>
               <div class="modal-footer" style="vertical-align:middle">
 
-                <label  style="float:right" class="btn" for="modal-one-{{user}}">Cancel</label>
+                <label  style="float:right" class="btn" for="modal-one-{{global_seller[-1]}}">Cancel</label>
                     <button type="submit" style="float:right" class = "btn" name ="action" value="checkout">Continue Order</button>
                   <br>
               </div>
@@ -115,8 +233,6 @@
         </div>
         </form>
 
-    {% endfor %}
-
 
     </div>
   {% else %}
@@ -124,3 +240,4 @@
   {% endif %}
 
 {% endblock %}
+

@@ -3,15 +3,14 @@
 
 {% block content %}
   <h2>Checkout</h2>
-  {% if shopping_cart %}
+  {% if cart_items %}
     <div class="datagrid">
 
-        {% for user in shopping_cart %} <!-- Just a single seller user expected here in checkout-->
         <div class="round_box">
         <table cellpadding="5">
         <form method="post" action="{{ url_for('cart') }}">
             <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
-            <tr><td colspan="3"><p style="font-size:20px"><b>Seller: {{user}}</b></p></td><td colspan="2">
+            <tr><td colspan="3"><p style="font-size:20px"><b>Seller: {{seller_key|display_name}} ({{seller_key}})</b></p></td><td colspan="2">
                 <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Cancel Order</button>
                 <button type="submit" style="float:right" class = "btn" name ="action" value="create_order">Place Order</button>
                 </td></tr>
@@ -20,24 +19,24 @@
             <th width="300px" align="left"><strong>Item</strong></th>
             <th width="50px"><strong>Qty</strong></th>
             <th width="250px"><strong>Shipping</strong></th>
-            <th width="200px"><strong>Price</strong></th>
+            <th width="200px"><strong>Total Price</strong></th>
             </tr>
 
-            {% for item in shopping_cart[user]%}
-                {% set item_dict = shopping_cart[user][item] %}
-                {% set shipping_options = item_dict.item['shipping_options'] %}
+            {% for item in cart_items%}
+                {% set item_dict = cart_items[item] %}
+                {% set shipping_options = item.shipping_options|from_json %}
                 <tr>
-                <td colspan="2">{{ item_dict.item['item'] }}</td>
-                <td><label>{{ item_dict['quantity'] }}</label></td>
+                <td colspan="2">{{ item.title }}</td>
+                <td><label>{{ item.quantity }}</label></td>
                 <td>
                 {% for shipping_option in shipping_options %}
                 {%   set shipping_option_dict = shipping_options[shipping_option] %}
-                     {% if item_dict.shipping == shipping_option %}{{ shipping_option_dict[0] }}{%endif%}
+                     {% if item.shipping == shipping_option %}{{ shipping_option_dict[0] }}{%endif%}
+                {% endfor %}
+                </td><td style="text-align: center">{{ item.line_total_price }} {{ item.currency_code }} ({{item['total_btc_price']}} BTC)</td></tr>
+                <input name="pgpkey_id" type=hidden value="{{ seller_key }}">
+                <input name="listing_id" type=hidden value="{{ item.item_id }}">
             {% endfor %}
-           </div></td><td style="text-align: center">{{ item_dict.total_price }} {{ item_dict.item['currency'] }} ({{item_dict.total_btc_price}} BTC)</td></tr>
-            <input name="pgpkey_id" type=hidden value="{{ user }}">
-            <input name="listing_id" type=hidden value="{{ item_dict.item['id'] }}">
-        {%endfor%}
         </table>
         </div>
         <br>
@@ -58,7 +57,7 @@
         </table>
 
         <br>
-    {% endfor %}
+
 
     </form>
     </div>
