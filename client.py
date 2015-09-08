@@ -39,7 +39,6 @@ login_manager.login_view = "login"
 login_manager.init_app(app)
 pager_items = 12  # default of 12 items per page when paginating
 
-
 class User(UserMixin):
 
     def __init__(self, id):
@@ -59,7 +58,6 @@ def load_user(userid):
 
 ########## CSRF protection ###############################
 
-
 @app.before_request
 def csrf_protect():
     if request.method == "POST":
@@ -77,7 +75,10 @@ def generate_csrf_token():
     return session['_csrf_token']
 
 ######## STATUS, PAGE GLOBALS AND UPDATES ################################
-
+@app.before_request
+def looking_glass_session(): # this session cookie will be used for looking glass mode
+    if session.get('lg','') == '':
+        session['lg']= ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16))
 
 @app.before_request
 def get_connection_status():
@@ -103,12 +104,10 @@ def from_json(value):
 @app.template_filter('display_name')
 # take a pgp keyid and return the displayname alongside the pgp key and any flags
 def display_name(value):
-    session = app.roStorageDB.DBSession()
+    dbsession = app.roStorageDB.DBSession()
     filter = value
-    print filter
-    dname = session.query(app.roStorageDB.cacheDirectory).filter_by(key_id=filter).first()
-    print dname.display_name
-    return (dname.display_name) # TODO - check the contacts list and also add status flags/verfication status
+    dname = dbsession.query(app.roStorageDB.cacheDirectory).filter_by(key_id=filter).first()
+    return (dname.display_name) # TODO - check the contacts list and also add status flags/verfication/trust status
 
 @app.template_filter('to_btc')
 # convert a given amount in a given currency to btc
@@ -132,21 +131,23 @@ def home():
 @login_required
 def orders(view_type='buying', page=1):
     checkEvents()
-    session = app.roStorageDB.DBSession()
+    dbsession = app.roStorageDB.DBSession()
     page_results = None
     if view_type == 'buying':
-        orders_buying = session.query(app.roStorageDB.Orders).filter_by(buyer_key=app.pgp_keyid).order_by(
+        orders_buying = dbsession.query(app.roStorageDB.Orders).filter_by(buyer_key=app.pgp_keyid).order_by(
             app.roStorageDB.Orders.order_date.asc())
         page_results = SqlalchemyOrmPage(
             orders_buying, page=page, items_per_page=pager_items)
+        return render_template('orders.html', orders=page_results, view=view_type)
     elif view_type == 'selling':
-        orders_selling = session.query(app.roStorageDB.Orders).filter_by(seller_key=app.pgp_keyid).order_by(
+        orders_selling = dbsession.query(app.roStorageDB.Orders).filter_by(seller_key=app.pgp_keyid).order_by(
             app.roStorageDB.Orders.order_date.asc())
         page_results = SqlalchemyOrmPage(
             orders_selling, page=page, items_per_page=pager_items)
-    return render_template('orders.html', orders=page_results, view=view_type)
-
-
+        return render_template('orders.html', orders=page_results, view=view_type)
+    elif view_type == 'view':
+        order = dbsession.query(app.roStorageDB.Orders).filter_by(id=page).first()
+        return render_template('order.html', order=order)
 @app.route
 @app.route('/listings/publish')
 @login_required
@@ -175,10 +176,10 @@ def external_listings(keyid='none', id='none'):
     if keyid == 'none':
         return redirect('/listings')
     # View another users listings or listing
-    session = app.roStorageDB.DBSession()
+    dbsession = app.roStorageDB.DBSession()
     if id == 'none':
         # This is a request for a users listings (all items)
-        listings_cache = session.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
+        listings_cache = dbsession.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
         if not listings_cache:
             if not request.args.get('wait'):
                 # We don't have anythng in the cache, make a request
@@ -213,14 +214,14 @@ def external_listings(keyid='none', id='none'):
             # Even if listings are expired then show the items
             if request.args.get('wait'):
                 return redirect('/listings/view/' + keyid) # Extra redirect to remove the ?wait=x from the URL
-            listings_data = session.query(app.roStorageDB.cacheItems).filter_by(key_id=keyid).all()
+            listings_data = dbsession.query(app.roStorageDB.cacheItems).filter_by(key_id=keyid).all()
             if not listings_data:
                 return render_template('no_listing.html')
             else:
                 return render_template('listings.html', listings=listings_data, pgp_key=keyid)
     else:
         # This is a request for a single item
-        item_cache = session.query(app.roStorageDB.cacheItems).filter_by(key_id=keyid).filter_by(id=id).first()
+        item_cache = dbsession.query(app.roStorageDB.cacheItems).filter_by(key_id=keyid).filter_by(id=id).first()
         if not item_cache:
             if not request.args.get('wait'):
                 # We don't have anythng in the cache, make a request
@@ -261,9 +262,8 @@ def external_listings(keyid='none', id='none'):
 @login_required
 def cart(action=''):
     # todo check items from same seller are in same currency or deal with it
-    shopping_cart = defaultdict(defaultdict)  # lol...
-    session = app.roStorageDB.DBSession()
-    cart_items = session.query(app.roStorageDB.Cart).order_by(
+    dbsession = app.roStorageDB.DBSession()
+    cart_items = dbsession.query(app.roStorageDB.Cart).order_by(
         app.roStorageDB.Cart.seller_key_id.asc())
     if request.method == 'POST':
         action = request.form['action']
@@ -273,7 +273,7 @@ def cart(action=''):
             # qty and shipping to listing page
             seller_key = request.form['pgpkey_id']
             item_id = request.form['listing_id']
-            new_item = {"key_id": seller_key, "item_id": item_id}
+            new_item = {"key_id": seller_key, "item_id": item_id, "sessionid": session.get('lg','')}
             task = queue_task(1, 'add_to_cart', new_item)
             # todo - do this from bakend so that item naem can be included
             flash("Item added to cart", category="message")
@@ -281,50 +281,56 @@ def cart(action=''):
             # delete sellers items from cart - remove them from database
             print "Front end requesting to delete sellers items from cart"
             seller_key = request.form['pgpkey_id']
-            del_seller = {"key_id": seller_key}
+            del_seller = {"key_id": seller_key, "sessionid": session.get('lg','')}
             task = queue_task(1, 'remove_from_cart', del_seller)
         elif action == 'update':
             # User is updating something in the cart - find out what and then update db
             # possible changes are Quantity or shipping
             seller_key = request.form['pgpkey_id']
             # Loop through each item in the cart and recover form values
-            seller_cart_items = session.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
+            seller_cart_items = dbsession.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
             cart_item_list = {}
             for seller_cart_item in seller_cart_items:
                 item_id =  seller_cart_item.item_id
                 cart_item_list[item_id]=(request.form['quantity_' + item_id],request.form['shipping_' + item_id])
-            cart_updates = {"key_id": seller_key, "items": cart_item_list}
+            cart_updates = {"key_id": seller_key, "items": cart_item_list, "sessionid": session.get('lg','')}
             task = queue_task(1, 'update_cart', cart_updates)
         elif action == "checkout":
             # user is checking out their cart from a single seller
             seller_key = request.form['pgpkey_id']
             transaction_type = request.form['transaction_type'] # TODO: check selected transaction type is allowed for each cart item
             print "User is checking out from a cart from seller " + seller_key
-            seller_cart_items = session.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
+            seller_cart_items = dbsession.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
             cart_item_list = {}
             for seller_cart_item in seller_cart_items:
                 item_id =  seller_cart_item.item_id
                 cart_item_list[item_id]=(request.form['quantity_' + item_id],request.form['shipping_' + item_id])
-            cart_checkout = {"key_id": seller_key, "transaction_type": transaction_type, "items": cart_item_list}
+            cart_checkout = {"key_id": seller_key, "transaction_type": transaction_type, "items": cart_item_list, "sessionid": session.get('lg','')}
             task = queue_task(1, 'checkout', cart_checkout)
             # return redirect(url_for('checkout'))
             # TODO : find  a better way to do this
             messageQueue.put(task)
             checkEvents()
             sleep(0.5)
-            cart_items = session.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
+            cart_items = dbsession.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
             checkEvents()
             return render_template('checkout.html', cart_items=cart_items, seller_key=seller_key)
         elif action == "create_order":
             seller_key = request.form['pgpkey_id']
             buyer_address = request.form['address']
             buyer_note = request.form['note']
-            order_details = {"key_id": seller_key, "buyer_address": buyer_address, "buyer_note": buyer_note}
+            order_details = {"key_id": seller_key, "buyer_address": buyer_address, "buyer_note": buyer_note, "sessionid": session.get('lg','')}
             task = queue_task(1, 'create_order', order_details)
             messageQueue.put(task)
             # order is submitted to backend - order must be built, wallet addresses generated, order message created, order committed to db
-            # TODO : Wait for order to appear in database then return page
-            return render_template('order.html', shopping_cart=shopping_cart, seller_key=seller_key) # TODO - payment address
+            orders = dbsession.query(app.roStorageDB.Orders).filter_by(session_id=session.get('lg','')).filter_by(seller_key=seller_key).order_by(app.roStorageDB.Orders.order_status.asc())
+            if orders:
+                sleep(0.5)
+                # This query includes the lg sessionid because evem if lg is not enabled, it is necessary to track the user move from cart to order
+                orders = dbsession.query(app.roStorageDB.Orders).filter_by(session_id=session.get('lg','')).filter_by(seller_key=seller_key).order_by(app.roStorageDB.Orders.order_status.asc()) # one or more ordered items
+            else:
+                print "Order not yet ready...waiting..."
+            return render_template('ordered.html', order=orders, seller_key=seller_key)
 
         # Now send the relevant cart_update message to backend and await
         # response - then return page
@@ -350,8 +356,8 @@ def not_yet():
 @login_required
 def directory(page=1):
     checkEvents()
-    session = app.roStorageDB.DBSession()
-    directory = session.query(app.roStorageDB.cacheDirectory).order_by(
+    dbsession = app.roStorageDB.DBSession()
+    directory = dbsession.query(app.roStorageDB.cacheDirectory).order_by(
         app.roStorageDB.cacheDirectory.display_name.asc())
     page_results = SqlalchemyOrmPage(
         directory, page=page, items_per_page=pager_items * 2)
@@ -363,8 +369,8 @@ def directory(page=1):
 @login_required
 def listings(page=1):
     checkEvents()
-    session = app.roStorageDB.DBSession()
-    listings = session.query(app.roStorageDB.Listings)
+    dbsession = app.roStorageDB.DBSession()
+    listings = dbsession.query(app.roStorageDB.Listings)
     page_results = SqlalchemyOrmPage(
         listings, page=page, items_per_page=pager_items)
     return render_template('mylistings.html', listings=page_results)
@@ -383,8 +389,8 @@ def profile(keyid=None):
 #    task = queue_task(1,'get_profile',keyid)
 #    messageQueue.put(task)
     # for now wait for the response for up to [timeout] seconds
-    session = app.roStorageDB.DBSession()
-    profile = session.query(app.roStorageDB.cacheProfiles).filter_by(
+    dbsession = app.roStorageDB.DBSession()
+    profile = dbsession.query(app.roStorageDB.cacheProfiles).filter_by(
         key_id=keyid).first()
     if not profile:  # no existing profile found in cache, request it
         if not request.args.get('wait'):
@@ -423,8 +429,8 @@ def profile(keyid=None):
 @login_required
 def contacts(page=1):
     checkEvents()
-    session = app.roStorageDB.DBSession()
-    contacts = session.query(app.roStorageDB.Contacts)
+    dbsession = app.roStorageDB.DBSession()
+    contacts = dbsession.query(app.roStorageDB.Contacts)
     page_results = SqlalchemyOrmPage(
         contacts, page=page, items_per_page=pager_items)
     return render_template('contacts.html', contacts=page_results)
@@ -458,8 +464,8 @@ def new_contact(contact_pgpkey=""):
         checkEvents()
         return redirect(url_for('contacts'))
     else:
-        session = app.roStorageDB.DBSession()
-        contacts = session.query(app.roStorageDB.Contacts).all()
+        dbsession = app.roStorageDB.DBSession()
+        contacts = dbsession.query(app.roStorageDB.Contacts).all()
         return render_template('contact-new.html', contacts=contacts, contact_pgpkey=contact_pgpkey)
 
 
@@ -468,10 +474,10 @@ def new_contact(contact_pgpkey=""):
 @login_required
 def messages(page=1):
     checkEvents()
-    session = app.roStorageDB.DBSession()
-#  inbox_messages = session.query(app.roStorageDB.PrivateMessaging).filter_by(recipient_key=app.pgp_keyid,message_direction="In").order_by(
+    dbsession = app.roStorageDB.DBSession()
+#  inbox_messages = dbsession.query(app.roStorageDB.PrivateMessaging).filter_by(recipient_key=app.pgp_keyid,message_direction="In").order_by(
 #                  app.roStorageDB.PrivateMessaging.message_date.asc())
-    inbox_messages = session.query(app.roStorageDB.PrivateMessaging).filter_by(recipient_key=app.pgp_keyid, message_direction="In").order_by(
+    inbox_messages = dbsession.query(app.roStorageDB.PrivateMessaging).filter_by(recipient_key=app.pgp_keyid, message_direction="In").order_by(
         app.roStorageDB.PrivateMessaging.message_date.asc())
     page_results = SqlalchemyOrmPage(
         inbox_messages, page=page, items_per_page=pager_items)
@@ -484,8 +490,8 @@ def messages(page=1):
 @login_required
 def messages_sent(page=1):
     checkEvents()
-    session = app.roStorageDB.DBSession()
-    sent_messages = session.query(app.roStorageDB.PrivateMessaging).filter_by(sender_key=app.pgp_keyid, message_direction="Out").order_by(
+    dbsession = app.roStorageDB.DBSession()
+    sent_messages = dbsession.query(app.roStorageDB.PrivateMessaging).filter_by(sender_key=app.pgp_keyid, message_direction="Out").order_by(
         app.roStorageDB.PrivateMessaging.message_date.asc())
     page_results = SqlalchemyOrmPage(
         sent_messages, page=page, items_per_page=pager_items)
@@ -495,8 +501,8 @@ def messages_sent(page=1):
 @app.route('/messages/view/<string:id>/',)
 @login_required
 def view_message(id):
-    session = app.roStorageDB.DBSession()
-    message = session.query(
+    dbsession = app.roStorageDB.DBSession()
+    message = dbsession.query(
         app.roStorageDB.PrivateMessaging).filter_by(id=id).one()
     return render_template('message.html', message=message)
 
@@ -522,8 +528,8 @@ def reply_message(id):
         checkEvents()
         return redirect(url_for('messages'))
     else:
-        session = app.roStorageDB.DBSession()
-        message = session.query(
+        dbsession = app.roStorageDB.DBSession()
+        message = dbsession.query(
             app.roStorageDB.PrivateMessaging).filter_by(id=id).one()
         return render_template('message-reply.html', message=message)
 
@@ -585,11 +591,11 @@ def new_listing(id=0):
         checkEvents()
         return redirect(url_for('listings'))
     else:
-        session = app.roStorageDB.DBSession()
-        # session.query(app.roStorageDB.Contacts).all() # TODO: Query list of
+        dbsession = app.roStorageDB.DBSession()
+        # dbsession.query(app.roStorageDB.Contacts).all() # TODO: Query list of
         # categories currently known
         categories = None
-        currencies = session.query(app.roStorageDB.currencies).all()
+        currencies = dbsession.query(app.roStorageDB.currencies).all()
         return render_template('listing-new.html', categories=categories, currencies=currencies)
 
 
@@ -650,12 +656,12 @@ def edit_listing(id=0):
         checkEvents()
         return redirect(url_for('listings'))
     else:
-        session = app.roStorageDB.DBSession()
-        # session.query(app.roStorageDB.Contacts).all() # TODO: Query list of
+        dbsession = app.roStorageDB.DBSession()
+        # dbsession.query(app.roStorageDB.Contacts).all() # TODO: Query list of
         # categories currently known
         categories = None
-        currencies = session.query(app.roStorageDB.currencies).all()
-        listing_item = session.query(
+        currencies = dbsession.query(app.roStorageDB.currencies).all()
+        listing_item = dbsession.query(
             app.roStorageDB.Listings).filter_by(id=id).first()
         listing_shipping_options = json.loads(listing_item.shipping_options)
         return render_template('listing-edit.html', categories=categories, currencies=currencies, listing=listing_item, shipping_options=listing_shipping_options)
@@ -699,8 +705,8 @@ def new_message(recipient_key=""):
         checkEvents()
         return redirect(url_for('messages'))
     else:
-        session = app.roStorageDB.DBSession()
-        contacts = session.query(app.roStorageDB.Contacts).all()
+        dbsession = app.roStorageDB.DBSession()
+        contacts = dbsession.query(app.roStorageDB.Contacts).all()
         return render_template('message-compose.html', contacts=contacts, recipient_key=recipient_key)
 
 
@@ -779,29 +785,29 @@ def createidentity():                                               # This is a 
     if not installStorageDB.Start():
         flash('There was a problem creating the storage database ' +
               'storage.db', category="error")
-    session = installStorageDB.DBSession()
+    dbsession = installStorageDB.DBSession()
     # Now populate the config database with defaults + user specified data
     # TODO: take account of user selection when setting publish_id
     defaults = create_defaults(
-        installStorageDB, session, app.pgp_keyid, app.display_name, app.publish_id, wallet_seed)
+        installStorageDB, dbsession, app.pgp_keyid, app.display_name, app.publish_id, wallet_seed)
     if not defaults:
         flash('There was a problem creating the initial configuration in the storage database ' +
               'storage.db', category="error")
         # return False
-    session.commit()
+    dbsession.commit()
     sleep(1)  # TODO find cause of socks_enabled.value being None and causing failed install - for now add delay
     # Now set the proxy settings specified on the install page
-    socks_proxy = session.query(app.roStorageDB.Config).filter(
+    socks_proxy = dbsession.query(app.roStorageDB.Config).filter(
         app.roStorageDB.Config.name == "proxy").first()
-    socks_proxy_port = session.query(app.roStorageDB.Config).filter(
+    socks_proxy_port = dbsession.query(app.roStorageDB.Config).filter(
         app.roStorageDB.Config.name == "proxy_port").first()
-    i2p_socks_proxy = session.query(app.roStorageDB.Config).filter(
+    i2p_socks_proxy = dbsession.query(app.roStorageDB.Config).filter(
         app.roStorageDB.Config.name == "i2p_proxy").first()
-    i2p_socks_proxy_port = session.query(app.roStorageDB.Config).filter(
+    i2p_socks_proxy_port = dbsession.query(app.roStorageDB.Config).filter(
         app.roStorageDB.Config.name == "i2p_proxy_port").first()
-    socks_enabled = session.query(app.roStorageDB.Config).filter(
+    socks_enabled = dbsession.query(app.roStorageDB.Config).filter(
         app.roStorageDB.Config.name == "socks_enabled").first()
-    i2p_socks_enabled = session.query(app.roStorageDB.Config).filter(
+    i2p_socks_enabled = dbsession.query(app.roStorageDB.Config).filter(
         app.roStorageDB.Config.name == "i2p_socks_enabled").first()
     if request.form.get('enable_socks') == 'True':
         socks_enabled.value = 'True'
@@ -815,8 +821,8 @@ def createidentity():                                               # This is a 
         i2p_socks_enabled.value = 'False'
     i2p_socks_proxy.value = request.form['i2p_proxy']
     i2p_socks_proxy_port.value = request.form['i2p_proxy_port']
-    session.commit()
-    session.close()
+    dbsession.commit()
+    dbsession.close()
     installStorageDB.Stop()
     return redirect(url_for('setup'))
 
@@ -868,34 +874,34 @@ def setup(page=''):
     if request.method == "POST":
         # These are updates to the config - these should be sent to the client queue but for now allow a db update from here
         #  CHeck and apply new settings
-        session = app.roStorageDB.DBSession()
-        displayname = session.query(app.roStorageDB.Config).filter(
+        dbsession = app.roStorageDB.DBSession()
+        displayname = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "displayname").first()
-        profile = session.query(app.roStorageDB.Config).filter(
+        profile = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "profile").first()
-        avatar_image = session.query(app.roStorageDB.Config).filter(
+        avatar_image = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "avatar_image").first()
-        hubnodes = session.query(app.roStorageDB.Config.value).filter(
+        hubnodes = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "hubnodes").all()
-        notaries = session.query(app.roStorageDB.Config.value).filter(
+        notaries = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "notaries").all()
-        socks_proxy = session.query(app.roStorageDB.Config).filter(
+        socks_proxy = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "proxy").first()
-        socks_proxy_port = session.query(app.roStorageDB.Config).filter(
+        socks_proxy_port = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "proxy_port").first()
-        i2p_socks_proxy = session.query(app.roStorageDB.Config).filter(
+        i2p_socks_proxy = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "i2p_proxy").first()
-        i2p_socks_proxy_port = session.query(app.roStorageDB.Config).filter(
+        i2p_socks_proxy_port = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "i2p_proxy_port").first()
-        socks_enabled = session.query(app.roStorageDB.Config).filter(
+        socks_enabled = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "socks_enabled").first()
-        i2p_socks_enabled = session.query(app.roStorageDB.Config).filter(
+        i2p_socks_enabled = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "i2p_socks_enabled").first()
-        message_retention = session.query(app.roStorageDB.Config).filter(
+        message_retention = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "message_retention").first()
-        accept_unsigned = session.query(app.roStorageDB.Config).filter(
+        accept_unsigned = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "accept_unsigned").first()
-        wallet_seed = session.query(app.roStorageDB.Config).filter(
+        wallet_seed = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "wallet_seed").first()
         #
         if page == "identity":
@@ -909,7 +915,7 @@ def setup(page=''):
                     new_conf_item.value = str(encode_image(
                         avatar_image_file.read(), (128, 128)))
                     new_conf_item.displayname = "Avatar Image"
-                    session.add(new_conf_item)
+                    dbsession.add(new_conf_item)
                 else:
                     avatar_image.value = encode_image(
                         avatar_image_file.read(), (128, 128))  # TODO - maintain aspect ratio
@@ -920,7 +926,7 @@ def setup(page=''):
                 new_conf_item = app.roStorageDB.Config(name="profile")
                 new_conf_item.value = str(request.form['profile'])
                 new_conf_item.displayname = "Public Profile"
-                session.add(new_conf_item)
+                dbsession.add(new_conf_item)
         elif page == "network":
             if request.form.get('enable_socks') == 'True':
                 socks_enabled.value = 'True'
@@ -935,13 +941,13 @@ def setup(page=''):
             i2p_socks_proxy.value = request.form['i2p_proxy']
             i2p_socks_proxy_port.value = request.form['i2p_proxy_port']
             new_hubnodes = str(request.form['hubnodes']).splitlines()
-            session.query(app.roStorageDB.Config.value).filter(
+            dbsession.query(app.roStorageDB.Config.value).filter(
                 app.roStorageDB.Config.name == "hubnodes").delete()
             for node in new_hubnodes:
                 new_conf_item = app.roStorageDB.Config(name="hubnodes")
                 new_conf_item.value = node
                 new_conf_item.displayname = "Entry Points"
-                session.add(new_conf_item)
+                dbsession.add(new_conf_item)
         elif page == "security":
             message_retention.value = request.form['message_retention']
             if request.form.get('allow_unsigned') == 'True':
@@ -952,60 +958,60 @@ def setup(page=''):
             wallet_seed = request.form['seed']
             new_stratum_servers = str(
                 request.form['stratum_servers']).splitlines()
-            session.query(app.roStorageDB.Config.value).filter(
+            dbsession.query(app.roStorageDB.Config.value).filter(
                 app.roStorageDB.Config.name == "stratum_servers").delete()
             for node in new_stratum_servers:
                 new_conf_item = app.roStorageDB.Config(name="stratum_servers")
                 new_conf_item.value = node
                 new_conf_item.displayname = "Stratum Servers"
-                session.add(new_conf_item)
+                dbsession.add(new_conf_item)
         try:
-            session.commit()
+            dbsession.commit()
         except:
-            session.rollback()
+            dbsession.rollback()
             flash(
                 "There was a problem saving the updated configuration. Nothing has been saved", category="error")
             return redirect(url_for('setup'))
         finally:
-            session.close()
+            dbsession.close()
             flash("Configuration updated", category="message")
             return redirect(url_for('setup'))
     else:
         # First read config from the database
-        session = app.roStorageDB.DBSession()
-        pgpkeyid = session.query(app.roStorageDB.Config.value).filter(
+        dbsession = app.roStorageDB.DBSession()
+        pgpkeyid = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "pgpkeyid").first()
-        displayname = session.query(app.roStorageDB.Config.value).filter(
+        displayname = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "displayname").first()
-        profile = session.query(app.roStorageDB.Config.value).filter(
+        profile = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "profile").first()
-        avatar = session.query(app.roStorageDB.Config.value).filter(
+        avatar = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "avatar_image").first()
-        hubnodes = session.query(app.roStorageDB.Config.value).filter(
+        hubnodes = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "hubnodes").all()
-        notaries = session.query(app.roStorageDB.Config.value).filter(
+        notaries = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "notaries").all()
-        socks_proxy = session.query(app.roStorageDB.Config.value).filter(
+        socks_proxy = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "proxy").first()
-        socks_proxy_port = session.query(app.roStorageDB.Config.value).filter(
+        socks_proxy_port = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "proxy_port").first()
-        i2p_socks_proxy = session.query(app.roStorageDB.Config.value).filter(
+        i2p_socks_proxy = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "i2p_proxy").first()
-        i2p_socks_proxy_port = session.query(app.roStorageDB.Config.value).filter(
+        i2p_socks_proxy_port = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "i2p_proxy_port").first()
-        socks_enabled = session.query(app.roStorageDB.Config.value).filter(
+        socks_enabled = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "socks_enabled").first()
-        i2p_socks_enabled = session.query(app.roStorageDB.Config.value).filter(
+        i2p_socks_enabled = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "i2p_socks_enabled").first()
-        message_retention = session.query(app.roStorageDB.Config.value).filter(
+        message_retention = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "message_retention").first()
-        accept_unsigned = session.query(app.roStorageDB.Config.value).filter(
+        accept_unsigned = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "accept_unsigned").first()
-        wallet_seed = session.query(app.roStorageDB.Config.value).filter(
+        wallet_seed = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "wallet_seed").first()
-        stratum_servers = session.query(app.roStorageDB.Config.value).filter(
+        stratum_servers = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "stratum_servers").all()
-        session.close()
+        dbsession.close()
         if page == '':
             return render_template('setup.html', displayname=displayname, pgpkeyid=pgpkeyid, hubnodes=hubnodes, notaries=notaries)
         elif page == 'identity':
@@ -1074,6 +1080,7 @@ def login():
             return render_template('login.html', key_list=private_keys)
         user = User.get(app.pgp_keyid)
         login_user(user)
+        session['lg']= ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16)) # give user a new session, why not?
         if app.connection_status == "Off-line":
             messageThread = messaging_loop(app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey, "storage.db", app.homedir,
                                            app.appdir, messageQueue, messageQueue_res, messageQueue_data, workoffline=app.workoffline)
@@ -1126,8 +1133,8 @@ def pks_lookup():
     # Query local key cache database for the key - we will request from the
     # broker if we don't have it
     print "PKS Lookup for " + search_key
-    session = app.roStorageDB.DBSession()
-    key_block = session.query(app.roStorageDB.cachePGPKeys).filter_by(
+    dbsession = app.roStorageDB.DBSession()
+    key_block = dbsession.query(app.roStorageDB.cachePGPKeys).filter_by(
         key_id=search_key).first()
     if not key_block:
         key = {"keyid": "" + search_key + ""}
@@ -1138,12 +1145,12 @@ def pks_lookup():
         # now, we wait...
         sleep(0.1)
         timer = 0
-        key_block = session.query(app.roStorageDB.cachePGPKeys).filter_by(
+        key_block = dbsession.query(app.roStorageDB.cachePGPKeys).filter_by(
             key_id=search_key).first()
         while (not key_block) and (timer < 20):  # 20 second timeout for key lookups
             sleep(1)
             checkEvents()
-            key_block = session.query(app.roStorageDB.cachePGPKeys).filter_by(
+            key_block = dbsession.query(app.roStorageDB.cachePGPKeys).filter_by(
                 key_id=search_key).first()
             timer = timer + 1
         if not key_block:

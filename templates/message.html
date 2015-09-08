@@ -12,12 +12,12 @@
         {% if message.message_direction=="In" %}
         <tr>
           <td width="100px"><b>From</b></td>
-          <td>{{ message.sender_name }}({{message.sender_key}})</td>
+          <td>{{ message.sender_key|display_name }}({{message.sender_key}})</td>
         </tr>
         {% else %}
         <tr>
           <td width="100px"><b>To</b></td>
-          <td>{{ message.recipient_name }}({{message.recipient_key}})</td>
+          <td>{{ message.recipient_key|display_name }}({{message.recipient_key}})</td>
         </tr>
         {% endif %}
         <tr>

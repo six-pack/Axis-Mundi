@@ -7,14 +7,14 @@
     <div class="datagrid">
     <table cellpadding="10">
         <tr>
-        <th width="200px"><strong>From</strong></th>
-        <th width="400px"><strong>Subject</strong></th>
+        <th width="250px"><strong>From</strong></th>
+        <th width="300px"><strong>Subject</strong></th>
         <th width="200px"><strong>Date Received</strong></th>
         <th width="150px"><strong>Actions</strong></th>
         </tr>
         {% for o in inbox_messages %}
         <tr>
-        <td width="200px"><a href="/profile/{{ o.sender_key }}">{{ o.sender_key }}</a></td>
+        <td width="200px"><a href="/profile/{{ o.sender_key }}">{{ o.sender_key|display_name }} ({{ o.sender_key }})</a></td>
         <td width="400px"><a href="/messages/view/{{ o.id }}">{{ o.subject }}</a></td>
         <td width="200px">{{ o.message_date }}</td>
         <td>

@@ -10,7 +10,7 @@
                 <input type="hidden" name="action" value="add">
                 <input type="hidden" name="pgpkey_id" value="{{pgp_key}}"><input type="hidden" name="listing_id" value="{{item.id}}"><div style="btn"><button type="submit" class = "btn">Add to Cart</button></div></form></td></tr>
             <tr><td width="200"><B>Quantity Available </b></td><td>{{item.qty_available}}</td></tr>
-            <tr><td width="200"><B>Seller</b></td><td><a href="/profile/{{ pgp_key }}">{{ pgp_key }}</a></td><td><a class="btn" href="{{ url_for('new_message')}}{{pgp_key}}">Send Message</a></td></tr>
+            <tr><td width="200"><B>Seller</b></td><td><a href="/profile/{{ pgp_key }}">{{ pgp_key|display_name }}</a></td><td><a class="btn" href="{{ url_for('new_message')}}{{pgp_key}}">Send Message</a></td></tr>
             <tr><td width="200"><B>Ships From</b></td><td>Not Specified</td></tr>
             <tr><td width="200"><B>Ships To</b></td><td>Worldwide</td></tr>
 

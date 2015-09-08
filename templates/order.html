@@ -1,67 +1,35 @@
 {% extends "layout.html" %}
-{% set active_page = "Trade" %}
+{% set active_page = "Orders" %}
 
+  
 {% block content %}
-  <h2>Order Placed With {{seller_key|display_name}} ({{seller_key}})</h2>
-  {% if shopping_cart %}
+  <h2>View Order</h2>
     <div class="datagrid">
+   <p>{{order.title}}</p>
+    <p>{{ order.seller_key|display_name }}</p>
+    <p>{{ order.orderid}}   </p>
+    <p>{{ order.order_date.strftime('%Y-%m-%d') }}</p>
 
-        <div class="round_box">
-        <table cellpadding="5">
-        <form method="post" action="{{ url_for('cart') }}">
-            <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
-            <tr><td colspan="3"><p style="font-size:20px"><b>Seller: {{user}}</b></p></td><td colspan="2">
-                <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Cancel Order</button>
-                <button type="submit" style="float:right" class = "btn" name ="action" value="create_order">Place Order</button>
-                </td></tr>
-            <tr>
-            <th width="100px" align="left"><strong></strong></th>
-            <th width="300px" align="left"><strong>Item</strong></th>
-            <th width="50px"><strong>Qty</strong></th>
-            <th width="250px"><strong>Shipping</strong></th>
-            <th width="200px"><strong>Price</strong></th>
-            </tr>
-
-            {% for item in shopping_cart[user]%}
-                {% set item_dict = shopping_cart[user][item] %}
-                {% set shipping_options = item_dict.item['shipping_options'] %}
-                <tr>
-                <td colspan="2">{{ item_dict.item['item'] }}</td>
-                <td><label>{{ item_dict['quantity'] }}</label></td>
-                <td>
-                {% for shipping_option in shipping_options %}
-                {%   set shipping_option_dict = shipping_options[shipping_option] %}
-                     {% if item_dict.shipping == shipping_option %}{{ shipping_option_dict[0] }}{%endif%}
-            {% endfor %}
-           </div></td><td style="text-align: center">{{ item_dict.total_price }} {{ item_dict.item['currency'] }} ({{item_dict.total_btc_price}} BTC)</td></tr>
-            <input name="pgpkey_id" type=hidden value="{{ user }}">
-            <input name="listing_id" type=hidden value="{{ item_dict.item['id'] }}">
-        </table>
-        </div>
-        <br>
-
-        <table cellpadding="5">
+    <table cellpadding="5">
         <tr>
-            <td ><label><b>Delivery Address</b></label></td>
-            <td ><div id="container">
-            <div class="twrap"><textarea class="inputs" name="address" style ="height: auto;" cols="80" rows="8" placeholder="Type the delivery address here EXACTLY how you want it to appear on an address label" required></textarea></div>
-        </div></td>
         </tr>
-        <tr>
-            <td ><label><b>Note to Seller</b></label></td>
-            <td ><div id="container">
-            <div class="twrap"><textarea class="inputs" name="note" style ="height: auto;" rows="3" placeholder="Type any notes for the seller here."></textarea></div>
-        </div></td>
-        </tr>
-        </table>
-
-        <br>
-    {% endfor %}
-
-    </form>
+    </table>
     </div>
-  {% else %}
-        <h3><center>Your shopping cart is empty</center></h3>
-  {% endif %}
 
+        <table cellpadding="10">
+            <tr><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td width="300" rowspan="6" ><img width="128" height="128" alt="{{order.title}}" src={% if order.image_base64 %}"data:image/png;base64,{{order.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
+            <tr><td width="200"><b>Price</b></td><td><b>{{order.price}} {{order.currency_code}} (x.xx BTC)</b></td><td><form method="post" action="{{ url_for('cart') }}">
+                <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="add">
+                <input type="hidden" name="pgpkey_id" value="{{pgp_key}}"><input type="hidden" name="listing_id" value="{{order.id}}"><div style="btn"><button type="submit" class = "btn">Add to Cart</button></div></form></td></tr>
+            <tr><td width="200"><B>Seller</b></td><td><a href="/profile/{{ order.seller_key}}">{{ order.seller_key|display_name }}</a></td><td><a class="btn" href="{{ url_for('new_message')}}{{order.seller_key}}">Send Message</a></td></tr>
+            <tr><td width="200"><B>Ships From</b></td><td>Not Specified</td></tr>
+            <tr><td width="200"><B>Ships To</b></td><td>Worldwide</td></tr>
+
+            <tr>
+               <td colspan="4" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;">{{order.description}}</td>
+            </tr>
+            <tr><td width="200"><B>Bitcoin Payment Address</b></td><td colspan="3">{{order.payment_btc_address}}</td></tr>
+        </table>
 {% endblock %}

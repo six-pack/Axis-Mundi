@@ -84,6 +84,9 @@ class Storage():
         delivery_address = Column(String())
         order_note = Column(String())
         order_type = Column(String(16), nullable=False)
+        buyer_ephemeral_btc_seed = Column(String(256))
+        payment_btc_address = Column(String(80))
+        payment_status = Column(String(64))
         seller_btc_stealth = Column(String(80))
         item_id = Column(String(16), nullable=False)
         title = Column(String(80), nullable=False)
@@ -98,9 +101,12 @@ class Storage():
         quantity = Column(Integer)
         shipping = Column(String())
         line_total_price = Column(String(20), nullable=False)
+        line_total_btc_price = Column(String(20), nullable=False)
         feedback_left = Column(String())
         feedback_received = Column(String())
         auxillary = Column(String()) # bucket for future use
+        session_id = Column(String(32)) # needed to support looking glass mode
+        is_synced = Column(Boolean)
 
     class Countries(Base):
         __tablename__ = 'countries'
@@ -126,11 +132,13 @@ class Storage():
         shipping_options = Column(String())
         image_base64 = Column(String())
         publish_date = Column(DateTime, nullable=False)
+        seller_btc_stealth = Column(String(80))
         raw_item = Column(String())  # raw signed item message text
         quantity = Column(Integer)
         shipping = Column(String())
         line_total_price = Column(String(20), nullable=False)
         order_type = Column(String(32))
+        session_id = Column(String(32)) # needed to support looking glass mode
 
     class cachePGPKeys(Base):
         __tablename__ = 'cachepgpkeys'
@@ -171,6 +179,7 @@ class Storage():
         # will hold json list of shipping options
         shipping_options = Column(String())
         image_base64 = Column(String())
+        seller_btc_stealth = Column(String(80))
         publish_date = Column(DateTime, nullable=False)
 
     class cacheProfiles(Base):

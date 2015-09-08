@@ -54,6 +54,7 @@ class messaging_loop(threading.Thread):
         self.clearnet_brokers = []
         self.gpg = gnupg.GPG(gnupghome=self.pgpdir, options={
                              '--primary-keyring="' + self.appdir + '/pubkeys.gpg"'})
+        self.client = mqtt()
         self.pgp_passphrase = pgppassphrase
         self.profile_text = ''
         self.display_name = None
@@ -216,10 +217,11 @@ class messaging_loop(threading.Thread):
                 )
                 session.add(new_db_message)
                 session.commit()
-            elif message.type == 'Transaction':
+            elif message.type == 'Order Message':
                 flash_msg = queue_task(
-                    0, 'flash_message', 'Transaction message received from ' + message.sender)
+                    0, 'flash_message', 'Order message received from ' + message.sender)
                 self.q_res.put(flash_msg)
+                # TODO : Process incoming order message - is it a new order or an update to an existing order
 #                session = self.storageDB.DBSession()
 #                new_db_message = self.storageDB.PrivateMessaging(
 #                                                                    sender_key=message.sender,
@@ -334,6 +336,7 @@ class messaging_loop(threading.Thread):
                                                                           currency_code = verified_listing['currency'],
                                                                           shipping_options = json.dumps(verified_listing['shipping_options']),
                                                                           image_base64 = verified_listing['image'],
+                                                                          seller_btc_stealth= verified_listing['stealth_address'],
                                                                           publish_date = datetime.strptime(verified_listing['publish_date'],"%Y-%m-%d %H:%M:%S"))
 
                             session.add(cacheditem)
@@ -431,8 +434,7 @@ class messaging_loop(threading.Thread):
                 listings_dict['max_order_qty'] = listing_item.order_max_qty
                 listings_dict['publish_date'] = current_time()
                 listings_dict['stealth_address'] = stealth_address
-                listings_dict[
-                    'shipping_options'] = listing_item.shipping_options
+                listings_dict['shipping_options'] = listing_item.shipping_options
                 # listings_dict_str = json.dumps(listings_dict)
                 listings_dict_str = json.dumps(listings_dict, sort_keys=True)
                 listings_dict_str = textwrap.fill(
@@ -451,9 +453,9 @@ class messaging_loop(threading.Thread):
             # need to get the recipients public key
             self.task_state_messages[message.id]['state'] = MSG_STATE_NEEDS_KEY
             self.task_state_messages[message.id]['message'] = message
-# return False # Message processing is deferred pending a key, added
-# message to task_state_messages todo remove line to saveto db even if no
-# key is present
+            # return False # Message processing is deferred pending a key, added
+            # message to task_state_messages todo remove line to saveto db even if no
+            # key is present
         else:
             outMessage = self.myMessaging.PrepareMessage(message)
             if not outMessage:
@@ -485,23 +487,11 @@ class messaging_loop(threading.Thread):
         # Write the message to the database as long as we havent already -
         # check to see if message id already exists first
         session = self.storageDB.DBSession()
-        if message.type == "Txn Message":  # This is a transaction message
-            new_db_message = self.storageDB.PrivateMessaging(
-                sender_key=message.sender,
-                sender_name=message.sender_name,
-                recipient_key=message.recipient,
-                recipient_name=message.recipient_name,
-                message_id=message.id,
-                # this will not be used directly (no purge for txn msgs)
-                message_purge_date=purgedate,
-                message_date=formatted_msg_sent_date,
-                subject=message.subject,
-                body=message.body,
-                message_sent=message.sent,
-                message_read=message.read,
-                message_direction="Out"
-            )
-            session.add(new_db_message)
+        if message.type == "Order Message":  # This is an outbound order message, update db order
+            order = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.orderid==message.subject).filter(self.storageDB.Orders.is_synced == False).first()
+            print "Sent order id " + message.subject
+            order.is_synced = True
+            session.commit()
 
         elif message.type == "Private Message":
             # If it already exists then update
@@ -752,7 +742,7 @@ class messaging_loop(threading.Thread):
                 print "Error: Item signture not verified for listing message held in cache db"
         return verified_listings
 
-    def add_to_cart(self, item_id, key_id):
+    def add_to_cart(self, item_id, key_id, sessionid):
         # TODO: At the moment this will only work if the listing has already
         # been retrieved (cached) - implement a fetch here if we need one
         session = self.storageDB.DBSession()
@@ -801,7 +791,7 @@ class messaging_loop(threading.Thread):
                                              raw_item=raw_msg,
                                              title=item.title,
                                              qty_available=item.qty_available,
-
+                                             session_id=sessionid,
                                              order_max_qty = item.order_max_qty,
                                              price = item.price,
                                              currency_code = item.currency_code,
@@ -809,7 +799,7 @@ class messaging_loop(threading.Thread):
                                              shipping_options = item.shipping_options,
                                              image_base64 = item.image_base64,
                                              publish_date = item.publish_date,
-
+                                             seller_btc_stealth= item.seller_btc_stealth,
 
                                              quantity=1,  # ToDO read quantity from listing form if given
                                              shipping=1,
@@ -827,7 +817,7 @@ class messaging_loop(threading.Thread):
             self.storageDB.Cart.seller_key_id == key_id).delete()
         session.commit()
 
-    def update_cart(self, key_id, items, transaction_type=None):
+    def update_cart(self, key_id, items, sessionid, transaction_type=None):
         # TODO error checking...
         session = self.storageDB.DBSession()
         for item in items:
@@ -838,11 +828,12 @@ class messaging_loop(threading.Thread):
             cart_entry.quantity = qty
             cart_entry.shipping = shipping
             cart_entry.line_total_price = (int(cart_entry.quantity)  * float(cart_entry.price)) + float(json.loads(cart_entry.shipping_options)[cart_entry.shipping][1])
+            cart_entry.session_id = sessionid
             if transaction_type:
                 cart_entry.order_type = transaction_type
             session.commit()
 
-    def create_order(self, key_id, buyer_address, buyer_note):
+    def create_order(self, key_id, buyer_address, buyer_note, sessionid):
         # TODO error checking...
         print "Creating order to seller " + key_id
         session = self.storageDB.DBSession()
@@ -850,36 +841,98 @@ class messaging_loop(threading.Thread):
         for entry in cart_entries:
             # generate an order for each line item
             orderid = ''.join(random.SystemRandom().choice(string.digits) for _ in range(9))
-            payment_address = 'x'
+            if entry.order_type == 'direct':
+                transient_seed = ''.join(random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(64))
+                transient_master = btc.bip32_master_key(transient_seed) # not needing to be strong
+                transient_privkey = btc.bip32_extract_key(btc.bip32_ckd(transient_master, orderid))
+                transient_pubkey = btc.privkey_to_pubkey(btc.bip32_extract_key(btc.bip32_ckd(transient_master, orderid)))
+                seller_pubkey = btc.b58check_to_hex(entry.seller_btc_stealth)
+                payment_address = sender_payee_address_from_stealth(transient_privkey,transient_pubkey)
+                print payment_address
+            elif entry.order_type == 'notarized':
+                print "Warning - unsupported order type"
+            elif entry.order_type == 'escrow':
+                print "Warning - unsupported order type"
             new_order = self.storageDB.Orders ( orderid = orderid,
+                                                session_id = sessionid,
                                                 seller_key = key_id,
                                                 buyer_key = self.mypgpkeyid,
                                                 notary_key = None,
+                                                buyer_ephemeral_btc_seed = transient_seed,
+                                                payment_btc_address = payment_address,
+                                                payment_status = 'waiting', # waiting/paid/refunded
                                                 order_date = datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
-                                                order_status = 1,
+                                                order_status = 'created', # created/sent/cancelled/rejected/processing/shipped/dispute/finalized
+                                                is_synced = False,
+                                                # is a sync time/date needed?or is a order history structure (json) needed to store event & date/time for all events
                                                 delivery_address = buyer_address,
                                                 order_note = buyer_note,
-                                                order_type = 'direct',
-                                                seller_btc_stealth = 'ADDRESS',
+                                                order_type = entry.order_type,
+                                                seller_btc_stealth = entry.seller_btc_stealth,
                                                 item_id = entry.item_id,
                                                 title = entry.title,
                                                 price = entry.price,
                                                 currency_code = entry.currency_code,
                                                 shipping_options = entry.shipping_options,
                                                 image_base64 = entry.image_base64,
-                                                publish_date = entry.publish_date,#datetime.strptime(entry.publish_date,"%Y-%m-%d %H:%M:%S"),
+                                                publish_date = entry.publish_date,
                                                 raw_item = None,
                                                 raw_seed = entry.raw_item,
                                                 quantity = entry.quantity,
                                                 shipping = entry.shipping,
-                                                line_total_price = entry.line_total_price
+                                                line_total_price = entry.line_total_price,
+                                                line_total_btc_price = 0.1 # TODO - FINISH THIS!
                                                 )
             session.add(new_order)
             session.commit()
+            # Call sync orders
+            self.sync_orders()
             # Purge entry from shopping cart
-
+            cart_entries = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).delete()
+            session.commit()
 
         print "create_order finished..."
+
+    def sync_orders(self):
+        # Send any order messages as necessary
+        # iterate orderss table and send any unsent messages
+        if not self.connected:
+            return False
+        session = self.storageDB.DBSession()
+        orders = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.is_synced == False).all()
+        for order in orders:
+            if order.order_status == 'created':
+                ####### New order, needs to be sent #######
+                order_msg = Message()
+                order_msg.type = 'Order Message'
+                order_msg.sender = self.mypgpkeyid
+                order_msg.recipient = order.seller_key
+                order_msg.subject = order.orderid # put the order id in the subject for easy processing of outbound messages
+                order_dict = {}
+                order_dict['id'] = order.orderid
+                order_dict['quantity'] = order.quantity
+                order_dict['shipping_option'] = order.shipping
+                order_dict['delivery_address'] = order.delivery_address
+                order_dict['buyer_notes'] = order.order_note
+                order_dict['order_type'] = order.order_type
+                order_dict['buyer_btc_pub_key'] = order.order_type
+                order_dict['payment_address'] = order.order_type # duplicate information but eases processing
+                order_dict['currency_code'] = order.currency_code
+                order_dict['total_price'] = order.line_total_price #
+                order_dict['total_price_btc'] = order.line_total_btc_price
+                order_json = json.dumps(order_dict, sort_keys=True)
+                order_json = textwrap.fill(
+                    order_json, 80, drop_whitespace=False)
+                signed_item = str(self.gpg.sign(
+                    order_json, keyid=self.mypgpkeyid, passphrase=self.pgp_passphrase))
+                order_msg.sub_messages.append(signed_item)
+#                order_out_message = Messaging.PrepareMessage(
+#                    self.myMessaging, order_msg)
+#                # send order message
+#                if self.client.publish(self.pub_items, order_out_message, 1, True):
+                order.order_status = 'sent'
+                session.commit()
+                self.sendMessage(self.client,order_msg)
 
     def run(self):
         # TODO: Clean up this flow
@@ -929,7 +982,7 @@ class messaging_loop(threading.Thread):
             # mqtt connection
             self.select_random_broker()
             if self.targetbroker.endswith('.onion'):
-                client = mqtt(self.mypgpkeyid, False,
+                self.client = mqtt(self.mypgpkeyid, False,
                               proxy=self.proxy, proxy_port=int(self.proxy_port))
                 print self.proxy
                 print self.proxy_port
@@ -937,7 +990,7 @@ class messaging_loop(threading.Thread):
                     0, 'flash_message', 'Connecting to Tor hidden service ' + self.targetbroker)
                 self.q_res.put(flash_msg)
             elif self.targetbroker.endswith('.b32.i2p'):
-                client = mqtt(self.mypgpkeyid, False, proxy=self.i2p_proxy,
+                self.client = mqtt(self.mypgpkeyid, False, proxy=self.i2p_proxy,
                               proxy_port=int(self.i2p_proxy_port))
                 print self.i2p_proxy
                 print self.i2p_proxy_port
@@ -946,29 +999,29 @@ class messaging_loop(threading.Thread):
                 self.q_res.put(flash_msg)
             else:  # TODO: Only if in test mode
                 if self.test_mode == True:
-                    client = mqtt(self.mypgpkeyid, False,
+                    self.client = mqtt(self.mypgpkeyid, False,
                                   proxy=None, proxy_port=None)
                 flash_msg = queue_task(
                     0, 'flash_error', 'WARNING: On-line mode enabled and target broker does not appear to be a Tor or i2p hidden service')
                 self.q_res.put(flash_msg)
             # client = mqtt.Client(self.mypgpkeyid,False) # before custom mqtt
             # client # original paho-mqtt
-            client.on_connect = self.on_connect
-            client.on_message = self.on_message
-            client.on_disconnect = self.on_disconnect
-            client.on_publish = self.on_publish
-            client.on_subscribe = self.on_subscribe
+            self.client.on_connect = self.on_connect
+            self.client.on_message = self.on_message
+            self.client.on_disconnect = self.on_disconnect
+            self.client.on_publish = self.on_publish
+            self.client.on_subscribe = self.on_subscribe
             # create broker authentication request
             password = self.make_pgp_auth()
             # print password
-            client.username_pw_set(self.mypgpkeyid, password)
+            self.client.username_pw_set(self.mypgpkeyid, password)
             flash_msg = queue_task(0, 'flash_status', 'Connecting...')
             self.q_res.put(flash_msg)
             try:
                 self.connected = False
                 # client.connect_async(self.targetbroker, 1883, 60)  # This is
                 # now async
-                client.connect(self.targetbroker, 1883,
+                self.client.connect(self.targetbroker, 1883,
                                60)  # This is now async
 # time.sleep(0.5) # TODO: Find a better way to prevent the
 # disconnect/reconnection loop following a connect
@@ -980,7 +1033,7 @@ class messaging_loop(threading.Thread):
                 pass
         while not self.shutdown:
             if not self.workoffline:
-                client.loop(0.05)  # deal with mqtt events
+                self.client.loop(0.05)  # deal with mqtt events
             time.sleep(0.05)
 #            if not self.connected and not self.workoffline and 1==0: # TODO - sort this!!
 #                try:
@@ -1026,7 +1079,7 @@ class messaging_loop(threading.Thread):
                     print "Can we send queued message for " + pending_key
                     if self.connected:
                         if outbound:  # this should always be true as incoming messages should never be set to MSG_STATE_QUEUED
-                            self.sendMessage(client, self.task_state_messages[
+                            self.sendMessage(self.client, self.task_state_messages[
                                              pending_message]['message'])
                             self.task_state_messages[pending_message][
                                 'state'] = MSG_STATE_DONE
@@ -1034,7 +1087,7 @@ class messaging_loop(threading.Thread):
                     print "Deferred message now ready"
                     if outbound:
                         print "Sending deferred message"
-                        self.sendMessage(client, self.task_state_messages[
+                        self.sendMessage(self.client, self.task_state_messages[
                                          pending_message]['message'])
                         self.task_state_messages[pending_message][
                             'state'] = MSG_STATE_DONE
@@ -1050,7 +1103,7 @@ class messaging_loop(threading.Thread):
                         msg.topic = self.task_state_messages[
                             pending_message]['message'].topic
                         print msg.topic
-                        self.on_message(client, None, msg)
+                        self.on_message(self.client, None, msg)
 #                        self.myMessaging.GetMessage(self.task_state_messages[pending_message]['message'].raw_message,self,allow_unsigned=self.allow_unsigned)
 
                 elif pending_message_state == MSG_STATE_DONE:
@@ -1063,7 +1116,7 @@ class messaging_loop(threading.Thread):
                     state = None
                 if state == KEY_LOOKUP_STATE_INITIAL:
                     key_topic = 'user/' + pgp_key + '/key'
-                    res = client.subscribe(str(key_topic), 1)
+                    res = self.client.subscribe(str(key_topic), 1)
                     if res[0] == MQTT_ERR_SUCCESS:
                         self.task_state_pgpkeys[pgp_key][
                             'state'] = KEY_LOOKUP_STATE_REQUESTED
@@ -1087,7 +1140,7 @@ class messaging_loop(threading.Thread):
                     message.subject = task.data['subject']
                     message.body = task.data['body']
                     message.sent = False
-                    self.sendMessage(client, message)
+                    self.sendMessage(self.client, message)
                 elif task.command == 'delete_pm':
                     message_to_del = task.data['id']
                     self.delete_pm(message_to_del)
@@ -1100,33 +1153,36 @@ class messaging_loop(threading.Thread):
 # code in the state_table
                 elif task.command == 'get_profile':
                     key_topic = 'user/' + task.data['keyid'] + '/profile'
-                    client.subscribe(str(key_topic), 1)
+                    self.client.subscribe(str(key_topic), 1)
                     print "Requesting profile for " + task.data['keyid']
                 elif task.command == 'get_listings':
                     item_id = task.data['id']
                     key_id = task.data['keyid']
 
                     key_topic = 'user/' + key_id + '/items'
-                    client.subscribe(str(key_topic), 1)
+                    self.client.subscribe(str(key_topic), 1)
                     print "Requesting listings for " + key_id
 ########################################################################################################################- removed listing processing code to front end
 ########################################################################################################################
                 elif task.command == 'add_to_cart':
                     item_id = task.data['item_id']
                     key_id = task.data['key_id']
-                    print "Backend received add to cart request for " + key_id + '/' + item_id
-                    self.add_to_cart(item_id, key_id)
+                    sessionid = task.data['sessionid']
+                    print "Backend received add to cart request for " + key_id + '/' + item_id + ' in lg session ' + sessionid
+                    self.add_to_cart(item_id, key_id, sessionid)
 
                 elif task.command == 'update_cart':
                     key_id = task.data['key_id']
                     items = task.data['items']
-                    self.update_cart(key_id, items)
+                    sessionid = task.data['sessionid']
+                    self.update_cart(key_id, items,sessionid)
 
                 elif task.command == 'checkout':
                     key_id = task.data['key_id']
                     items = task.data['items']
                     transaction_type = task.data['transaction_type']
-                    self.update_cart(key_id, items,transaction_type=transaction_type) # first capture any updates made to the cart before processing checkout
+                    sessionid = task.data['sessionid']
+                    self.update_cart(key_id,items,sessionid,transaction_type=transaction_type) # first capture any updates made to the cart before processing checkout
 
                     print "Backend handled checkout message"
 #                    self.checkout_cart(key_id)
@@ -1135,7 +1191,8 @@ class messaging_loop(threading.Thread):
                     key_id = task.data['key_id']
                     buyer_address = task.data['buyer_address']
                     buyer_note = task.data['buyer_note']
-                    self.create_order(key_id,buyer_address,buyer_note)
+                    sessionid = task.data['sessionid']
+                    self.create_order(key_id,buyer_address,buyer_note,sessionid)
 
                 elif task.command == 'remove_from_cart':
                     key_id = task.data['key_id']
@@ -1146,7 +1203,7 @@ class messaging_loop(threading.Thread):
                     listings_out_message = Messaging.PrepareMessage(
                         self.myMessaging, self.create_listings_msg())
                     # Our published items queue, qos=1, durable
-                    client.publish(
+                    self.client.publish(
                         self.pub_items, listings_out_message, 1, True)
                     flash_msg = queue_task(
                         0, 'flash_message', 'Re-publishing listings')
@@ -1155,7 +1212,7 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'get_directory':
                         # Request list of all users
                     key_topic = 'user/+/directory'
-                    client.subscribe(str(key_topic), 1)
+                    self.client.subscribe(str(key_topic), 1)
                     print "Requesting directory of users"
 
                 elif task.command == 'new_contact':
@@ -1208,12 +1265,12 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'shutdown':
                     self.shutdown = True
         try:
-            client
+            self.client
         except NameError:
             pass
         else:
-            if client._state == mqtt_cs_connected:
-                client.disconnect()
+            if self.client._state == mqtt_cs_connected:
+                self.client.disconnect()
         self.storageDB.DBSession.close_all()
         print "client-backend exits"
         # Terminated
