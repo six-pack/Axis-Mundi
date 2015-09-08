@@ -200,12 +200,14 @@ class Storage():
         if get_os() == 'Windows':
             # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
             self.engine = create_engine(
-                r'sqlite:///' + dbfilepath, connect_args={'check_same_thread': False})
+                r'sqlite+pysqlcipher://:'+passphrase+'/' + dbfilepath, connect_args={'check_same_thread': False}) # Encrypted database
+#                r'sqlite:///' + dbfilepath, connect_args={'check_same_thread': False}) # Cleartext database (testing)
             #  poolclass=StaticPool
         else:
             # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
             self.engine = create_engine(
-                'sqlite:////' + dbfilepath, connect_args={'check_same_thread': False})
+                'sqlite+pysqlcipher://:'+passphrase+'//' + dbfilepath, connect_args={'check_same_thread': False}) # Encrypted database
+#                'sqlite:////' + dbfilepath, connect_args={'check_same_thread': False}) # Cleartext database (testing)
             #  poolclass=StaticPool
         try:
             self.Base.metadata.create_all(self.engine)
