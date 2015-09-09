@@ -11,10 +11,11 @@
                    <input type="hidden" name="name" value="{{profile.display_name}}">
                    <input type="hidden" name="pgpkey_id" value="{{profile.key_id}}">
                    <input type="hidden" name="pgpkey_block">
-                   <button type="submit" class = "btn" style="float:right">Add to Contacts</button></form>
+                   <button type="submit" class = "btn" style="float:right">Add to Contacts</button>
                     <div style="float:right;margin-top: 12px"><a class="btn"  href="{{ url_for('new_message')}}{{profile.key_id}}">Send Message</a></div>
                     <div style="float:right;margin-top: 12px"><a class="btn" style="margin-top: 109px" href="{{ url_for('external_listings',keyid=profile.key_id)}}">View Listings</a></div>
                     <div style="float:right;margin-top: 12px"><a class="btn"  href="{{ url_for('not_yet')}}">Block User</a></div>
+                    <label class="btn" for="modal-one">Tag User</label>
             </td></tr>
             <tr>
                <td colspan="2" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;"><div class="round_box"> {% if profile.profile_text %}{{profile.profile_text}}{%else%} This user is not publishing a public profile{%endif%}</div</td>
@@ -23,6 +24,56 @@
             <tr><td><label>PGP Key :</label></td>
             <td><label>{{profile.key_id}}</label></td></tr>
         </table>
+        <!-- Modal One -->
+        <div class="modal">
+          <input class="modal-open" id="modal-one" type="checkbox" hidden>
+          <div class="modal-wrap" aria-hidden="true" role="dialog">
+            <label class="modal-overlay" for="modal-one">></label>
+            <div class="modal-dialog">
+              <div class="modal-header">
+                <h2>Tag user</h2>
+                <label class="btn-close" for="modal-one" aria-hidden="true">×</label>
+              </div>
+              <div class="modal-body">
+                <div class="datagrid">
+                <div class="round_box" style="width:95%">
+                    <table cellpadding="5">
+                        <tr>
+                            <td width = "160px"><div><input type="radio" class="radio" name="user_tag" id="direct" value="direct" checked><label for="scammer" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Scammer</b></label></div></td>
+                            <td>Tags the user as a scammer
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="round_box" style="width:95%">
+                    <table cellpadding="5">
+                        <tr>
+                            <td width = "160px"><div><input type="radio" class="radio" name="user_tag" id="notarized" value="notarized" disabled><label for="trusted" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Trusted</b></label></div></td>
+                            <td>Tags the user as trusted
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="round_box" style="width:95%">
+                    <table cellpadding="5">
+                        <tr>
+                            <td width = "160px"><div><input type="radio" class="radio" name="user_tag" id="escrow" value="escrow" disabled><label for="verified_identity" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Identity Verified</b></label></div></td>
+                            <td>Tags the user as having a verified identity
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+              </div>
+              <div class="modal-footer" style="vertical-align:middle">
 
+                <label  style="float:right" class="btn" for="modal-one}}">Cancel</label>
+                    <button type="submit" style="float:right" class = "btn" name ="action" value="checkout">Continue Order</button>
+                  <br>
+              </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        </form>
 {% endblock %}
 
