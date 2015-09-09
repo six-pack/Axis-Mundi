@@ -1,15 +1,48 @@
 {% extends "layout.html" %}
 {% set active_page = "Orders" %}
 
-  
+
 {% block content %}
   <h2>View Order</h2>
+    <form method="post" action="{{ url_for('orders') }}">
+    <input type="hidden" name="id" value="{{order.id}}">
+    <input type="hidden" name="seller_key" value="{{order.seller_key}}">
+    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
     <div class="datagrid">
-   <p>{{order.title}}</p>
-    <p>{{ order.seller_key|display_name }}</p>
-    <p>{{ order.orderid}}   </p>
-    <p>{{ order.order_date.strftime('%Y-%m-%d') }}</p>
+        <div class="round_box">
+           <table>
+                <tr><td width="800px" colspan="2"><h4>{{order.title}}</h4></td>
 
+                {% if order.order_status == "created" %}
+                    <td width="200"><div style="btn"><button type="submit" class = "btn" style="float:right">Cancel</button></div></td></tr>
+                {% elif order.order_status == "sent" %}
+                    <td width="200"><div style="btn">
+                        {% if order.payment_status == "unpaid" %}<label class="btn" style="float:right" for="modal-one">Pay Now</label>&nbsp;
+                        {% else %}<button type="submit" class = "btn" style="float:right">Dispute</button>&nbsp;<button type="submit" class = "btn" style="float:right" >Finalize</button>
+                        {% endif %}
+                    </div></td></tr>
+                {% elif order.order_status == "cancelled" %}
+                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" class = "btn">Finalize</button></div></td></tr>
+               {% elif order.order_status == "rejected" %}
+                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" class = "btn">Finalize</button></div></td></tr>
+               {% elif order.order_status == "processing" %}
+                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" class = "btn">Finalize</button></div></td></tr>
+               {% elif order.order_status == "shipped" %}
+                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" class = "btn">Finalize</button></div></td></tr>
+               {% elif order.order_status == "disputed" %}
+                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" class = "btn">Finalize</button></div></td></tr>
+               {% elif order.order_status == "finalized" %}
+                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" class = "btn">Finalize</button></div></td></tr>
+               {% else  %}
+                    <td width="200">Order state error</td></tr>
+                {%endif %}
+               {% set shipping = order.shipping_options|from_json %}
+                <tr><td width="200px"><b>Order ID:</b> {{ order.orderid}}</td><td width="200px"><b>Order Date:</b>{{ order.order_date.strftime('%Y-%m-%d') }}</td><td width="400px"><b>Seller:</b>{{ order.seller_key|display_name }} </td> </tr>
+                <tr><td width="200px"><b>Order Type:</b>{{ order.order_type }}</td><td width="200px"><b>Payment Status:</b>{{ order.payment_status }}</td><td width="400px"><b>Shipping:</b>{{shipping[order.shipping][0]}} </td> </tr>
+                <tr><td width="200px"><b>Order Status:</b>{{ order.order_status }}</td><td width="200px"><b>Payment Status:</b>{{ order.payment_status }}</td><td width="400px"><b>Total Price:</b> {{ order.line_total_price}} {{order.currency_code}} ({{order.line_total_btc_price}} BTC)</td> </tr>
+
+           </table>
+        </div>
     <table cellpadding="5">
         <tr>
         </tr>
@@ -19,17 +52,39 @@
         <table cellpadding="10">
             <tr><td></td><td></td><td></td><td></td><td></td></tr>
             <tr><td width="300" rowspan="6" ><img width="128" height="128" alt="{{order.title}}" src={% if order.image_base64 %}"data:image/png;base64,{{order.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
-            <tr><td width="200"><b>Price</b></td><td><b>{{order.price}} {{order.currency_code}} (x.xx BTC)</b></td><td><form method="post" action="{{ url_for('cart') }}">
-                <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
-                <input type="hidden" name="action" value="add">
-                <input type="hidden" name="pgpkey_id" value="{{pgp_key}}"><input type="hidden" name="listing_id" value="{{order.id}}"><div style="btn"><button type="submit" class = "btn">Add to Cart</button></div></form></td></tr>
-            <tr><td width="200"><B>Seller</b></td><td><a href="/profile/{{ order.seller_key}}">{{ order.seller_key|display_name }}</a></td><td><a class="btn" href="{{ url_for('new_message')}}{{order.seller_key}}">Send Message</a></td></tr>
+            <tr><td width="200"><b>Price</b></td><td><b>{{order.price}} {{order.currency_code}} (x.xx BTC)</b></td><td>
+
+</td></tr>
+            <tr><td width="200"><B>Seller</b></td><td><a href="/profile/{{ order.seller_key}}">{{ order.seller_key|display_name }}</a></td><td></td></tr>
             <tr><td width="200"><B>Ships From</b></td><td>Not Specified</td></tr>
             <tr><td width="200"><B>Ships To</b></td><td>Worldwide</td></tr>
 
             <tr>
                <td colspan="4" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;">{{order.description}}</td>
             </tr>
-            <tr><td width="200"><B>Bitcoin Payment Address</b></td><td colspan="3">{{order.payment_btc_address}}</td></tr>
         </table>
+
+<!-- Modal One -->
+<div class="modal">
+  <input class="modal-open" id="modal-one" type="checkbox" hidden>
+  <div class="modal-wrap" aria-hidden="true" role="dialog">
+    <label class="modal-overlay" for="modal-one"></label>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2>Payment Details</h2>
+        <label class="btn-close" for="modal-one" aria-hidden="true">×</label>
+      </div>
+      <div class="modal-body">
+          <table cellpadding="5">
+            <tr><td><b>Total Amount :</b></td><td><b>{{order.line_total_btc_price}} BTC</b></td></tr>
+            <tr><td><b>Payment Address :</b></td><td><b>{{order.payment_btc_address}}</b></td></tr>
+          </table>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class = "btn" name = "action" value="mark_paid">Mark As Paid</button>
+      </div>
+    </div>
+  </div>
+</div>
+</form>
 {% endblock %}

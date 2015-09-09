@@ -5,20 +5,31 @@
   <h2>Directory</h2>
 
     <div class="datagrid">
+        <p>The Axis Mundi directory is maintained automatically by your software. The directory shows all users on the system who have 'opted in'. Please remember that a user can choose any name they wish and could spoof other users names. You should rely on the PGP key ID which cannot be spoofed.</p>
+        <p>Trust and reputation scores will be added to the directory in the future.</p>
     <table cellpadding="10" width="100%">
         <tr>
+            <td colspan="3">
+                <div class="round_box" style="height:40px">
+                    Search Filter
+                    &nbsp;&nbsp;&nbsp;<input type="text" name="search_name" size="20" class="inputs" placeholder="User to search for"  value="{{ search_filter }}">
+                    &nbsp;<input type="checkbox" name="filter_sellers" value="yes">Only display sellers
+                    <button type="submit" class = "btn" name = "action" style="float:right" value="update_fliter">Update Filter</button>
+                </div>
+
+            </td>
+        </tr>
+        <tr>
         <th width="350px" align="left"><strong>Name</strong></th>
-        <th width="170px"><strong>PGP Key</strong></th>
-        <th ><strong>Actions</strong></th>
+        <th width="170px"><strong>PGP Key ID</strong></th>
+        <th ><strong>Flags</strong></th>
         </tr>
         {% for entry in directory %}
         <tr>
-        <td width="350px">{{entry.display_name}}</td>
-        <td width="170px">{{entry.key_id}}</td>
+        <td width="350px"><a href="{{ url_for('profile')}}{{entry.key_id}}">{{entry.display_name}}</a></td>
+        <td width="170px"><a href="{{ url_for('profile')}}{{entry.key_id}}">{{entry.key_id}}</a></td>
         <td align="center">
-             <a class="btn" href="{{ url_for('new_message')}}{{entry.key_id}}">Message</a>
-             <a class="btn" href="{{ url_for('profile')}}{{entry.key_id}}">Profile</a>
-             <a class="btn" href="{{ url_for('external_listings',keyid=entry.key_id)}}">Listings</a></p></td>
+             (Flags & Ratings etc.)
         </td>
         </tr>
         {% endfor %}

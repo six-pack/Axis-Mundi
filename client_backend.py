@@ -33,13 +33,12 @@ class messaging_loop(threading.Thread):
     # The date time shall not contain seconds and will be chekced on the
     # server to be no more than +/- 5 minutes fromcurrent server time
 
-    def __init__(self, pgpkeyid, pgppassphrase, dbpassphrase, database, homedir, appdir, q, q_res, q_data, workoffline=False):
+    def __init__(self, pgpkeyid, pgppassphrase, dbpassphrase, database, homedir, appdir, q, q_res, workoffline=False):
         print "NOTICE: Backend Thread Init"
         self.targetbroker = None
         self.mypgpkeyid = pgpkeyid
         self.q = q  # queue for client (incoming queue_task requests)
         self.q_res = q_res  # results queue for client (outgoing)
-        self.q_data = q_data  # results queue for client (outgoing)
         self.database = database
         self.homedir = homedir
         if get_os() == 'Windows':
@@ -315,8 +314,8 @@ class messaging_loop(threading.Thread):
                             session.add(cachedlistings)
                         session.commit()
                     if not listings_message.sub_messages:
-                        # user has no listings, return 'none'
-                        self.q_data.put('none')
+                        # user has no listings
+                        print "User " + keyid + ' has no listings'
                     else:
                         print "Extracting items from valid listings message..."
                         verified_listings = self.get_items_from_listings(
@@ -341,7 +340,6 @@ class messaging_loop(threading.Thread):
 
                             session.add(cacheditem)
                         session.commit()
-                        self.q_data.put(verified_listings)
             else:
                 print "No items message found in listings returned from " + keyid
         else:
@@ -860,7 +858,7 @@ class messaging_loop(threading.Thread):
                                                 notary_key = None,
                                                 buyer_ephemeral_btc_seed = transient_seed,
                                                 payment_btc_address = payment_address,
-                                                payment_status = 'waiting', # waiting/paid/refunded
+                                                payment_status = 'unpaid', # unpaid/escrow/paid/refunded
                                                 order_date = datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
                                                 order_status = 'created', # created/sent/cancelled/rejected/processing/shipped/dispute/finalized
                                                 is_synced = False,
@@ -892,6 +890,13 @@ class messaging_loop(threading.Thread):
             session.commit()
 
         print "create_order finished..."
+
+    def update_order(self,command,id,sessionid):
+        if command == 'order_mark_paid':
+            session = self.storageDB.DBSession()
+            order = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.id == id).first()
+            order.payment_status = 'waiting'
+            session.commit()
 
     def sync_orders(self):
         # Send any order messages as necessary
@@ -1193,6 +1198,12 @@ class messaging_loop(threading.Thread):
                     buyer_note = task.data['buyer_note']
                     sessionid = task.data['sessionid']
                     self.create_order(key_id,buyer_address,buyer_note,sessionid)
+
+                elif task.command == 'update_order':
+                    id = task.data['id']
+                    command = task.data['command']
+                    sessionid = task.data['sessionid']
+                    self.update_order(command,id,sessionid)
 
                 elif task.command == 'remove_from_cart':
                     key_id = task.data['key_id']

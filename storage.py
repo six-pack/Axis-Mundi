@@ -196,7 +196,7 @@ class Storage():
         # This next one works although a numeric passphrase must be given
         #        self.engine = create_engine('sqlite+pysqlcipher://:' + passphrase + '/' + dbfilepath)
         print dbfilepath
-        #TODO : DATABASE ENCRYPTION SHOULD BE ENABLED HERE
+        # DATABASE ENCRYPTION CAN BE DISABLED/ENABLED HERE
         if get_os() == 'Windows':
             # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
             self.engine = create_engine(

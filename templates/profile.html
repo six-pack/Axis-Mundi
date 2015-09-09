@@ -17,7 +17,7 @@
                     <div style="float:right;margin-top: 12px"><a class="btn"  href="{{ url_for('not_yet')}}">Block User</a></div>
             </td></tr>
             <tr>
-               <td colspan="2" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;"><div class="round_box"> {{profile.profile_text}}</div</td>
+               <td colspan="2" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;"><div class="round_box"> {% if profile.profile_text %}{{profile.profile_text}}{%else%} This user is not publishing a public profile{%endif%}</div</td>
                <td></td>
             </tr>
             <tr><td><label>PGP Key :</label></td>

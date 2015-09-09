@@ -33,7 +33,6 @@ app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
 messageQueue = Queue.Queue()    # work Queue for mqtt client thread
 messageQueue_res = Queue.Queue()    # Results Queue for mqtt client thread
 # Profile and Listing Results Queue for mqtt client thread
-messageQueue_data = Queue.Queue()
 login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.init_app(app)
@@ -124,7 +123,7 @@ def home():
     return render_template('home.html')
 
 
-@app.route('/orders')
+@app.route('/orders', methods=["GET", "POST"])
 @app.route('/orders/<int:page>')
 @app.route('/orders/<string:view_type>')
 @app.route('/orders/<string:view_type>/<int:page>')
@@ -133,6 +132,22 @@ def orders(view_type='buying', page=1):
     checkEvents()
     dbsession = app.roStorageDB.DBSession()
     page_results = None
+    if request.method == "POST":
+        # User is updating the order
+        id = request.form.get('id')
+        seller_key = request.form.get('seller_key')
+        action = request.form.get('action')
+        print id
+        print action
+        if action == 'mark_paid':
+            print "Front end marking as paid"
+            cmd_data = {"id": id,"command":"order_mark_paid", "sessionid": session.get('lg','')}
+            task = queue_task(1, 'update_order', cmd_data)
+            messageQueue.put(task)
+            sleep(0.2)
+        checkEvents()
+
+        redirect('/orders/view/' + id)
     if view_type == 'buying':
         orders_buying = dbsession.query(app.roStorageDB.Orders).filter_by(buyer_key=app.pgp_keyid).order_by(
             app.roStorageDB.Orders.order_date.asc())
@@ -1083,7 +1098,7 @@ def login():
         session['lg']= ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16)) # give user a new session, why not?
         if app.connection_status == "Off-line":
             messageThread = messaging_loop(app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey, "storage.db", app.homedir,
-                                           app.appdir, messageQueue, messageQueue_res, messageQueue_data, workoffline=app.workoffline)
+                                           app.appdir, messageQueue, messageQueue_res, workoffline=app.workoffline)
             messageThread.start()
             # it's better for the user to get a flashed message now rather than
             # on the next page load so
@@ -1189,15 +1204,6 @@ def checkEvents():
     return(True)
 
 
-def checkDataQ():
-    if messageQueue_data.empty():
-        return(False)
-    while not messageQueue_data.empty():
-        results = messageQueue_data.get()
-        # TODO: check results is set to a valid queue_task object here
-        return results
-
-
 def client_shutdown(sender, **extra):
     print "Client_Shutdown called....exiting"
 
@@ -1246,7 +1252,7 @@ def run():
         app.SetupDone = True  # TODO: A better check is needed here
     # TODO: turn off threading - either move PKS lookup handler to backend
     # thread or inject retreived keys directly into keyring
-    app.run(debug=True, threaded=True, use_reloader=False)
+    app.run(debug=True, threaded=True, use_reloader=False, port=5000)
  # use_reloader added to prevent initialization running twice when in flask
  # debug mode
 
