@@ -110,8 +110,12 @@ def display_name(value):
 
 @app.template_filter('to_btc')
 # convert a given amount in a given currency to btc
-def to_btc(value): # tuple expected (ammount,currency_code)
-    return ('name: ' + value) # TODO - convert amount to btc
+def to_btc(value,currency_code):
+    dbsession = app.roStorageDB.DBSession()
+    currency_rec = dbsession.query(app.roStorageDB.currencies).filter_by(code=currency_code).first()
+    rate = currency_rec.exchange_rate
+    btc_val = str(float(rate) * float(value))
+    return (btc_val) # TODO - convert amount to btc
 
 ########## Flask Routes ##################################
 
@@ -150,13 +154,13 @@ def orders(view_type='buying', page=1):
         redirect('/orders/view/' + id)
     if view_type == 'buying':
         orders_buying = dbsession.query(app.roStorageDB.Orders).filter_by(buyer_key=app.pgp_keyid).order_by(
-            app.roStorageDB.Orders.order_date.asc())
+            app.roStorageDB.Orders.order_date.desc())
         page_results = SqlalchemyOrmPage(
             orders_buying, page=page, items_per_page=pager_items)
         return render_template('orders.html', orders=page_results, view=view_type)
     elif view_type == 'selling':
         orders_selling = dbsession.query(app.roStorageDB.Orders).filter_by(seller_key=app.pgp_keyid).order_by(
-            app.roStorageDB.Orders.order_date.asc())
+            app.roStorageDB.Orders.order_date.desc())
         page_results = SqlalchemyOrmPage(
             orders_selling, page=page, items_per_page=pager_items)
         return render_template('orders.html', orders=page_results, view=view_type)

@@ -11,7 +11,7 @@
               {% for item in order %}
                   <div class="round_box">
                     <p><b><a href="/orders/view/{{item.id}}">Order ID: {{item.orderid}}</a> &nbsp;&nbsp;&nbsp;   <a href="/orders/view/{{item.id}}">{{item.quantity}} x {{ item.title }}</a></b></p>
-                    <p><h5>Please pay {{item['total_btc_price']}} BTC to address {{item['payment_btc_address']}}</h5></p>
+                    <p><h5>Please pay {{item['line_total_btc_price']}} BTC to address {{item['payment_btc_address']}}</h5></p>
                   </div>
             {% endfor %}
 

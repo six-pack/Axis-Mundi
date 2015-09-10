@@ -52,7 +52,7 @@
         <table cellpadding="10">
             <tr><td></td><td></td><td></td><td></td><td></td></tr>
             <tr><td width="300" rowspan="6" ><img width="128" height="128" alt="{{order.title}}" src={% if order.image_base64 %}"data:image/png;base64,{{order.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
-            <tr><td width="200"><b>Price</b></td><td><b>{{order.price}} {{order.currency_code}} (x.xx BTC)</b></td><td>
+            <tr><td width="200"><b>Price</b></td><td><b>{{order.price}} {{order.currency_code}} ({{order.price|to_btc(order.currency_code)}} BTC)</b></td><td>
 
 </td></tr>
             <tr><td width="200"><B>Seller</b></td><td><a href="/profile/{{ order.seller_key}}">{{ order.seller_key|display_name }}</a></td><td></td></tr>

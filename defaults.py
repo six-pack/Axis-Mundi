@@ -158,39 +158,51 @@ def create_defaults(db, session, pgp_keyid, display_name, publish_id, btc_master
         # Currencies
         curr_db_item = db.currencies(code='USD')
         curr_db_item.name = 'US Dollar'
+        curr_db_item.exchange_rate = 0
         session.add(curr_db_item)
         curr_db_item = db.currencies(code='EUR')
         curr_db_item.name = 'Euro'
+        curr_db_item.exchange_rate = 0
         session.add(curr_db_item)
         curr_db_item = db.currencies(code='BTC')
         curr_db_item.name = 'Bitcoin'
+        curr_db_item.exchange_rate = 1
         session.add(curr_db_item)
         curr_db_item = db.currencies(code='ZAR')
         curr_db_item.name = 'South African Rand'
+        curr_db_item.exchange_rate = 0
         session.add(curr_db_item)
         curr_db_item = db.currencies(code='AUD')
         curr_db_item.name = 'Australian Dollar'
+        curr_db_item.exchange_rate = 0
         session.add(curr_db_item)
         curr_db_item = db.currencies(code='GBP')
         curr_db_item.name = 'British Pound'
+        curr_db_item.exchange_rate = 0
         session.add(curr_db_item)
         curr_db_item = db.currencies(code='CAD')
         curr_db_item.name = 'Canadian Dollar'
+        curr_db_item.exchange_rate = 0
         session.add(curr_db_item)
         curr_db_item = db.currencies(code='SEK')
         curr_db_item.name = 'Swedish Krone'
+        curr_db_item.exchange_rate = 0
         session.add(curr_db_item)
         curr_db_item = db.currencies(code='ISK')
         curr_db_item.name = 'Icelandic Krona'
+        curr_db_item.exchange_rate = 0
         session.add(curr_db_item)
         curr_db_item = db.currencies(code='NOK')
         curr_db_item.name = 'Norwegian Krone'
+        curr_db_item.exchange_rate = 0
         session.add(curr_db_item)
         curr_db_item = db.currencies(code='DKK')
         curr_db_item.name = 'Danish Krone'
+        curr_db_item.exchange_rate = 0
         session.add(curr_db_item)
         curr_db_item = db.currencies(code='RUB')
         curr_db_item.name = 'Russian Ruble'
+        curr_db_item.exchange_rate = 0
         session.add(curr_db_item)
         # Finally commit
         session.commit()

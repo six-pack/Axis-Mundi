@@ -537,6 +537,13 @@ class messaging_loop(threading.Thread):
                                      keyid=self.mypgpkeyid, passphrase=self.pgp_passphrase))
         return password
 
+    def price_to_btc(self,price,currency):
+        session = self.storageDB.DBSession()
+        currency_rec = session.query(self.storageDB.currencies).filter_by(code=currency).first()
+        rate = currency_rec.exchange_rate
+        btc_val = str(float(rate) * float(price))
+        return (btc_val)
+
     def select_random_broker(self):
         transports = []
         if self.i2p_proxy_enabled and len(self.i2p_brokers) > 0:
@@ -879,7 +886,7 @@ class messaging_loop(threading.Thread):
                                                 quantity = entry.quantity,
                                                 shipping = entry.shipping,
                                                 line_total_price = entry.line_total_price,
-                                                line_total_btc_price = 0.1 # TODO - FINISH THIS!
+                                                line_total_btc_price = self.price_to_btc(entry.line_total_price,entry.currency_code) #
                                                 )
             session.add(new_order)
             session.commit()

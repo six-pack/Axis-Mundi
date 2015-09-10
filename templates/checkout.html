@@ -33,7 +33,7 @@
                 {%   set shipping_option_dict = shipping_options[shipping_option] %}
                      {% if item.shipping == shipping_option %}{{ shipping_option_dict[0] }}{%endif%}
                 {% endfor %}
-                </td><td style="text-align: center">{{ item.line_total_price }} {{ item.currency_code }} ({{item['total_btc_price']}} BTC)</td></tr>
+                </td><td style="text-align: center">{{ item.line_total_price }} {{ item.currency_code }} ({{item['line_total_price']|to_btc(item.currency_code)}} BTC)</td></tr>
                 <input name="pgpkey_id" type=hidden value="{{ seller_key }}">
                 <input name="listing_id" type=hidden value="{{ item.item_id }}">
             {% endfor %}

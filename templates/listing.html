@@ -5,7 +5,7 @@
         <table cellpadding="10">
             <tr><td></td><td></td><td></td><td></td><td></td></tr>
             <tr><td width="300" rowspan="6" ><img width="256" height="256" alt="{{item.title}}" src={% if item.image_base64 %}"data:image/png;base64,{{item.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
-            <tr><td width="200"><b>Price</b></td><td><b>{{item.price}} {{item.currency_code}} (x.xx BTC)</b></td><td><form method="post" action="{{ url_for('cart') }}">
+            <tr><td width="200"><b>Price</b></td><td><b>{{item.price}} {{item.currency_code}} ({{ item.price|to_btc(item.currency_code) }} BTC)</b></td><td><form method="post" action="{{ url_for('cart') }}">
                 <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="add">
                 <input type="hidden" name="pgpkey_id" value="{{pgp_key}}"><input type="hidden" name="listing_id" value="{{item.id}}"><div style="btn"><button type="submit" class = "btn">Add to Cart</button></div></form></td></tr>

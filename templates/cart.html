@@ -133,7 +133,7 @@
                         {%   set shipping_option_dict = shipping_options[shipping_option] %}
                         <option value="{{ shipping_option }}" {% if cart_item['shipping'] == shipping_option %}selected{%endif%}>{{ shipping_option_dict[0] }}&nbsp;({{ shipping_option_dict[1] }} {{cart_item['currency_code']}}) </option>
                     {% endfor %}
-                    </select></div></td><td style="text-align: center">{{ cart_item['line_total_price'] }} {{ cart_item['currency_code'] }} (xxx BTC)</td></tr>
+                    </select></div></td><td style="text-align: center">{{ cart_item['line_total_price'] }} {{ cart_item['currency_code'] }} ({{ cart_item['line_total_price']|to_btc(cart_item['currency_code']) }} BTC)</td></tr>
                     <input name="pgpkey_id" type=hidden value="{{ current_seller }}">
                     <input name="listing_id" type=hidden value="{{ cart_item['item_id'] }}">
 
@@ -152,7 +152,7 @@
                         {%   set shipping_option_dict = shipping_options[shipping_option] %}
                         <option value="{{ shipping_option }}" {% if cart_item['shipping'] == shipping_option %}selected{%endif%}>{{ shipping_option_dict[0] }}&nbsp;({{ shipping_option_dict[1] }} {{cart_item['currency_code']}}) </option>
                     {% endfor %}
-                    </select></div></td><td style="text-align: center">{{ cart_item['line_total_price'] }} {{ cart_item['currency_code'] }} (xxx BTC)</td></tr>
+                    </select></div></td><td style="text-align: center">{{ cart_item['line_total_price'] }} {{ cart_item['currency_code'] }} ({{ cart_item['line_total_price']|to_btc(cart_item['currency_code']) }} BTC)</td></tr>
                     <input name="pgpkey_id" type=hidden value="{{ current_seller }}">
                     <input name="listing_id" type=hidden value="{{ cart_item['item_id'] }}">
 

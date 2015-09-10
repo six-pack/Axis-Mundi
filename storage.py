@@ -117,6 +117,8 @@ class Storage():
         __tablename__ = 'currencies'
         code = Column(String(4), primary_key=True, nullable=False)
         name = Column(String(40), nullable=False)
+        exchange_rate = Column(String(10), nullable=False)
+        last_update = Column(DateTime) # if blank means never
 
     class Cart(Base):
         __tablename__ = 'shopping_cart'

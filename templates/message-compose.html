@@ -15,7 +15,7 @@
         <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
         <tr>
           <td width="100px"><b>To</b></td>
-          <td><input type="text" class="inputs" autocomplete="Off" name="recipient" list="Contacts" size="55" placeholder="Type in the name of a contact or a PGP key ID" required value="{{recipient_key}}"></td>
+          <td><input type="text" class="inputs" autocomplete="Off" name="recipient" list="Contacts" size="55" placeholder="Type in the name of a contact or a PGP key ID" required value="{{recipient_key|display_name}} ({{recipient_key}})"></td>
           <td style="float:right cellpadding:5px"><input type="checkbox"  name="sign-message" value="sign-message" checked>Sign My Message </td>
         </tr>
         <tr>
