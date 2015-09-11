@@ -85,6 +85,7 @@ class Storage():
         order_note = Column(String())
         order_type = Column(String(16), nullable=False)
         buyer_ephemeral_btc_seed = Column(String(256))
+        buyer_btc_pub_key = Column(String(256))
         payment_btc_address = Column(String(80))
         payment_status = Column(String(64))
         seller_btc_stealth = Column(String(80))

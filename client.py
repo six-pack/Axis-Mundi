@@ -103,6 +103,8 @@ def from_json(value):
 @app.template_filter('display_name')
 # take a pgp keyid and return the displayname alongside the pgp key and any flags
 def display_name(value):
+    if value == '':
+        return
     dbsession = app.roStorageDB.DBSession()
     filter = value
     dname = dbsession.query(app.roStorageDB.cacheDirectory).filter_by(key_id=filter).first()
@@ -146,6 +148,18 @@ def orders(view_type='buying', page=1):
         if action == 'mark_paid':
             print "Front end marking as paid"
             cmd_data = {"id": id,"command":"order_mark_paid", "sessionid": session.get('lg','')}
+            task = queue_task(1, 'update_order', cmd_data)
+            messageQueue.put(task)
+            sleep(0.2)
+        if action == 'order_shipped':
+            print "Front end marking as shipped"
+            cmd_data = {"id": id,"command":"order_shipped", "sessionid": session.get('lg','')}
+            task = queue_task(1, 'update_order', cmd_data)
+            messageQueue.put(task)
+            sleep(0.2)
+        if action == 'order_finalize':
+            print "Front end marking as finalized"
+            cmd_data = {"id": id,"command":"order_finalize", "sessionid": session.get('lg','')}
             task = queue_task(1, 'update_order', cmd_data)
             messageQueue.put(task)
             sleep(0.2)
@@ -709,7 +723,7 @@ def new_message(recipient_key=""):
     checkEvents()
     if request.method == "POST":
         # TODO: Validate these inputs
-        recipient = request.form['recipient']
+        recipient = str(request.form['recipient']).strip()
         subject = request.form['subject']
         body = request.form['body']
         sign_msg = request.form['sign-message']

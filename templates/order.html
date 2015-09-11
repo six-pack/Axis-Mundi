@@ -15,10 +15,10 @@
 
                 {% if order.order_status == "created" %}
                     <td width="200"><div style="btn"><button type="submit" class = "btn" style="float:right">Cancel</button></div></td></tr>
-                {% elif order.order_status == "sent" %}
+                {% elif order.order_status == "submitted" %}
                     <td width="200"><div style="btn">
                         {% if order.payment_status == "unpaid" %}<label class="btn" style="float:right" for="modal-one">Pay Now</label>&nbsp;
-                        {% else %}<button type="submit" class = "btn" style="float:right">Dispute</button>&nbsp;<button type="submit" class = "btn" style="float:right" >Finalize</button>
+                        {% else %}<button type="submit" class = "btn" name="action" value="order_dispute" style="float:right">Dispute</button>&nbsp;<button type="submit" class = "btn" name="action" value="order_finalize" style="float:right" >Finalize</button>
                         {% endif %}
                     </div></td></tr>
                 {% elif order.order_status == "cancelled" %}

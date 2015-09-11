@@ -864,10 +864,11 @@ class messaging_loop(threading.Thread):
                                                 buyer_key = self.mypgpkeyid,
                                                 notary_key = None,
                                                 buyer_ephemeral_btc_seed = transient_seed,
+                                                buyer_btc_pub_key = transient_pubkey,
                                                 payment_btc_address = payment_address,
                                                 payment_status = 'unpaid', # unpaid/escrow/paid/refunded
                                                 order_date = datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
-                                                order_status = 'created', # created/sent/cancelled/rejected/processing/shipped/dispute/finalized
+                                                order_status = 'created', # created/submitted/cancelled/rejected/processing/shipped/dispute/finalized
                                                 is_synced = False,
                                                 # is a sync time/date needed?or is a order history structure (json) needed to store event & date/time for all events
                                                 delivery_address = buyer_address,
@@ -899,11 +900,45 @@ class messaging_loop(threading.Thread):
         print "create_order finished..."
 
     def update_order(self,command,id,sessionid):
+        # TODO : COnsider state machine once flow is fully defined
         if command == 'order_mark_paid':
+            # this state is not transmitted to other parties and is used purely locally to help buyer
             session = self.storageDB.DBSession()
             order = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.id == id).first()
-            order.payment_status = 'waiting'
+            order.payment_status = 'confirming'
             session.commit()
+            self.sync_orders()
+        elif command == 'order_payment_received':
+            # this state is not transmitted to other parties
+            session = self.storageDB.DBSession()
+            order = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.id == id).first()
+            order.payment_status = 'paid'
+        elif command == 'order_shipped':
+            # this state will be transmitted from seller back to buyer
+            # TODO update order message and transmit to buyer
+            session = self.storageDB.DBSession()
+            order = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.id == id).first()
+            order.order_status = 'shipped'
+            if self.mypgpkeyid == order.buyer_key:
+                order.is_synced = True # we are the buyer, no need to send anything - the seller will see payment
+            else:
+                order.is_synced = False # we are the seller, no need to send anything - the seller will see payment
+            session.commit()
+            self.sync_orders()
+        elif command == 'order_finalize':
+            # this state will be transmitted from buyer back to seller
+            # TODO update order message and transmit to buyer
+            session = self.storageDB.DBSession()
+            order = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.id == id).first()
+            order.order_status = 'finalized'
+            if self.mypgpkeyid == order.buyer_key:
+                order.is_synced = False # we are the buyer, send message
+            else:
+                order.is_synced = True # we are the seller, no need to send anything
+            session.commit()
+            self.sync_orders()
+        else:
+            print "Error: Unknown order update type: " + command
 
     def sync_orders(self):
         # Send any order messages as necessary
@@ -927,11 +962,12 @@ class messaging_loop(threading.Thread):
                 order_dict['delivery_address'] = order.delivery_address
                 order_dict['buyer_notes'] = order.order_note
                 order_dict['order_type'] = order.order_type
-                order_dict['buyer_btc_pub_key'] = order.order_type
-                order_dict['payment_address'] = order.order_type # duplicate information but eases processing
+                order_dict['buyer_btc_pub_key'] = order.buyer_btc_pub_key
+                order_dict['payment_address'] = order.payment_btc_address # duplicate information but eases processing
                 order_dict['currency_code'] = order.currency_code
                 order_dict['total_price'] = order.line_total_price #
                 order_dict['total_price_btc'] = order.line_total_btc_price
+                order_dict['parent_contract_block'] = order.raw_seed
                 order_json = json.dumps(order_dict, sort_keys=True)
                 order_json = textwrap.fill(
                     order_json, 80, drop_whitespace=False)
@@ -942,9 +978,75 @@ class messaging_loop(threading.Thread):
 #                    self.myMessaging, order_msg)
 #                # send order message
 #                if self.client.publish(self.pub_items, order_out_message, 1, True):
-                order.order_status = 'sent'
+                order.order_status = 'submitted'
                 session.commit()
                 self.sendMessage(self.client,order_msg)
+            elif order.order_status == 'rejected':
+                ####### Rejected order, needs to be sent #######
+                order_msg = Message()
+                order_msg.type = 'Order Message'
+                order_msg.sender = self.mypgpkeyid
+                order_msg.recipient = order.buyer_key
+                order_msg.subject = order.orderid # put the order id in the subject for easy processing of outbound messages
+                order_dict = {}
+                order_dict['parent_contract_block'] = order.raw_item
+                order_dict['order_status'] = order.order_status
+                order_json = json.dumps(order_dict, sort_keys=True)
+                order_json = textwrap.fill(
+                    order_json, 80, drop_whitespace=False)
+                signed_item = str(self.gpg.sign(
+                    order_json, keyid=self.mypgpkeyid, passphrase=self.pgp_passphrase))
+                order_msg.sub_messages.append(signed_item)
+                session.commit()
+                self.sendMessage(self.client,order_msg)
+                print "Creating rejected notification message"
+
+            elif order.order_status == 'processing':
+                print "Creating processing notification message"
+            elif order.order_status == 'shipped':
+                ####### Rejected order, needs to be sent #######
+                order_msg = Message()
+                order_msg.type = 'Order Message'
+                order_msg.sender = self.mypgpkeyid
+                order_msg.recipient = order.buyer_key
+                order_msg.subject = order.orderid # put the order id in the subject for easy processing of outbound messages
+                order_dict = {}
+                order_dict['parent_contract_block'] = order.raw_item
+                order_dict['order_status'] = order.order_status
+                order_json = json.dumps(order_dict, sort_keys=True)
+                order_json = textwrap.fill(
+                    order_json, 80, drop_whitespace=False)
+                signed_item = str(self.gpg.sign(
+                    order_json, keyid=self.mypgpkeyid, passphrase=self.pgp_passphrase))
+                order_msg.sub_messages.append(signed_item)
+                session.commit()
+                self.sendMessage(self.client,order_msg)
+                print "Creating shipped notification message"
+            elif order.order_status == 'cancelled':
+                print "Creating cancelled notification message"
+            elif order.order_status == 'finalized':
+                ####### Finalize order, needs to be sent #######
+                order_msg = Message()
+                order_msg.type = 'Order Message'
+                order_msg.sender = self.mypgpkeyid
+                order_msg.recipient = order.seller_key
+                order_msg.subject = order.orderid # put the order id in the subject for easy processing of outbound messages
+                order_dict = {}
+                order_dict['parent_contract_block'] = order.raw_item
+                order_dict['order_status'] = order.order_status
+                order_json = json.dumps(order_dict, sort_keys=True)
+                order_json = textwrap.fill(
+                    order_json, 80, drop_whitespace=False)
+                signed_item = str(self.gpg.sign(
+                    order_json, keyid=self.mypgpkeyid, passphrase=self.pgp_passphrase))
+                order_msg.sub_messages.append(signed_item)
+                session.commit()
+                self.sendMessage(self.client,order_msg)
+                print "Creating finalize notification message"
+            elif order.order_status == 'dispute':
+                print "Creating finalize notification message"
+            else:
+                print "Error: Unknown order state in order " + order.orderid + "=" + order.order_status
 
     def run(self):
         # TODO: Clean up this flow
@@ -1170,12 +1272,10 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'get_listings':
                     item_id = task.data['id']
                     key_id = task.data['keyid']
-
                     key_topic = 'user/' + key_id + '/items'
                     self.client.subscribe(str(key_topic), 1)
                     print "Requesting listings for " + key_id
-########################################################################################################################- removed listing processing code to front end
-########################################################################################################################
+
                 elif task.command == 'add_to_cart':
                     item_id = task.data['item_id']
                     key_id = task.data['key_id']
