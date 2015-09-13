@@ -9,7 +9,7 @@ from mqtt_client import Client as mqtt
 from storage import Storage
 import gnupg
 from messaging import Message, Messaging, Contact
-from utilities import queue_task, current_time, got_pgpkey, parse_user_name, full_name, Listing, get_age
+from utilities import queue_task, current_time, got_pgpkey, parse_user_name, full_name, Listing, get_age, json_from_clearsigned
 import json
 import socks
 import socket
@@ -217,9 +217,51 @@ class messaging_loop(threading.Thread):
                 session.add(new_db_message)
                 session.commit()
             elif message.type == 'Order Message':
+                # message.sub_messages[0] contains the outermost pgp signed message block
+                # verifiy signature, record pgp key and json load result - store key and order message in stage[0]
+                # while order message.raw_item exists
+                         #verifiy signature, record pgp key and json load result in stage[n]- store key and order message
+                # read stage array backwards to get contract chain
+                # if chain checks out then update order db
+#                print message.sub_messages[0]
+                order_stages = []
+                current_stage_signed = message.sub_messages[0] # process the outermost clearsigned message
+                current_stage_signed = re.sub('(?m)^- ',"",current_stage_signed) # pgp wont do this for us
+
+                current_stage_sig_check = self.gpg.verify(current_stage_signed)
+#                print "current_stage_signed"
+#                print current_stage_signed
+                while current_stage_sig_check.fingerprint: #  using fingerprint means we must already have the pgpkey which we will if received the order message over the network
+                                                        # TODO get pgp key first if needed (like with messages) so we can process orders out of band (like email)
+                    current_stage_verified = json_from_clearsigned(current_stage_signed)
+                    try:
+                        order_stage = (json.loads(current_stage_verified))
+                    except:
+                        print "Error unable to decode json order stage message " + current_stage_verified
+                        return False
+                    # see if there is a parent block
+                    try:
+                        current_stage_signed = str(order_stage['parent_contract_block']).replace('\\n','\n') # process the next most outermost clearsigned message
+                    except KeyError:
+                        # This will happen once we reach the top of the chain
+                        current_stage_signed = ''
+                    current_stage_signed = re.sub('(?m)^- ',"",current_stage_signed) # pgp wont do this for us
+                    order_stages.append(order_stage)
+                    current_stage_sig_check = self.gpg.verify(current_stage_signed)
+
+                print "Order message contains the following blocks"
+                for stage in order_stages:
+
+                    print "-------------------------------------------------------------------------------"
+                    print stage
+                    print "-------------------------------------------------------------------------------"
+                print order_stages
+                #status = order_stages['order_status']# order_stages[0]['order_status']
                 flash_msg = queue_task(
                     0, 'flash_message', 'Order message received from ' + message.sender)
                 self.q_res.put(flash_msg)
+
+
                 # TODO : Process incoming order message - is it a new order or an update to an existing order
 #                session = self.storageDB.DBSession()
 #                new_db_message = self.storageDB.PrivateMessaging(
@@ -718,8 +760,10 @@ class messaging_loop(threading.Thread):
 
     def get_items_from_listings(self, key_id, listings_dict):
         verified_listings = []
+        print "get_items from listing: " + listings_dict.__str__()
         for item in listings_dict:
             verify_item = self.gpg.verify(item)
+            raw_item = item
             # remove the textwrapping we applied when encoding this submessage
             item = item.replace('\n', '')
             if verify_item.key_id == key_id:  # TODO - this is a weak check - check the fingerprint is set
@@ -737,7 +781,7 @@ class messaging_loop(threading.Thread):
                     item_shipping_options = json.loads(
                         verified_item['shipping_options'])
                     verified_item['shipping_options'] = item_shipping_options
-                    verified_item['raw_contract'] = item
+                    verified_item['raw_contract'] = raw_item
                     verified_listings.append(verified_item)
                 except:
                     print "Error: item json not extracted from signed sub-message"
@@ -754,7 +798,6 @@ class messaging_loop(threading.Thread):
         item  = session.query(self.storageDB.cacheItems).filter(self.storageDB.cacheItems.key_id == key_id).filter(
             self.storageDB.cacheItems.id == item_id).first()
         if item:
-            print item
             raw_msg = item.listings_block
             cart_res = item.__dict__
         else:
@@ -921,20 +964,21 @@ class messaging_loop(threading.Thread):
             order.order_status = 'shipped'
             if self.mypgpkeyid == order.buyer_key:
                 order.is_synced = True # we are the buyer, no need to send anything - the seller will see payment
-            else:
-                order.is_synced = False # we are the seller, no need to send anything - the seller will see payment
+            if self.mypgpkeyid == order.seller_key: # TODO should be self but this lets buyer and seller be the same- useful for testing for now
+                order.is_synced = False # we are the seller, send shipped notice to buyer
             session.commit()
             self.sync_orders()
         elif command == 'order_finalize':
+            print "Processing finalize state change"
             # this state will be transmitted from buyer back to seller
             # TODO update order message and transmit to buyer
             session = self.storageDB.DBSession()
             order = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.id == id).first()
             order.order_status = 'finalized'
             if self.mypgpkeyid == order.buyer_key:
-                order.is_synced = False # we are the buyer, send message
-            else:
-                order.is_synced = True # we are the seller, no need to send anything
+                order.is_synced = False # we are the buyer, send finalization notice - if notarized then prompt for order feedback
+            if self.mypgpkeyid == order.seller_key: # TODO should be self but this lets buyer and seller be the same- useful for testing for now
+                order.is_synced = True # we are the seller, do nothing for now
             session.commit()
             self.sync_orders()
         else:
@@ -961,13 +1005,14 @@ class messaging_loop(threading.Thread):
                 order_dict['shipping_option'] = order.shipping
                 order_dict['delivery_address'] = order.delivery_address
                 order_dict['buyer_notes'] = order.order_note
+                order_dict['order_status'] = 'submitted'
                 order_dict['order_type'] = order.order_type
                 order_dict['buyer_btc_pub_key'] = order.buyer_btc_pub_key
                 order_dict['payment_address'] = order.payment_btc_address # duplicate information but eases processing
                 order_dict['currency_code'] = order.currency_code
                 order_dict['total_price'] = order.line_total_price #
                 order_dict['total_price_btc'] = order.line_total_btc_price
-                order_dict['parent_contract_block'] = order.raw_seed
+                order_dict['parent_contract_block'] = str(order.raw_seed).replace('\n', '\\n') # escape raw.seed becasue the pgp signature contains line breaks
                 order_json = json.dumps(order_dict, sort_keys=True)
                 order_json = textwrap.fill(
                     order_json, 80, drop_whitespace=False)
@@ -981,15 +1026,23 @@ class messaging_loop(threading.Thread):
                 order.order_status = 'submitted'
                 session.commit()
                 self.sendMessage(self.client,order_msg)
-            elif order.order_status == 'rejected':
-                ####### Rejected order, needs to be sent #######
+            elif order.order_status in ['rejected','processing','shipped','finalized','dispute','cancelled']:
+                print "Order update message : " + order.order_status
                 order_msg = Message()
                 order_msg.type = 'Order Message'
                 order_msg.sender = self.mypgpkeyid
-                order_msg.recipient = order.buyer_key
+                if order.order_status in ['rejected','processing','shipped','cancelled']:
+                    # these state changes needs to be notified to the buyer
+                    order_msg.recipient = order.buyer_key
+                else:
+                    # these state changes needs to be notified to the buyer
+                    order_msg.recipient = order.seller_key
                 order_msg.subject = order.orderid # put the order id in the subject for easy processing of outbound messages
                 order_dict = {}
-                order_dict['parent_contract_block'] = order.raw_item
+                print "=================="
+                print str(order.raw_item)
+                print "==================="
+                order_dict['parent_contract_block'] = str(order.raw_item).replace('\n', '\\n') # escape raw.seed becasue the pgp signature contains line breaks
                 order_dict['order_status'] = order.order_status
                 order_json = json.dumps(order_dict, sort_keys=True)
                 order_json = textwrap.fill(
@@ -999,52 +1052,7 @@ class messaging_loop(threading.Thread):
                 order_msg.sub_messages.append(signed_item)
                 session.commit()
                 self.sendMessage(self.client,order_msg)
-                print "Creating rejected notification message"
 
-            elif order.order_status == 'processing':
-                print "Creating processing notification message"
-            elif order.order_status == 'shipped':
-                ####### Rejected order, needs to be sent #######
-                order_msg = Message()
-                order_msg.type = 'Order Message'
-                order_msg.sender = self.mypgpkeyid
-                order_msg.recipient = order.buyer_key
-                order_msg.subject = order.orderid # put the order id in the subject for easy processing of outbound messages
-                order_dict = {}
-                order_dict['parent_contract_block'] = order.raw_item
-                order_dict['order_status'] = order.order_status
-                order_json = json.dumps(order_dict, sort_keys=True)
-                order_json = textwrap.fill(
-                    order_json, 80, drop_whitespace=False)
-                signed_item = str(self.gpg.sign(
-                    order_json, keyid=self.mypgpkeyid, passphrase=self.pgp_passphrase))
-                order_msg.sub_messages.append(signed_item)
-                session.commit()
-                self.sendMessage(self.client,order_msg)
-                print "Creating shipped notification message"
-            elif order.order_status == 'cancelled':
-                print "Creating cancelled notification message"
-            elif order.order_status == 'finalized':
-                ####### Finalize order, needs to be sent #######
-                order_msg = Message()
-                order_msg.type = 'Order Message'
-                order_msg.sender = self.mypgpkeyid
-                order_msg.recipient = order.seller_key
-                order_msg.subject = order.orderid # put the order id in the subject for easy processing of outbound messages
-                order_dict = {}
-                order_dict['parent_contract_block'] = order.raw_item
-                order_dict['order_status'] = order.order_status
-                order_json = json.dumps(order_dict, sort_keys=True)
-                order_json = textwrap.fill(
-                    order_json, 80, drop_whitespace=False)
-                signed_item = str(self.gpg.sign(
-                    order_json, keyid=self.mypgpkeyid, passphrase=self.pgp_passphrase))
-                order_msg.sub_messages.append(signed_item)
-                session.commit()
-                self.sendMessage(self.client,order_msg)
-                print "Creating finalize notification message"
-            elif order.order_status == 'dispute':
-                print "Creating finalize notification message"
             else:
                 print "Error: Unknown order state in order " + order.orderid + "=" + order.order_status
 

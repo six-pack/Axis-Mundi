@@ -14,25 +14,37 @@
                 <tr><td width="800px" colspan="2"><h4>{{order.title}}</h4></td>
 
                 {% if order.order_status == "created" %}
-                    <td width="200"><div style="btn"><button type="submit" class = "btn" style="float:right">Cancel</button></div></td></tr>
+                    <td width="200"><div style="btn"><button type="submit" name="action" value="order_cancelled" class = "btn" style="float:right">Cancel</button></div></td></tr>
                 {% elif order.order_status == "submitted" %}
                     <td width="200"><div style="btn">
-                        {% if order.payment_status == "unpaid" %}<label class="btn" style="float:right" for="modal-one">Pay Now</label>&nbsp;
-                        {% else %}<button type="submit" class = "btn" name="action" value="order_dispute" style="float:right">Dispute</button>&nbsp;<button type="submit" class = "btn" name="action" value="order_finalize" style="float:right" >Finalize</button>
+                        {% if order.buyer_key == mykey %}
+                            {% if order.payment_status == "unpaid" %}<label class="btn" style="float:right" for="modal-one">Pay Now</label>&nbsp;<button type="submit" name="action" value="order_cancelled" class = "btn" style="float:right">Cancel</button>
+                            {% else %}<!--<button type="submit" class = "btn" name="action" value="order_dispute" style="float:right">Dispute</button>&nbsp;--><button type="submit" class = "btn" name="action" value="order_finalize" style="float:right" >Finalize</button>
+                            {% endif %}
+                        {%endif %}
+                        {% if order.seller_key == mykey %}
+                            <td width="200"><div style="btn"><button type="submit" name="action" value="order_shipped"  class ="btn">Mark Shipped</button></div></td></tr>
                         {% endif %}
                     </div></td></tr>
                 {% elif order.order_status == "cancelled" %}
-                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" class = "btn">Finalize</button></div></td></tr>
+                    <td width="200"><!--TODO Add cancellation reason here --></td></tr>
                {% elif order.order_status == "rejected" %}
-                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" class = "btn">Finalize</button></div></td></tr>
+                    <td width="200"><!--TODO Add rejection reason here --></td></td></tr>
                {% elif order.order_status == "processing" %}
-                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" class = "btn">Finalize</button></div></td></tr>
+                    {% if order.buyer_key == mykey %}
+                        <td width="200"><div style="btn"><button type="submit" name="action" value="order_finalize" class = "btn">Finalize</button></div></td></tr>
+                    {% endif %}
+                    {% if order.seller_key == mykey %}
+                        <td width="200"><div style="btn"><button type="submit" name="action" value="order_shipped" class = "btn">Mark Shipped</button></div></td></tr>
+                    {% endif %}
                {% elif order.order_status == "shipped" %}
-                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" class = "btn">Finalize</button></div></td></tr>
+                    {% if order.buyer_key == mykey %}
+                        <button type="submit" name="action" value="order_finalize" class = "btn">Finalize</button></div></td></tr>
+                    {% endif %}
                {% elif order.order_status == "disputed" %}
-                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" class = "btn">Finalize</button></div></td></tr>
+                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" name="action" value="order_finalize" class = "btn">Finalize</button></div></td></tr>
                {% elif order.order_status == "finalized" %}
-                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" class = "btn">Finalize</button></div></td></tr>
+                    <button type="submit" name="action" value="order_leave_feedback" class = "btn">Leave Feedback</button></div></td></tr>
                {% else  %}
                     <td width="200">Order state error</td></tr>
                 {%endif %}

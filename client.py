@@ -93,8 +93,11 @@ def add_header(response):
             'Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
     return response
 
-
 ######### JINJA FILTERS ##################################
+
+@app.context_processor
+def inject_mykey():
+    return dict(mykey=app.pgp_keyid)
 
 @app.template_filter('from_json')
 def from_json(value):
@@ -1270,7 +1273,7 @@ def run():
         app.SetupDone = True  # TODO: A better check is needed here
     # TODO: turn off threading - either move PKS lookup handler to backend
     # thread or inject retreived keys directly into keyring
-    app.run(debug=True, threaded=True, use_reloader=False, port=5000)
+    app.run(debug=True, threaded=True, use_reloader=False, port=5001)
  # use_reloader added to prevent initialization running twice when in flask
  # debug mode
 
@@ -1324,6 +1327,7 @@ if __name__ == '__main__':
         freeze_support()
 
     print """
+
  AA  X   X III  SSS   M   M U   U N   N DDD  III
 A  A  X X   I  S      MM MM U   U NN  N D  D  I
 AAAA   X    I   SSS   M M M U   U N N N D  D  I
