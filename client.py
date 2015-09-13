@@ -1273,7 +1273,7 @@ def run():
         app.SetupDone = True  # TODO: A better check is needed here
     # TODO: turn off threading - either move PKS lookup handler to backend
     # thread or inject retreived keys directly into keyring
-    app.run(debug=True, threaded=True, use_reloader=False, port=5001)
+    app.run(debug=True, threaded=True, use_reloader=False, port=5000)
  # use_reloader added to prevent initialization running twice when in flask
  # debug mode
 
