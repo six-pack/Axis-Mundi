@@ -9,6 +9,8 @@ import string
 import itertools
 import os
 import sys
+from platform import system as get_os
+
 
 
 class Listing(object):
