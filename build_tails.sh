@@ -4,7 +4,7 @@ echo "Axis Mundi Executable Builder (Tails)"
 echo "############################################################################################################"
 echo "Preparing Operating System requirements"
 sudo apt-get update
-sudo apt-get install build-essential python-wxtools python-pip python-dev libjpeg-dev zlib1g-dev libssl-dev
+sudo apt-get install build-essential python-wxtools python-pip python-dev libjpeg-dev zlib1g-dev libssl-dev python-appindicator
 sudo pip uninstall PIL
 echo "############################################################################################################"
 echo "Getting PyInstaller source code"

@@ -23,8 +23,6 @@ from constants import *
 from multiprocessing import Process, freeze_support
 import multiprocessing.forking
 import webbrowser
-import trayicon_gui
-import wx
 import os
 
 app = Flask(__name__)
@@ -1339,27 +1337,46 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
     running = True
     option_nogui = False
     option_nobrowser = False
+    if os_is_tails():
+        use_wx = False # todo the gtk/appindicator method should be used when possible instead of wx
+    else:
+        use_wx = True
     # By default try to start the status gui in the system tray
     if not option_nogui:
-        try:
-            gui = wx.App()
-            frame = wx.Frame(None)  # empty frame
-            trayicon_gui.TaskBarIcon()
-        except:  # If that fails assume nogui mode
-            print "No display detected, disabling status gui"
-            option_nogui = True
-            option_nobrowser = True
+        if use_wx:
+        # USe wxpython for gui
+            import trayicon_gui
+            import wx
+            try:
+                gui = wx.App()
+                frame = wx.Frame(None)  # empty frame
+                trayicon_gui.TaskBarIcon()
+            except:  # If that fails assume nogui mode
+                print "No display detected, disabling status gui"
+                option_nogui = True
+                option_nobrowser = True
+        else:
+        # Use GTK for gui (and appindicator)
+            import signal
+            import gtk
+            import appindicator
     # If this is Tails - prepare system for Axis Mundi
-
-
     if os_is_tails():
         print "Tails OS detected "
         # TODO : Check to see if tor browser and firewall change are already made, if they are don't bother user with dialogs
-        res = wx.MessageBox('TAILS OS has been detected\n\nIt is necessary to make two configuration changes for Axis Mundi to run.\n\nDo you want Axis Mundi to make the changes for you?','Axis Mundi- TAILS Detected',wx.YES_NO|wx.ICON_WARNING)
-        if res == wx.YES:
+        message = gtk.MessageDialog(type=gtk.MESSAGE_WARNING, buttons=gtk.BUTTONS_YES_NO)
+        message.set_markup('TAILS OS has been detected\n\nIt is necessary to make two configuration changes for Axis Mundi to run.\n\nDo you want Axis Mundi to make the changes for you?')
+        message.set_title('Axis Mundi- TAILS Detected')
+        res = message.run()
+        message.destroy()
+        if res == gtk.RESPONSE_YES:
             print "Making changes to TAILS OS to support Axis Mundi..."
+            message = gtk.MessageDialog(type=gtk.MESSAGE_WARNING, buttons=gtk.BUTTONS_OK)
+            message.set_markup('Please make sure that Tor Browser is closed before continuing')
+            message.set_title('Axis Mundi- Close Tor Browser')
+            res = message.run()
+            message.destroy()
             #TODO: Check to see if Tor Browser is already running
-            wx.MessageBox('Please confirm Tor Browser is closed before continuing','Axis Mundi - Close Tor Browser', wx.ICON_EXCLAMATION)
             # 1) Add proxyexception to Torbrowser for 127.0.0.1
             try:
                 # TODO # This assumes a default Tails prefs.js - check to see if this line already exists
@@ -1370,21 +1387,46 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
                 print "ERROR (Tails): Could not modify Tor Browser prefs with proxy exclusion for localhost "
             # 2) Add firewall rule
 
-            def ask(parent=None, message=''):
-                dlg = wx.PasswordEntryDialog(parent, message)
-                dlg.ShowModal()
-                result = dlg.GetValue()
-                dlg.Destroy()
-                return result
-            admin_pass = ask(message = 'Provide Tails Administrative Password')
+            def get_text(parent, message, default=''):
+                """
+                Display a dialog with a text entry.
+                Returns the text, or None if canceled.
+                """
+                d = gtk.MessageDialog(parent,
+                                      gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+                                      gtk.MESSAGE_QUESTION,
+                                      gtk.BUTTONS_OK_CANCEL,
+                                      message)
+                entry = gtk.Entry()
+                entry.set_text(default)
+                entry.set_visibility(False) # password field
+                entry.show()
+                d.vbox.pack_end(entry)
+                entry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
+                d.set_default_response(gtk.RESPONSE_OK)
+
+                r = d.run()
+                text = entry.get_text().decode('utf8')
+                d.destroy()
+                if r == gtk.RESPONSE_OK:
+                    return text
+                else:
+                    return None
+
+#            admin_pass = ask(message = 'Provide Tails Administrative Password')
+            admin_pass = get_text(None, message = 'Provide Tails Administrative Password')
             command = '/sbin/iptables -I OUTPUT 2 -p tcp -s 127.0.0.1 -d 127.0.0.1 -m owner --uid-owner amnesia -j ACCEPT'
             p = os.system('echo %s|sudo -S %s' % (admin_pass, command))
             if not p==0:
                 print "ERROR (Tails): Could not modify firewall configuration to allow localhost to localhost traffic"
             admin_pass = ''
         else:
-            wx.MessageBox('Please ensure you make the following two changes manually before continuing:\n\n1) Add a proxy exception in Tor Browser for 127.0.0.1\n2) Add a firewall rule to allow localhost to localhost using the following command :\nsudo iptables -I OUTPUT 2 -p tcp -s 127.0.0.1 -d 127.0.0.1 -m owner --uid-owner amnesia -j ACCEPT\n','Axis Mundi - Manual TAILS instructions')
 
+            message = gtk.MessageDialog(type=gtk.MESSAGE_WARNING, buttons=gtk.BUTTONS_OK)
+            message.set_markup('Please ensure you make the following two changes manually before continuing:\n\n1) Add a proxy exception in Tor Browser for 127.0.0.1\n2) Add a firewall rule to allow localhost to localhost using the following command :\nsudo iptables -I OUTPUT 2 -p tcp -s 127.0.0.1 -d 127.0.0.1 -m owner --uid-owner amnesia -j ACCEPT\n')
+            message.set_title('Axis Mundi - Manual Re-configuration')
+            res = message.run()
+            message.destroy()
     # Start the front end thread of the client
     front_end = Process(target=run)
     front_end.start()
@@ -1397,7 +1439,30 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
             if option_nogui:
                 sleep(0.5)
             else:
-                gui.MainLoop()
+                if use_wx:
+                    gui.MainLoop()
+                else:
+                    def build_menu():
+                        menu = gtk.Menu()
+                        item_title = gtk.MenuItem('Axis Mundi')
+                        item_title.set_sensitive(False)
+                        menu.append(item_title)
+                        item_title = gtk.SeparatorMenuItem()
+                        menu.append(item_title)
+                        item_quit = gtk.MenuItem('Shutdown')
+                        item_quit.connect('activate', quit)
+                        menu.append(item_quit)
+                        menu.show_all()
+                        return menu
+
+                    def quit(source):
+                        gtk.main_quit()
+
+                    signal.signal(signal.SIGINT, signal.SIG_DFL)
+                    indicator = appindicator.Indicator('Axis Mundi', resource_path('icon.png'), appindicator.CATEGORY_SYSTEM_SERVICES)
+                    indicator.set_status(appindicator.STATUS_ACTIVE)
+                    indicator.set_menu(build_menu())
+                    gtk.main()
                 running = False
         except KeyboardInterrupt:
             break
@@ -1407,6 +1472,7 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
     front_end.terminate()
     front_end.join()
     if not option_nogui:
-        gui.Exit()
+        if use_wx:
+            gui.Exit()
     # TODO - overwrite and then delete temp pubkeyring if used
     print "Axis Mundi exiting..."

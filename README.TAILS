@@ -37,7 +37,7 @@ Then the following steps are necessary
 
 1) Open a terminal and enter the following commands, entering your administrative password when prompted:
     sudo apt-get update
-    sudo apt-get install build-essential python-wxtools python-pip python-dev libjpeg-dev zlib1g-dev libssl-dev
+    sudo apt-get install build-essential python-wxtools python-pip python-dev libjpeg-dev zlib1g-dev libssl-dev python-appindicator
     sudo pip uninstall PIL
     git clone https://github.com/six-pack/axis-mundi
     cd axis-mundi
