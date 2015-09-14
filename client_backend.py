@@ -51,8 +51,11 @@ class messaging_loop(threading.Thread):
         self.onion_brokers = []
         self.i2p_brokers = []
         self.clearnet_brokers = []
-        self.gpg = gnupg.GPG(gnupghome=self.pgpdir, options={
-                             '--primary-keyring="' + self.appdir + '/pubkeys.gpg"'})
+        # TODO - account for filenames with spaces on windows
+        self.gpg = gnupg.GPG(gnupghome=self.pgpdir, options={ '--primary-keyring=' + self.appdir + '/pubkeys.gpg',
+                                                              '--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
+                                                              '--keyserver-options=auto-key-retrieve=yes,http-proxy='
+                                                             })
         self.client = mqtt()
         self.pgp_passphrase = pgppassphrase
         self.profile_text = ''
@@ -239,23 +242,21 @@ class messaging_loop(threading.Thread):
                     except:
                         print "Error unable to decode json order stage message " + current_stage_verified
                         return False
+                    order_stages.append(order_stage)
                     # see if there is a parent block
                     try:
                         current_stage_signed = str(order_stage['parent_contract_block']).replace('\\n','\n') # process the next most outermost clearsigned message
                     except KeyError:
                         # This will happen once we reach the top of the chain
+                        # or it could be some invalid crap to be dropped
                         current_stage_signed = ''
                     current_stage_signed = re.sub('(?m)^- ',"",current_stage_signed) # pgp wont do this for us
-                    order_stages.append(order_stage)
                     current_stage_sig_check = self.gpg.verify(current_stage_signed)
 
-                print "Order message contains the following blocks"
+                print "Order message contains a contract chain of " + str(len(order_stages)) + " blocks"
                 for stage in order_stages:
-
                     print "-------------------------------------------------------------------------------"
                     print stage
-                    print "-------------------------------------------------------------------------------"
-                print order_stages
                 #status = order_stages['order_status']# order_stages[0]['order_status']
                 flash_msg = queue_task(
                     0, 'flash_message', 'Order message received from ' + message.sender)

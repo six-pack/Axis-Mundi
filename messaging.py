@@ -90,9 +90,10 @@ class Messaging():
         self.mypgpkeyid = mypgpkeyid
         if get_os() == 'Windows':
             keyring = app_dir + '\pubkeys.gpg'
+            # TODO - account for filenames with spaces on windows
         else:
             keyring = app_dir + '/pubkeys.gpg'
-        self.gpg = gnupg.GPG(gnupghome=pgp_dir, options={'--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
+        self.gpg = gnupg.GPG(gnupghome=pgp_dir, options={'--primary-keyring=' + keyring,'--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
                                                          '--keyserver-options=auto-key-retrieve=yes,http-proxy=', '--primary-keyring="' + keyring + '"'})  # removed '--auto-key-locate=keyserver',
         self.pgp_passphrase = pgppassphrase
 #       self.gpg.options = "--no-emit-version"

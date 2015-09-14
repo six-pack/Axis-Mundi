@@ -1235,11 +1235,9 @@ def run():
     app.secret_key = ''.join(random.SystemRandom().choice(
         string.ascii_uppercase + string.digits) for _ in range(16))
     app.jinja_env.globals['csrf_token'] = generate_csrf_token
-    print 'Translate paths for Flask if running from binary (onefile)'
-    print 'before:' + app.template_folder
     app.template_folder = resource_path('templates')
     app.static_folder = resource_path('static')
-    print 'after:' + app.template_folder
+    print 'Execution path : ' + app.template_folder
     app.SetupDone = False
     app.pgp_keyid = ""
     # path of the module/executable - should work for both source and binary
