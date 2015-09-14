@@ -87,8 +87,12 @@ class Messaging():
 
     def __init__(self, mypgpkeyid, pgppassphrase, pgp_dir, app_dir):
         self.mypgpkeyid = mypgpkeyid
+        if get_os() == 'Windows':
+            keyring = app_dir + '\pubkeys.gpg'
+        else:
+            keyring = app_dir + '/pubkeys.gpg'
         self.gpg = gnupg.GPG(gnupghome=pgp_dir, options={'--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
-                                                         '--keyserver-options=auto-key-retrieve=yes', '--primary-keyring="' + app_dir + 'pubkeys.gpg"'})  # removed '--auto-key-locate=keyserver',
+                                                         '--keyserver-options=auto-key-retrieve=yes,http-proxy=', '--primary-keyring="' + keyring + '"'})  # removed '--auto-key-locate=keyserver',
         self.pgp_passphrase = pgppassphrase
 #       self.gpg.options = "--no-emit-version"
 
