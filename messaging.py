@@ -5,6 +5,7 @@ import textwrap
 import random
 import string
 from constants import *
+from platform import system as get_os
 
 
 class Contract_seed(object):
