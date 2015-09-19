@@ -153,6 +153,7 @@ def create_defaults(db, session, pgp_keyid, display_name, publish_id, btc_master
         new_conf_item.value = "1234567812345678"
         new_conf_item.displayname = "Market Feedback Helpers"
         session.add(new_conf_item)
+        session.commit()
         # Now static data
         # TODO: Countries
         # Currencies

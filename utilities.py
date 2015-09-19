@@ -168,8 +168,7 @@ def json_from_clearsigned(clearsigned_rawmessage):
         # Now replace and '- ' if at start of line with nothing to mirror pgp escaping of dashes
         current_stage_signed = re.sub('(?m)^- ',"",nearly_stripped_message) # pgp wont do this for us
         # Now strip the line breaks that were added prior to signing
-        stripped_message = nearly_stripped_message.replace('\n', '')  # strip out all those newlines we added pre-signing
-
+        stripped_message = current_stage_signed.replace('\n', '')  # strip out all those newlines we added pre-signing
         return stripped_message
     else:
         return False

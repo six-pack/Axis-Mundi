@@ -229,7 +229,7 @@ class messaging_loop(threading.Thread):
 #                print message.sub_messages[0]
                 order_stages = []
                 current_stage_signed = message.sub_messages[0] # process the outermost clearsigned message
-                current_stage_signed = re.sub('(?m)^- ',"",current_stage_signed) # pgp wont do this for us
+                #current_stage_signed = re.sub('(?m)^- ',"",current_stage_signed) # pgp wont do this for us
 
                 current_stage_sig_check = self.gpg.verify(current_stage_signed)
 #                print "current_stage_signed"
@@ -245,18 +245,23 @@ class messaging_loop(threading.Thread):
                     order_stages.append(order_stage)
                     # see if there is a parent block
                     try:
-                        current_stage_signed = str(order_stage['parent_contract_block']).replace('\\n','\n') # process the next most outermost clearsigned message
+                        current_stage_signed = str(order_stage['parent_contract_block'])#.replace('\\n','\n') # process the next most outermost clearsigned message
                     except KeyError:
                         # This will happen once we reach the top of the chain
                         # or it could be some invalid crap to be dropped
                         current_stage_signed = ''
-                    current_stage_signed = re.sub('(?m)^- ',"",current_stage_signed) # pgp wont do this for us
+#                    current_stage_signed = re.sub('(?m)^- ',"",current_stage_signed) # pgp wont do this for us
+                    print "Verifying nested signature"
+                    print current_stage_signed
                     current_stage_sig_check = self.gpg.verify(current_stage_signed)
-
+                order_stages.reverse()
                 print "Order message contains a contract chain of " + str(len(order_stages)) + " blocks"
                 for stage in order_stages:
                     print "-------------------------------------------------------------------------------"
-                    print stage
+                    try:
+                        print stage['order_status'] +' '+ str(stage)
+                    except:
+                        print 'Item ' + str(stage)
                 #status = order_stages['order_status']# order_stages[0]['order_status']
                 flash_msg = queue_task(
                     0, 'flash_message', 'Order message received from ' + message.sender)
@@ -335,8 +340,11 @@ class messaging_loop(threading.Thread):
                 #                print listings_message
                 if not keyid == listings_message.sender:
                     print "Listings were signed by a different key - discarding..."
+                elif not listings_message.sub_messages:
+                        # user has no listings
+                        print "User " + keyid + ' has no listings'
                 else:
-                    listings = json.dumps(listings_message.sub_messages)
+                    listings = listings_message.sub_messages.__str__()
                     print "Listings message received from " + keyid
                     # add this to the cachelistings table
                     if listings_message.type == 'Listings Message' and listings:
@@ -356,33 +364,30 @@ class messaging_loop(threading.Thread):
                                                                           listings_block=listings)
                             session.add(cachedlistings)
                         session.commit()
-                    if not listings_message.sub_messages:
-                        # user has no listings
-                        print "User " + keyid + ' has no listings'
-                    else:
-                        print "Extracting items from valid listings message..."
-                        verified_listings = self.get_items_from_listings(
-                            keyid, listings_message.sub_messages)
-                        # Purge any existing entries from table
-                        session.query(self.storageDB.cacheItems).filter(self.storageDB.cacheItems.key_id == keyid).delete()
-                        for verified_listing in verified_listings:
-                            cacheditem = self.storageDB.cacheItems(id=verified_listing['id'], key_id=keyid,
-                                                                          updated=datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
-                                                                          listings_block=verified_listing['raw_contract'],
-                                                                          title=verified_listing['item'],
-                                                                          category=verified_listing['category'],
-                                                                          description=verified_listing['description'],
-                                                                          qty_available = verified_listing['qty'],
-                                                                          order_max_qty = verified_listing['max_order_qty'],
-                                                                          price = verified_listing['unit_price'],
-                                                                          currency_code = verified_listing['currency'],
-                                                                          shipping_options = json.dumps(verified_listing['shipping_options']),
-                                                                          image_base64 = verified_listing['image'],
-                                                                          seller_btc_stealth= verified_listing['stealth_address'],
-                                                                          publish_date = datetime.strptime(verified_listing['publish_date'],"%Y-%m-%d %H:%M:%S"))
 
-                            session.add(cacheditem)
-                        session.commit()
+                    print "Extracting items from valid listings message..."
+                    verified_listings = self.get_items_from_listings(
+                        keyid, listings_message.sub_messages)
+                    # Purge any existing entries from table
+                    session.query(self.storageDB.cacheItems).filter(self.storageDB.cacheItems.key_id == keyid).delete()
+                    for verified_listing in verified_listings:
+                        cacheditem = self.storageDB.cacheItems(id=verified_listing['id'], key_id=keyid,
+                                                                      updated=datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
+                                                                      listings_block=verified_listing['raw_contract'],
+                                                                      title=verified_listing['item'],
+                                                                      category=verified_listing['category'],
+                                                                      description=verified_listing['description'],
+                                                                      qty_available = verified_listing['qty'],
+                                                                      order_max_qty = verified_listing['max_order_qty'],
+                                                                      price = verified_listing['unit_price'],
+                                                                      currency_code = verified_listing['currency'],
+                                                                      shipping_options = json.dumps(verified_listing['shipping_options']),
+                                                                      image_base64 = verified_listing['image'],
+                                                                      seller_btc_stealth= verified_listing['stealth_address'],
+                                                                      publish_date = datetime.strptime(verified_listing['publish_date'],"%Y-%m-%d %H:%M:%S"))
+
+                        session.add(cacheditem)
+                    session.commit()
             else:
                 print "No items message found in listings returned from " + keyid
         else:
@@ -761,15 +766,17 @@ class messaging_loop(threading.Thread):
 
     def get_items_from_listings(self, key_id, listings_dict):
         verified_listings = []
-        print "get_items from listing: " + listings_dict.__str__()
+        # print "get_items from listing: " + listings_dict.__str__()
+        print "get_items from listing from " + key_id
         for item in listings_dict:
             verify_item = self.gpg.verify(item)
             raw_item = item
             # remove the textwrapping we applied when encoding this submessage
-            item = item.replace('\n', '')
+#            item = item.replace('\n', '')
             if verify_item.key_id == key_id:  # TODO - this is a weak check - check the fingerprint is set
                 try:
-                    stripped_item = item[item.index('{'):item.rindex('}') + 1]
+                    stripped_item = json_from_clearsigned(item)
+
                 except:
                     stripped_item = ''
                     print "Error: item not extracted from signed sub-message"
@@ -782,7 +789,7 @@ class messaging_loop(threading.Thread):
                     item_shipping_options = json.loads(
                         verified_item['shipping_options'])
                     verified_item['shipping_options'] = item_shipping_options
-                    verified_item['raw_contract'] = raw_item
+                    verified_item['raw_contract'] = str(raw_item)
                     verified_listings.append(verified_item)
                 except:
                     print "Error: item json not extracted from signed sub-message"
@@ -1013,13 +1020,14 @@ class messaging_loop(threading.Thread):
                 order_dict['currency_code'] = order.currency_code
                 order_dict['total_price'] = order.line_total_price #
                 order_dict['total_price_btc'] = order.line_total_btc_price
-                order_dict['parent_contract_block'] = str(order.raw_seed).replace('\n', '\\n') # escape raw.seed becasue the pgp signature contains line breaks
+                order_dict['parent_contract_block'] = str(order.raw_seed)#.replace('\n', '\\n') # escape raw.seed becasue the pgp signature contains line breaks
                 order_json = json.dumps(order_dict, sort_keys=True)
                 order_json = textwrap.fill(
                     order_json, 80, drop_whitespace=False)
                 signed_item = str(self.gpg.sign(
                     order_json, keyid=self.mypgpkeyid, passphrase=self.pgp_passphrase))
                 order_msg.sub_messages.append(signed_item)
+                order.raw_item = str(signed_item)#.replace('\n', '\\n')
 #                order_out_message = Messaging.PrepareMessage(
 #                    self.myMessaging, order_msg)
 #                # send order message
@@ -1043,7 +1051,7 @@ class messaging_loop(threading.Thread):
                 print "=================="
                 print str(order.raw_item)
                 print "==================="
-                order_dict['parent_contract_block'] = str(order.raw_item).replace('\n', '\\n') # escape raw.seed becasue the pgp signature contains line breaks
+                order_dict['parent_contract_block'] = str(order.raw_item)#.replace('\n', '\\n') # escape raw.seed becasue the pgp signature contains line breaks
                 order_dict['order_status'] = order.order_status
                 order_json = json.dumps(order_dict, sort_keys=True)
                 order_json = textwrap.fill(

@@ -1,6 +1,6 @@
 import gnupg
 import json
-from utilities import current_time, got_pgpkey
+from utilities import current_time, got_pgpkey, json_from_clearsigned
 import textwrap
 import random
 import string
@@ -164,10 +164,7 @@ class Messaging():
         if clear_lrawmessage.startswith('-----BEGIN PGP SIGNED MESSAGE-----'):
             tmp_key = False
             try:
-                tmp_stripped_msg = clear_lrawmessage[
-                    clear_lrawmessage.index('{'):clear_lrawmessage.rindex('}') + 1]
-                # strip out all those newlines we added pre-signing
-                tmp_stripped_msg = tmp_stripped_msg.replace('\n', '')
+                tmp_stripped_msg = json_from_clearsigned(clear_lrawmessage)
                 tmp_message = Message()
                 tmp_message.loadjson(tmp_stripped_msg)
                 tmp_key = tmp_message.sender
@@ -206,8 +203,9 @@ class Messaging():
             if verify_signature.key_id:     # Weak signature check - TODO: TESTING ONLY!
                 input_message_signed = True
                 try:
-                    clear_strippedlrawmessage = clear_lrawmessage[
-                        clear_lrawmessage.index('{'):clear_lrawmessage.rindex('}') + 1]
+                    clear_strippedlrawmessage = json_from_clearsigned(clear_lrawmessage)
+                    #clear_strippedlrawmessage = clear_lrawmessage[
+                    #    clear_lrawmessage.index('{'):clear_lrawmessage.rindex('}') + 1]
                 except:
                     return False
             else:
@@ -220,8 +218,8 @@ class Messaging():
             else:
                 return False
         # Step 3 - Is it a valid JSON message?
-        clear_strippedlrawmessage = clear_strippedlrawmessage.replace(
-            '\n', '')  # strip out all those newlines we added pre-signing
+        #clear_strippedlrawmessage = clear_strippedlrawmessage.replace(
+        #    '\n', '')  # strip out all those newlines we added pre-signing
         message = Message()
         if message.loadjson(clear_strippedlrawmessage) == False:
             print "Could not decode JSON, dropping message. Message was " + clear_strippedlrawmessage

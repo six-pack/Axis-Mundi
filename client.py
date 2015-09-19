@@ -385,16 +385,22 @@ def wait():
 def not_yet():
     return render_template('not_yet.html')
 
-@app.route('/directory')
-@app.route('/directory/<int:page>')
+@app.route('/directory', methods=["GET", "POST"])
+@app.route('/directory/<int:page>',methods=["GET", "POST"])
 @login_required
-def directory(page=1):
-    checkEvents()
+def directory(page=1,filter=''):
+    if request.method == "POST":
+        filter = request.form['search_name']
     dbsession = app.roStorageDB.DBSession()
-    directory = dbsession.query(app.roStorageDB.cacheDirectory).order_by(
-        app.roStorageDB.cacheDirectory.display_name.asc())
+    if filter:
+        directory = dbsession.query(app.roStorageDB.cacheDirectory).filter(app.roStorageDB.cacheDirectory.display_name.like("%"+filter+"%")).order_by(
+            app.roStorageDB.cacheDirectory.display_name.asc())
+    else:
+        directory = dbsession.query(app.roStorageDB.cacheDirectory).order_by(
+            app.roStorageDB.cacheDirectory.display_name.asc())
     page_results = SqlalchemyOrmPage(
         directory, page=page, items_per_page=pager_items * 2)
+    checkEvents()
     return render_template('directory.html', directory=page_results)
 
 
@@ -827,9 +833,14 @@ def createidentity():                                               # This is a 
     if not defaults:
         flash('There was a problem creating the initial configuration in the storage database ' +
               'storage.db', category="error")
-        # return False
-    dbsession.commit()
-    sleep(1)  # TODO find cause of socks_enabled.value being None and causing failed install - for now add delay
+        app.appdir
+        return redirect('/') # TODO - error page
+    #dbsession.commit()
+    print "Created config database defaults. Rows created = " + str(dbsession.query(app.roStorageDB.Config).count())
+    print "Secret is " + app.dbsecretkey
+    while dbsession.query(app.roStorageDB.Config).filter_by(name='proxy').count() == 0:
+        print "waiting for initial database to populate..."
+        sleep(0.5)
     # Now set the proxy settings specified on the install page
     socks_proxy = dbsession.query(app.roStorageDB.Config).filter(
         app.roStorageDB.Config.name == "proxy").first()
@@ -843,6 +854,7 @@ def createidentity():                                               # This is a 
         app.roStorageDB.Config.name == "socks_enabled").first()
     i2p_socks_enabled = dbsession.query(app.roStorageDB.Config).filter(
         app.roStorageDB.Config.name == "i2p_socks_enabled").first()
+
     if request.form.get('enable_socks') == 'True':
         socks_enabled.value = 'True'
     else:
@@ -856,6 +868,7 @@ def createidentity():                                               # This is a 
     i2p_socks_proxy.value = request.form['i2p_proxy']
     i2p_socks_proxy_port.value = request.form['i2p_proxy_port']
     dbsession.commit()
+    flash("New identity created. You may now login to Axis Mundi", category="message")
     dbsession.close()
     installStorageDB.Stop()
     return redirect(url_for('setup'))

@@ -7,15 +7,6 @@
       know which PGP key you want to use as your identity. Below you will find a list of one or more PGP keys, please
       select one. If no keys are displayed then you need to create a PGP key before you can continue.</p>
 
-  <p>
-    <table >
-        <tr><td></td><td></td></tr>
-        <tr><td><b> Existing Users: </b>If you already have application data saved to a non-default location then select the file location here and hit
-      the load button</td><td width="20%"><label class="btn" for="modal-one">Load Identity</label></td>
-    </table>
-
-
-
 <!-- Modal One -->
 <div class="modal">
   <input class="modal-open" id="modal-one" type="checkbox" hidden>
@@ -24,6 +15,8 @@
     <div class="modal-dialog">
       <div class="modal-header">
         <h2>Load Existing Identity</h2>
+          <p>If you have an existing Axis Mundi identity stored in a non-standard location such as a USB stick then enter the full path to the Axis Mundi data folder e.g. '/media/usb0/.dnmng' </p>
+           <p>New users should ignore this option and leave it blank</p>
         <label class="btn-close" for="modal-one" aria-hidden="true">×</label>
       </div>
       <div class="modal-body">
@@ -40,25 +33,48 @@
 
 
 
-   <h1>Configure Identity</h1>
+   <h1>Set up Your New Axis Mundi Identity</h1>
     <form method="post" action="{{ url_for('createidentity') }}">
     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
         <table cellpadding="10">
-            <tr><td></td><td></td><td></td></tr>
-            <tr><td><label>PGP Key: </label></td><td colspan="2"><div class = "select_style"><select name="keyid">
+            <tr><td width = "200px"></td><td width ="300px"></td><td width ="100px"></td></tr>
+            <tr><td><label>PGP Key: </label></td><td colspan="2"><div class = "select_style" style="width:200px"><select name="keyid">
             {% for key in key_list %}
                 <option value="{{ key.keyid }}">({{ key.keyid}}) &nbsp; {{ key.uids[0] }}</option>
             {% endfor %}
             </select></div></td></tr>
-            <tr><td><label>Display Name :</label></td> <td colspan="2"><input type="text" name="displayname" size="44" class="inputs" placeholder="Display Name" required></td></tr>
-            <tr><td><label>PGP Passphrase:</label></td> <td><input type="password" name="pgppassphrase" size="44" class="inputs" placeholder="PGP Passphrase (will not be saved)"  required></td></tr>
-            <tr><td><label></label></td> <td><input type="checkbox" name="offline" value="yes">Publish my identity to a directory</td></tr>
-            <tr><td><label>Tor Proxy Address:</label></td> <td><input type="text" name="proxy" size="44" class="inputs" placeholder="Tor SOCKS proxy address" required value="127.0.0.1"></td><td><input type="checkbox" name="enable_socks" value="True" checked>Enable Tor SOCKS</td></tr>
-            <tr><td><label>Tor Proxy Port:</label></td> <td><input type="text" name="proxy_port" size="44" class="inputs" placeholder="Tor SOCKS proxy port" required value="9050"></td></tr>
-            <tr><td><label>i2p Proxy Address:</label></td> <td><input type="text" name="i2p_proxy" size="44" class="inputs" placeholder="i2p SOCKS proxy address" value=""></td><td><input type="checkbox" name="i2p_enable_socks" value="True" >Enable i2p SOCKS</td></tr>
-            <tr><td><label>i2p Proxy Port:</label></td> <td><input type="text" name="i2p_proxy_port" size="44" class="inputs" placeholder="i2p SOCKS proxy port" value=""></td></tr>
-            <tr><td><div style="btn"><button type="submit" class = "btn">Create Identity</button></div></td></tr>
-        </table></form>
+            <tr><td><label>Display Name :</label></td> <td colspan="2"><input type="text" name="displayname" size="50" class="inputs" placeholder="Display Name" required></td></tr>
+            <tr><td><label>PGP Passphrase:</label></td> <td><input type="password" name="pgppassphrase" size="50" class="inputs" placeholder="PGP Passphrase (will not be saved)"  required></td></tr>
+            <tr><td><label></label></td> <td><input type="checkbox" name="offline" value="yes" checked>Create an Axis Mundi Directory entry for me</td></tr>
+            <tr><td colspan = "2"><button type="submit" class = "btngreen" style="float:right">Create Identity</button><label class="btn" style="float:right" for="modal-two">Network Settings</label><label style="float:right" class="btn" for="modal-one">Load Existing Identity</label></td></tr>
+        </table>
 
+
+<!-- Modal One -->
+<div class="modal">
+  <input class="modal-open" id="modal-two" type="checkbox" hidden>
+  <div class="modal-wrap" aria-hidden="true" role="dialog">
+    <label class="modal-overlay" for="modal-two"></label>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2>Tor & i2p SOCKS Proxy Settings</h2>
+          <p>Axis Mundi is configured by default with the most common Tor proxy settings however if you need to change your Tor proxy settings or enable i2p then do so below,</p>
+        <label class="btn-close" for="modal-two" aria-hidden="true">×</label>
+      </div>
+      <div class="modal-body">
+          <table cellpadding="5">
+            <tr><td><label>Tor Proxy Address:</label></td> <td><input type="text" name="proxy" size="20" class="inputs" placeholder="Tor SOCKS proxy address" required value="127.0.0.1"></td><td><input type="checkbox" name="enable_socks" value="True" checked>Enable Tor SOCKS</td></tr>
+            <tr><td><label>Tor Proxy Port:</label></td> <td><input type="text" name="proxy_port" size="20" class="inputs" placeholder="Tor SOCKS proxy port" required value="9050"></td></tr>
+            <tr><td><label>i2p Proxy Address:</label></td> <td><input type="text" name="i2p_proxy" size="20" class="inputs" placeholder="i2p SOCKS proxy address" value=""></td><td><input type="checkbox" name="i2p_enable_socks" value="True" >Enable i2p SOCKS</td></tr>
+            <tr><td><label>i2p Proxy Port:</label></td> <td><input type="text" name="i2p_proxy_port" size="20" class="inputs" placeholder="i2p SOCKS proxy port" value=""></td></tr>
+          </table>
+      </div>
+      <div class="modal-footer">
+        <label class="btn" for="modal-two">Close</label>
+      </div>
+    </div>
+  </div>
+</div>
+</form>
 {% endblock %}
 

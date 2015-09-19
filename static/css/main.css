@@ -226,11 +226,6 @@ inputs-moz-placeholder {
     border-color: #bbb;
     border-width: 0.15em;
     margin: 1px;
-
-
-
-
-
 }
 
 .btn:hover {
@@ -242,6 +237,32 @@ inputs-moz-placeholder {
   background-image: linear-gradient(to bottom, #3cb0fd, #3498db);
   text-decoration: none;
 }
+
+.btngreen {
+  background: #88cb43;
+  background-image: -webkit-linear-gradient(top, #88cb43, #68ab23);
+  background-image: -moz-linear-gradient(top, #88cb43, #68ab23);
+  background-image: -ms-linear-gradient(top, #88cb43, #68ab23);
+  background-image: -o-linear-gradient(top, #88cb43, #68ab23);
+  background-image: linear-gradient(to bottom, #88cb43, #68ab23);
+  -webkit-border-radius: 10;
+  -moz-border-radius: 10;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 15px;
+  padding: 9px 10px 9px 10px;
+  text-decoration: none;}
+
+.btngreen:hover {
+  background: #98db43;
+  background-image: -webkit-linear-gradient(top, #3cb0fd, #3498db);
+  background-image: -moz-linear-gradient(top, #3cb0fd, #3498db);
+  background-image: -ms-linear-gradient(top, #3cb0fd, #3498db);
+  background-image: -o-linear-gradient(top, #3cb0fd, #3498db);
+  background-image: linear-gradient(to bottom, #3cb0fd, #3498db);
+  text-decoration: none;
+}
+
 
 .btn:not([type=submit]):not([type=file]):hover {
   background: #3cb0fd;
