@@ -7,10 +7,10 @@
     <div class="datagrid">
         <p>The Axis Mundi directory is maintained automatically by your software. The directory shows all users on the system who have 'opted in'. Please remember that a user can choose any name they wish and could spoof other users names. You should rely on the PGP key ID which cannot be spoofed.</p>
         <p>Trust and reputation scores will be added to the directory in the future.</p>
-    <table cellpadding="10" width="100%">
+    <table cellpadding="10" width="100%" class="stripetable">
         <tr>
             <td colspan="3">
-                <div class="round_box" style="height:40px">
+                <div class="round_box" style="height:40px;width: 97%">
                     <form method="post" action="{{ url_for('directory') }}" autocomplete="Off">
                     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
                     Search Filter
@@ -41,7 +41,7 @@
             <a href="/directory/{{directory.previous_page}}"><b>&lt;Previous</b></a>
         {% endif %}
         </td>
-        <td colspan="2"></td></td>
+        <td colspan="1"></td>
         <td align="right">
         {% if directory.next_page %}
             <a href="/directory/{{directory.next_page}}"><b>Next&gt;</b></a>

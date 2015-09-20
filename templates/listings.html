@@ -6,7 +6,7 @@
 
     <div class="datagrid">
 
-    <table cellpadding="10">
+    <table cellpadding="10" class="stripetable">
         <tr>
             <th></th>
         <th width="400px" align="left"><strong>Title</strong></th>
@@ -20,6 +20,7 @@
         <td><a href="/listings/view/{{pgp_key}}/{{listing.id}}">{{listing.title}}</a></td>
         <td>{{listing.price}} {{listing.currency_code}}</td>
         <td>{{listing.qty_available}}</td>
+        <td></td>
         </tr>
         {% endfor %}
         <tr>
@@ -28,7 +29,7 @@
             <a href="/listings/{{listings.previous_page}}"><b>&lt;Previous</b></a>
         {% endif %}
         </td>
-        <td colspan="2"></td></td>
+        <td colspan="3"></td></td>
         <td align="right">
         {% if listings.next_page %}
             <a href="/listings/{{listings.next_page}}"><b>Next&gt;</b></a>

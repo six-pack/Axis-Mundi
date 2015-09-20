@@ -8,7 +8,7 @@
                <a class="btn" href="{{ url_for('new_contact') }}">New Contact</a>
     <br>
     <br>
-    <table cellpadding="10" width="100%">
+    <table cellpadding="10" width="100%" class="stripetable">
         <tr>
         <th width="350px" align="left"><strong>Name</strong></th>
         <th width="170px"><strong>PGP Key</strong></th>
@@ -31,7 +31,7 @@
             <a href="/contacts/{{contacts.previous_page}}"><b>&lt;Previous</b></a>
         {% endif %}
         </td>
-        <td colspan="2"></td></td>
+        <td colspan="1"></td></td>
         <td align="right">
         {% if contacts.next_page %}
             <a href="/contacts/{{contact.next_page}}"><b>Next&gt;</b></a>

@@ -259,17 +259,22 @@ class messaging_loop(threading.Thread):
                 for stage in order_stages:
                     print "-------------------------------------------------------------------------------"
                     try:
-                        print stage['order_status'] +' '+ str(stage)
+                        print 'Order Stage: ' + stage['order_status'] +' '+ str(stage)
                     except:
-                        print 'Item ' + str(stage)
+                        print 'Item: ' + str(stage)
                 #status = order_stages['order_status']# order_stages[0]['order_status']
                 flash_msg = queue_task(
                     0, 'flash_message', 'Order message received from ' + message.sender)
                 self.q_res.put(flash_msg)
 
-
                 # TODO : Process incoming order message - is it a new order or an update to an existing order
-#                session = self.storageDB.DBSession()
+                session = self.storageDB.DBSession()
+  #              if session.query(self.storageDB.Orders).filter(self.storageDB.Orders.key_id == keyid).count() > 0:
+  #                  direntry = session.query(self.storageDB.cacheDirectory).filter(self.storageDB.cacheDirectory.key_id == keyid).update({
+  #                      self.storageDB.cacheDirectory.updated: datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
+  #                      self.storageDB.cacheDirectory.display_name: display_dict['display_name']
+  #                  })
+  #              else:
 #                new_db_message = self.storageDB.PrivateMessaging(
 #                                                                    sender_key=message.sender,
 #                                                                    recipient_key=message.recipient,
@@ -983,10 +988,10 @@ class messaging_loop(threading.Thread):
             session = self.storageDB.DBSession()
             order = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.id == id).first()
             order.order_status = 'finalized'
-            if self.mypgpkeyid == order.buyer_key:
-                order.is_synced = False # we are the buyer, send finalization notice - if notarized then prompt for order feedback
             if self.mypgpkeyid == order.seller_key: # TODO should be self but this lets buyer and seller be the same- useful for testing for now
                 order.is_synced = True # we are the seller, do nothing for now
+            if self.mypgpkeyid == order.buyer_key:
+                order.is_synced = False # we are the buyer, send finalization notice - if notarized then prompt for order feedback
             session.commit()
             self.sync_orders()
         else:
@@ -1044,13 +1049,10 @@ class messaging_loop(threading.Thread):
                     # these state changes needs to be notified to the buyer
                     order_msg.recipient = order.buyer_key
                 else:
-                    # these state changes needs to be notified to the buyer
+                    # these state changes needs to be notified to the seller
                     order_msg.recipient = order.seller_key
                 order_msg.subject = order.orderid # put the order id in the subject for easy processing of outbound messages
                 order_dict = {}
-                print "=================="
-                print str(order.raw_item)
-                print "==================="
                 order_dict['parent_contract_block'] = str(order.raw_item)#.replace('\n', '\\n') # escape raw.seed becasue the pgp signature contains line breaks
                 order_dict['order_status'] = order.order_status
                 order_json = json.dumps(order_dict, sort_keys=True)

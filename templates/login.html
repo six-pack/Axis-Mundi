@@ -41,6 +41,7 @@
     <div class="container">
       {% block content %}
           <h2>Axis Mundi Login</h2>
+  <div class="round_box" style="width:90%" align="center">
   <p>Please select a PGP key and supply the correct passphrase</p>
     <form method="post" action="{{ url_for('login') }}" autocomplete="Off">
     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
@@ -58,7 +59,7 @@
 
       {% endblock %}
     </div>
-
+</div>
   </body>
 </html>
 

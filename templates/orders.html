@@ -5,23 +5,23 @@
 {% block content %}
   <h2>Orders</h2>
     <div class="datagrid">
-    <table cellpadding="5">
+    <table cellpadding="10" class="stripetable">
         <tr>
+        <th width="100px"><strong>Date Created</strong></th>
         <th width="300px"><strong>Item</strong></th>
         {% if view == 'buying' %}
             <th width="150px"><strong>Seller</strong></th>
         {% elif view == 'selling' %}
             <th width="150px"><strong>Buyer</strong></th>
         {% endif %}
-        <th width="100px"><strong>Date Created</strong></th>
         <th width="80px"><strong>Status</strong></th>
         <th width="80px"><strong>Payment</strong></th>
         </tr>
         {% for o in orders %}
         <tr>
+        <td >{{ o.order_date.strftime('%Y-%m-%d') }}</td>
         <td ><a href="/orders/view/{{ o.id }}">{{ o.title }}</a></td>
         <td ><a href="/profile/{{ o.seller_key}}">{{ o.seller_key|display_name }}</a></td>
-        <td >{{ o.order_date.strftime('%Y-%m-%d') }}</td>
         <td >{{ o.order_status }}</td>
         <td>{{ o.payment_status }}</td>
         </tr>
@@ -32,7 +32,7 @@
             <a href="/orders/{{view}}/{{orders.previous_page}}"><b>&lt;Previous</b></a>
         {% endif %}
         </td>
-        <td colspan="2"></td>
+        <td colspan="3"></td>
         <td align="right">
         {% if orders.next_page %}
             <a href="/orders/{{view}}/{{orders.next_page}}"><b>Next&gt;</b></a>

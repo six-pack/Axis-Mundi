@@ -383,6 +383,20 @@ list-style-type: none;
     cellpadding:10;
 }
 
+.stripetable {
+   border: 1px solid #bbbbbb;
+   border-collapse: collapse;
+   text-align: center;
+}
+
+.stripetable tr:nth-child(odd) {
+   background-color: #eee;
+}
+
+.stripetable th {
+    background-color: #bbbbbb;
+}
+
 /* textarea */
 .twrap {
     overflow: hidden;

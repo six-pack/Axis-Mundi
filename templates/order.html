@@ -32,25 +32,25 @@
                     <td width="200"><!--TODO Add rejection reason here --></td></td></tr>
                {% elif order.order_status == "processing" %}
                     {% if order.buyer_key == mykey %}
-                        <td width="200"><div style="btn"><button type="submit" name="action" value="order_finalize" class = "btn">Finalize</button></div></td></tr>
+                        <td width="200"><div style="btn"><button type="submit" name="action" value="order_finalize" class = "btn" style="float:right">Finalize</button></div></td></tr>
                     {% endif %}
                     {% if order.seller_key == mykey %}
-                        <td width="200"><div style="btn"><button type="submit" name="action" value="order_shipped" class = "btn">Mark Shipped</button></div></td></tr>
+                        <td width="200"><div style="btn"><button type="submit" name="action" value="order_shipped" class = "btn" style="float:right">Mark Shipped</button></div></td></tr>
                     {% endif %}
                {% elif order.order_status == "shipped" %}
                     {% if order.buyer_key == mykey %}
-                        <button type="submit" name="action" value="order_finalize" class = "btn">Finalize</button></div></td></tr>
+                        <button type="submit" name="action" value="order_finalize" class = "btn" style="float:right">Finalize</button></div></td></tr>
                     {% endif %}
                {% elif order.order_status == "disputed" %}
-                    <td width="200"><div style="btn"><button type="submit" class = "btn">Dispute</button>&nbsp;<button type="submit" name="action" value="order_finalize" class = "btn">Finalize</button></div></td></tr>
+                    <td width="200"><div style="btn"><button type="submit" class = "btn" style="float:right">Dispute</button>&nbsp;<button type="submit" name="action" value="order_finalize" class = "btn" style="float:right">Finalize</button></div></td></tr>
                {% elif order.order_status == "finalized" %}
-                    <button type="submit" name="action" value="order_leave_feedback" class = "btn">Leave Feedback</button></div></td></tr>
+                    <button type="submit" name="action" value="order_leave_feedback" class = "btn" style="float:right">Leave Feedback</button></div></td></tr>
                {% else  %}
                     <td width="200">Order state error</td></tr>
                 {%endif %}
                {% set shipping = order.shipping_options|from_json %}
                 <tr><td width="200px"><b>Order ID:</b> {{ order.orderid}}</td><td width="200px"><b>Order Date:</b>{{ order.order_date.strftime('%Y-%m-%d') }}</td><td width="400px"><b>Seller:</b>{{ order.seller_key|display_name }} </td> </tr>
-                <tr><td width="200px"><b>Order Type:</b>{{ order.order_type }}</td><td width="200px"><b>Payment Status:</b>{{ order.payment_status }}</td><td width="400px"><b>Shipping:</b>{{shipping[order.shipping][0]}} </td> </tr>
+                <tr><td width="200px"><b>Order Type:</b>{{ order.order_type }}</td><td width="200px"><b>Quantity:</b>{{ order.quantity }}</td><td width="400px"><b>Shipping:</b>{{shipping[order.shipping][0]}} </td> </tr>
                 <tr><td width="200px"><b>Order Status:</b>{{ order.order_status }}</td><td width="200px"><b>Payment Status:</b>{{ order.payment_status }}</td><td width="400px"><b>Total Price:</b> {{ order.line_total_price}} {{order.currency_code}} ({{order.line_total_btc_price}} BTC)</td> </tr>
 
            </table>
