@@ -13,9 +13,9 @@
         <form method="post" action="{{ url_for('cart') }}">
             <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
             <tr><td colspan="3"><p style="font-size:20px"><b>Seller: {{current_seller|display_name}} ({{current_seller}})</b></p></td><td colspan="2">
-                <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Remove</button>
+                <label class="btnblu" for="modal-one-{{current_seller}}" style="float:right">Checkout</label>
                 <button type="submit" style="float:right" class = "btn" name ="action" value="update">Update</button>
-                <label class="btn" for="modal-one-{{current_seller}}" style="float:right">Checkout</label>
+                <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Remove</button>
                 </td></tr>
             <tr>
             <th width="100px" align="left"><strong></strong></th>
@@ -91,9 +91,9 @@
                         </div>
                       </div>
                       <div class="modal-footer" style="vertical-align:middle">
-
+                        <button type="submit" style="float:right" class = "btnblu" name ="action" value="checkout">Continue Order</button>
                         <label  style="float:right" class="btn" for="modal-one-{{global_seller[-1]}}">Cancel</label>
-                            <button type="submit" style="float:right" class = "btn" name ="action" value="checkout">Continue Order</button>
+
                           <br>
                       </div>
                       </div>
@@ -110,9 +110,9 @@
                 <form method="post" action="{{ url_for('cart') }}">
                     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
                     <tr><td colspan="3"><p style="font-size:20px"><b>Seller: {{current_seller|display_name}} ({{current_seller}})</b></p></td><td colspan="2">
-                        <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Remove</button>
+                        <label class="btnblu" for="modal-one-{{global_seller[-1]}}" style="float:right">Checkout</label>
                         <button type="submit" style="float:right" class = "btn" name ="action" value="update">Update</button>
-                        <label class="btn" for="modal-one-{{global_seller[-1]}}" style="float:right">Checkout</label>
+                        <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Remove</button>
                         </td></tr>
                     <tr>
                     <th width="100px" align="left"><strong></strong></th>
@@ -222,9 +222,10 @@
                 </div>
               </div>
               <div class="modal-footer" style="vertical-align:middle">
-
+                 <button type="submit" style="float:right" class = "btnblu" name ="action" value="checkout">Continue Order</button>
                 <label  style="float:right" class="btn" for="modal-one-{{global_seller[-1]}}">Cancel</label>
-                    <button type="submit" style="float:right" class = "btn" name ="action" value="checkout">Continue Order</button>
+
+
                   <br>
               </div>
               </div>

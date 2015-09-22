@@ -544,6 +544,7 @@ def view_message(id):
     dbsession = app.roStorageDB.DBSession()
     message = dbsession.query(
         app.roStorageDB.PrivateMessaging).filter_by(id=id).one()
+    print message.body
     return render_template('message.html', message=message)
 
 

@@ -2,7 +2,7 @@
 {% set active_page = "" %}
 
 {% block content %}
-  <h2>Initial Configuration</h2>
+  <h2>Set up Your New Axis Mundi Identity</h2>
   <p>This appears to be the first time I have been run. I am going to create a database but first you need to let me
       know which PGP key you want to use as your identity. Below you will find a list of one or more PGP keys, please
       select one. If no keys are displayed then you need to create a PGP key before you can continue.</p>
@@ -30,10 +30,7 @@
     </div>
   </div>
 </div>
-
-
-
-   <h1>Set up Your New Axis Mundi Identity</h1>
+<div class="round_box">
     <form method="post" action="{{ url_for('createidentity') }}">
     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
         <table cellpadding="10">
@@ -46,9 +43,9 @@
             <tr><td><label>Display Name :</label></td> <td colspan="2"><input type="text" name="displayname" size="50" class="inputs" placeholder="Display Name" required></td></tr>
             <tr><td><label>PGP Passphrase:</label></td> <td><input type="password" name="pgppassphrase" size="50" class="inputs" placeholder="PGP Passphrase (will not be saved)"  required></td></tr>
             <tr><td><label></label></td> <td><input type="checkbox" name="offline" value="yes" checked>Create an Axis Mundi Directory entry for me</td></tr>
-            <tr><td colspan = "2"><button type="submit" class = "btngreen" style="float:right">Create Identity</button><label class="btn" style="float:right" for="modal-two">Network Settings</label><label style="float:right" class="btn" for="modal-one">Load Existing Identity</label></td></tr>
+            <tr><td colspan = "2"><button type="submit" class = "btnblu" style="float:right">Create Identity</button><label class="btn" style="float:right" for="modal-two">Network Settings</label><label style="float:right" class="btn" for="modal-one">Load Existing Identity</label></td></tr>
         </table>
-
+</div>
 
 <!-- Modal One -->
 <div class="modal">

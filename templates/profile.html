@@ -15,7 +15,7 @@
                     <div style="float:right;margin-top: 12px"><a class="btn"  href="{{ url_for('new_message')}}{{profile.key_id}}">Send Message</a></div>
                     <div style="float:right;margin-top: 12px"><a class="btn" style="margin-top: 109px" href="{{ url_for('external_listings',keyid=profile.key_id)}}">View Listings</a></div>
                     <div style="float:right;margin-top: 12px"><a class="btn"  href="{{ url_for('not_yet')}}">Block User</a></div>
-                    <label class="btn" for="modal-one">Tag User</label>
+                    <div style="float:right;margin-top: 12px"><label class="btn" for="modal-one">Tag User</label></div>
             </td></tr>
             <tr>
                <td colspan="2" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;"><div class="round_box"> {% if profile.profile_text %}{{profile.profile_text}}{%else%} This user is not publishing a public profile{%endif%}</div</td>

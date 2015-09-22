@@ -38,7 +38,7 @@
       {% endif %}
     {% endwith %}
 </div>
-    <div class="container">
+    <div class="container" style="top:50px;position:relative;z-index:1;">
       {% block content %}
           <h2>Axis Mundi Login</h2>
   <div class="round_box" style="width:90%" align="center">
@@ -54,7 +54,7 @@
             </select></div></td></tr>
             <tr><td><label>PGP Passphrase:</label></td> <td><input type="password" name="pgppassphrase" size="44" class="inputs" placeholder="PGP Passphrase (will not be saved)"  required><div style="float:right"><input type="checkbox" name="offline" value="yes">Work Offline</div></td></tr>
 
-            <tr><td></td><td><button type="submit" class = "btn" style="float:right">Login to Axis Mundi</button></td></tr>
+            <tr><td></td><td><button type="submit" class = "btnblu" style="float:right">Login to Axis Mundi</button></td></tr>
         </table></form>
 
       {% endblock %}

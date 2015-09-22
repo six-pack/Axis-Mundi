@@ -9,7 +9,7 @@
         <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
         <tr>
           <td width="100px"><b>To</b></td>
-           <td><input type="text" class="inputs" size="55" name="recipient" value="{{ message.sender_key }}" readonly="True"></td>
+           <td><input type="text" class="inputs" size="55" name="recipient" value="{{ message.sender_key|display_name }} ({{message.sender_key}})" readonly="True"></td>
             <td style="float:right cellpadding:5px"><input type="checkbox"  name="sign-message" value="sign-message" checked>Sign My Message </td>
         </tr>
         <tr>
@@ -24,18 +24,22 @@
         <tr>
           <td>In reply to:</td>
           <td colspan="2">
+            <div style="btn"><button type="submit" style="float:right" class = "btnblu">Send Message</button></div>
             <div style="btn"><a href="{{ url_for('messages') }}"><input type="button" style="float:right" class = "btn" value="Cancel"></a></div>
-            <div style="btn"><button type="submit" style="float:right" class = "btn">Send Message</button></div></td>
+            </td>
         </tr>
         </form>
-        <tr>
+    </table>
+        <div class="round_box" style="width:95%">
+        <table cellpadding="5">
           <td width="100px"><b>Date</b></td>
           <td colspan="2">{{ message.message_date }}</td>
         </tr>
         <tr>
-          <td colspan="3" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;">{{ message.body }}</td>
+          <td colspan="3" style="white-space: pre-wrap;max-width:930px;word-wrap: break-word;">{{ message.body }}</div></td>
         </tr>
-    </table>
+        </table>
+        </div>
     </div>
 
 

@@ -8,20 +8,21 @@
     <table cellpadding="10" class="stripetable">
         <thread>
         <tr>
-        <th width="200px"><strong>To</strong></th>
-        <th width="400px"><strong>Subject</strong></th>
+        <th width="250px"><strong>To</strong></th>
+        <th width="450px"><strong>Subject</strong></th>
         <th width="200px"><strong>Date Sent</strong></th>
-        <th><strong>Actions</strong></th>
+<!--        <th><strong>Actions</strong></th> -->
         </tr>
         </thread>
         {% for o in sent_messages %}
         <tr>
-        <td width="200px"><a href="/profile/{{ o.recipient_key }}">{{ o.recipient_key|display_name }} ({{o.recipient_key}})</a></td>
-        <td width="400px"><a href="/messages/view/{{ o.id }}">{{ o.subject }}</a></td>
+        <td width="250px"><a href="/profile/{{ o.recipient_key }}">{{ o.recipient_key|display_name }} ({{o.recipient_key}})</a></td>
+        <td width="450px"><a href="/messages/view/{{ o.id }}">{{ o.subject }}</a></td>
         <td width="200px">{{ o.message_date }}</td>
-        <td>
+<!--        <td>
              <a href="{{ url_for('delete_message', id = o.id) }}">Delete</a>
         </td>
+-->
         </tr>
         {% endfor %}
         <tr>
@@ -30,7 +31,7 @@
             <a href="/messages/sent/{{sent_messages.previous_page}}"><b>&lt;Previous</b></a>
         {% endif %}
         </td>
-        <td colspan="2"></td></td>
+        <td colspan="1"></td></td>
         <td align="right">
         {% if sent_messages.next_page %}
             <a href="/messages/sent/{{sent_messages.next_page}}"><b>Next&gt;</b></a>

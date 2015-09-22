@@ -3,7 +3,7 @@
 
 {% block content %}
 
-<h4>New Contact</h4>
+<h4>Create New Contact</h4>
     <div class="datagrid">
     <table width="100%" cellpadding="10">
         <form method="post" action="{{ url_for('new_contact') }}">
@@ -20,8 +20,10 @@
 
         <tr><td colspan="3">
             <input type="hidden" name="pgpkey_id" value="">
+
+            <div style="btn"><button type="submit" style="float:right" class = "btnblu">Create Contact</button></div>
             <div style="btn"><a href="{{ url_for('contacts') }}"><input type="button" style="float:right" class = "btn" value="Cancel"></a></div>
-            <div style="btn"><button type="submit" style="float:right" class = "btn">Create Contact</button></div></td></tr>
+        </td></tr>
         </form>
     </table>
     </div>

@@ -5,7 +5,7 @@
   <h2>Contacts</h2>
 
     <div class="datagrid">
-               <a class="btn" href="{{ url_for('new_contact') }}">New Contact</a>
+               <a class="btnblu" href="{{ url_for('new_contact') }}">New Contact</a>
     <br>
     <br>
     <table cellpadding="10" width="100%" class="stripetable">
@@ -16,12 +16,11 @@
         </tr>
         {% for contact in contacts %}
         <tr>
-        <td width="350px">{{contact.contact_name}}</td>
-        <td width="170px">{{contact.contact_key}}</td>
+        <td width="350px"><a href="{{ url_for('profile')}}{{contact.contact_key}}">{{contact.contact_name}}</a></td>
+        <td width="170px"><a href="{{ url_for('profile')}}{{contact.contact_key}}">{{contact.contact_key}}</a></td>
         <td align="center">
-             <a class="btn" href="{{ url_for('new_message')}}{{contact.contact_key}}">Message</a>
-             <a class="btn" href="{{ url_for('profile')}}{{contact.contact_key}}">Profile</a>
-             <a class="btn" href="{{ url_for('external_listings',keyid=contact.contact_key)}}">Listings</a></p></td>
+             <a href="{{ url_for('new_message')}}{{contact.contact_key}}">Message</a> -
+             <a href="{{ url_for('external_listings',keyid=contact.contact_key)}}">Listings</a>
         </td>
         </tr>
         {% endfor %}

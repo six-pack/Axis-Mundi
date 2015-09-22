@@ -4,7 +4,7 @@
 {% block content %}
   <h3>View Message</h3>
     <div class="datagrid">
-    <table style="layout: fixed">
+    <table style="width:100%;">
         <tr>
           <td width="100px"><b>Date</b></td>
           <td>{{ message.message_date }}</td>
@@ -26,14 +26,15 @@
         </tr>
         <tr><td></td></tr>
         <tr>
-          <td colspan="2" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;">
-              <div>{{ message.body }}</div></td>
+          <td colspan="2" style="white-space: pre-wrap;max-width:930px;word-wrap: break-word;">
+              <div class="round_box" style="width:100%;">{{ message.body }}</div>
+          </td>
         </tr>
 
         <tr>
             <td colspan="2">
-            <div style="float:right;padding:1px"><a class="btn"  href="{{ url_for('reply_message', id = message.id) }}">Reply</a></div>
-            <div style="float:right;padding:1px"><a class="btn"  href="{{ url_for('delete_message', id = message.id) }}">Delete</a></div>
+            <div style="float:right;padding:1px"><a class="btnblu"  style="float:right" href="{{ url_for('reply_message', id = message.id) }}">Reply</a></div>
+            <div style="float:right;padding:1px"><a class="btn"  style="float:right" href="{{ url_for('delete_message', id = message.id) }}">Delete</a></div>
 
             </td>
         </tr>
