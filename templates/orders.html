@@ -8,14 +8,14 @@
     <table cellpadding="10" class="stripetable">
         <tr>
         <th width="100px"><strong>Date Created</strong></th>
-        <th width="300px"><strong>Item</strong></th>
+        <th width="350px"><strong>Item</strong></th>
         {% if view == 'buying' %}
-            <th width="150px"><strong>Seller</strong></th>
+            <th width="200px"><strong>Seller</strong></th>
         {% elif view == 'selling' %}
-            <th width="150px"><strong>Buyer</strong></th>
+            <th width="200px"><strong>Buyer</strong></th>
         {% endif %}
-        <th width="80px"><strong>Status</strong></th>
-        <th width="80px"><strong>Payment</strong></th>
+        <th width="100px"><strong>Status</strong></th>
+        <th width="100px"><strong>Payment</strong></th>
         </tr>
         {% for o in orders %}
         <tr>

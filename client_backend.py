@@ -345,15 +345,17 @@ class messaging_loop(threading.Thread):
                 #                print listings_message
                 if not keyid == listings_message.sender:
                     print "Listings were signed by a different key - discarding..."
-                elif not listings_message.sub_messages:
+                else:
+                    if listings_message.sub_messages:
+                        listings = listings_message.sub_messages.__str__()
+                    else:
                         # user has no listings
                         print "User " + keyid + ' has no listings'
-                else:
-                    listings = listings_message.sub_messages.__str__()
+                        listings = None
                     print "Listings message received from " + keyid
                     # add this to the cachelistings table
-                    if listings_message.type == 'Listings Message' and listings:
-                        session = self.storageDB.DBSession()
+                    session = self.storageDB.DBSession()
+                    if listings_message.type == 'Listings Message':
                         # If it already exists then update
                         if session.query(self.storageDB.cacheListings).filter(self.storageDB.cacheListings.key_id == keyid).count() > 0:
                             print "There appears to be an existing listings message in the db cache for user " + keyid
@@ -370,31 +372,35 @@ class messaging_loop(threading.Thread):
                             session.add(cachedlistings)
                         session.commit()
 
-                    print "Extracting items from valid listings message..."
-                    verified_listings = self.get_items_from_listings(
-                        keyid, listings_message.sub_messages)
-                    # Purge any existing entries from table
-                    session.query(self.storageDB.cacheItems).filter(self.storageDB.cacheItems.key_id == keyid).delete()
-                    for verified_listing in verified_listings:
-                        cacheditem = self.storageDB.cacheItems(id=verified_listing['id'], key_id=keyid,
-                                                                      updated=datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
-                                                                      listings_block=verified_listing['raw_contract'],
-                                                                      title=verified_listing['item'],
-                                                                      category=verified_listing['category'],
-                                                                      description=verified_listing['description'],
-                                                                      qty_available = verified_listing['qty'],
-                                                                      order_max_qty = verified_listing['max_order_qty'],
-                                                                      price = verified_listing['unit_price'],
-                                                                      currency_code = verified_listing['currency'],
-                                                                      shipping_options = json.dumps(verified_listing['shipping_options']),
-                                                                      image_base64 = verified_listing['image'],
-                                                                      seller_btc_stealth= verified_listing['stealth_address'],
-                                                                      publish_date = datetime.strptime(verified_listing['publish_date'],"%Y-%m-%d %H:%M:%S"))
+                        print "Trying to extract items from valid listings message..."
+                        if listings:
+                            verified_listings = self.get_items_from_listings(
+                                keyid, listings_message.sub_messages)
+                            # Purge any existing entries from table
+                            session.query(self.storageDB.cacheItems).filter(self.storageDB.cacheItems.key_id == keyid).delete()
+                            for verified_listing in verified_listings:
+                                cacheditem = self.storageDB.cacheItems(id=verified_listing['id'], key_id=keyid,
+                                                                              updated=datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
+                                                                              listings_block=verified_listing['raw_contract'],
+                                                                              title=verified_listing['item'],
+                                                                              category=verified_listing['category'],
+                                                                              description=verified_listing['description'],
+                                                                              qty_available = verified_listing['qty'],
+                                                                              order_max_qty = verified_listing['max_order_qty'],
+                                                                              price = verified_listing['unit_price'],
+                                                                              currency_code = verified_listing['currency'],
+                                                                              shipping_options = json.dumps(verified_listing['shipping_options']),
+                                                                              image_base64 = verified_listing['image'],
+                                                                              seller_btc_stealth= verified_listing['stealth_address'],
+                                                                              publish_date = datetime.strptime(verified_listing['publish_date'],"%Y-%m-%d %H:%M:%S"))
 
-                        session.add(cacheditem)
-                    session.commit()
-            else:
-                print "No items message found in listings returned from " + keyid
+                                session.add(cacheditem)
+                            session.commit()
+                        else:
+                            print "No items message found in listings returned from " + keyid
+                    else:
+                        print "Dropping incoming message because it is not a Listings Message"
+
         else:
             if incoming_message.signed:
                 flash_msg = queue_task(
