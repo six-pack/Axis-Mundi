@@ -1,5 +1,8 @@
-<meta http-equiv="refresh" content="1;url={{url}}">
-{% extends "layout.html" %}
+{%if looking_glass %} <meta http-equiv="refresh" content="1;url={{url}}">
+    {% extends "looking_glass/layout.html" %}
+{%else%}<meta http-equiv="refresh" content="1;url={{url}}">
+    {% extends "layout.html" %}
+{%endif%}
 {% set active_page = "" %}
 
 

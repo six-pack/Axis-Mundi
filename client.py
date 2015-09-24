@@ -28,6 +28,8 @@ import os
 app = Flask(__name__)
 # (8Mb maximum upload to local webserver) - make sure we dont need to use the disk
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
+# app.config['SERVER_NAME'] = 'xxxxxxxxx.onion:5000' # Set this if running Looking Glass mode TODO : automate
+looking_glass = False
 messageQueue = Queue.Queue()    # work Queue for mqtt client thread
 messageQueue_res = Queue.Queue()    # Results Queue for mqtt client thread
 # Profile and Listing Results Queue for mqtt client thread
@@ -81,11 +83,18 @@ def looking_glass_session(): # this session cookie will be used for looking glas
 def get_connection_status():
     checkEvents()
     g.connection_status = app.connection_status
-
+    # If we are running in Looking Glass mode then check the backend is running - if not redirect to login screen (for now)
+    if app.looking_glass:
+        try:
+            x= app.roStorageDB.DBSession()
+        except:
+            return login()
 
 @app.after_request
 def add_header(response):
     #response.cache_control.max_age = 0
+    if app.looking_glass:
+        return response
     if not str(request).find('main.css'): # ok to cache the CSS - disable this for slightly enhanced deniability
         response.headers[
             'Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
@@ -96,6 +105,10 @@ def add_header(response):
 @app.context_processor
 def inject_mykey():
     return dict(mykey=app.pgp_keyid)
+
+@app.context_processor
+def inject_looking_glass():
+    return dict(looking_glass=app.looking_glass)
 
 @app.template_filter('from_json')
 def from_json(value):
@@ -123,12 +136,15 @@ def to_btc(value,currency_code):
 ########## Flask Routes ##################################
 
 
-@app.route('/')
+#@app.route('/')
 @login_required
 def home():
     checkEvents()
     return render_template('home.html')
 
+def lg_home():
+    checkEvents()
+    return render_template('looking_glass/home.html')
 
 @app.route('/orders', methods=["GET", "POST"])
 @app.route('/orders/<int:page>')
@@ -202,15 +218,33 @@ def export_listings():
     return redirect(url_for('listings'))
 
 
+@app.route('/listings/view', methods=["GET", "POST"])
 @app.route('/listings/view/<string:keyid>')
 @app.route('/listings/view/<string:keyid>/<string:id>')
-@login_required
+#@login_required
 def external_listings(keyid='none', id='none'):
+    if not current_user.is_authenticated() and not app.looking_glass:
+        return app.login_manager.unauthorized()
     #todo remove listingscache (completely) and just work with itemcache
-    if keyid == 'none':
-        return redirect('/listings')
     # View another users listings or listing
     dbsession = app.roStorageDB.DBSession()
+    if keyid=='none':
+        # return all listings held in the cache (regardless of age) - used for looking_glass mostly
+        if request.method == 'POST':
+            filter = request.form['search_item']
+            if filter:
+                listings_data = dbsession.query(app.roStorageDB.cacheItems).filter(app.roStorageDB.cacheItems.title.like("%"+filter+"%")).order_by(
+                    app.roStorageDB.cacheItems.title.asc())
+            else:
+                listings_data = dbsession.query(app.roStorageDB.cacheItems).order_by(app.roStorageDB.cacheItems.title.asc())
+
+        else:
+            listings_data = dbsession.query(app.roStorageDB.cacheItems).order_by(app.roStorageDB.cacheItems.title.asc())
+
+        if not listings_data:
+            return render_template('no_listing.html')
+        else:
+            return render_template('listings.html', listings=listings_data, pgp_key='')
     if id == 'none':
         # This is a request for a users listings (all items)
         listings_cache = dbsession.query(app.roStorageDB.cacheListings).filter_by(key_id=keyid).first()
@@ -293,8 +327,10 @@ def external_listings(keyid='none', id='none'):
 
 
 @app.route('/cart', methods=["GET", "POST"])
-@login_required
+#@login_required
 def cart(action=''):
+    if not current_user.is_authenticated() and not app.looking_glass:
+        return app.login_manager.unauthorized()
     # todo check items from same seller are in same currency or deal with it
     dbsession = app.roStorageDB.DBSession()
     cart_items = dbsession.query(app.roStorageDB.Cart).order_by(
@@ -387,8 +423,10 @@ def not_yet():
 
 @app.route('/directory', methods=["GET", "POST"])
 @app.route('/directory/<int:page>',methods=["GET", "POST"])
-@login_required
+#@login_required
 def directory(page=1,filter=''):
+    if not current_user.is_authenticated() and not app.looking_glass:
+        return app.login_manager.unauthorized()
     if request.method == "POST":
         filter = request.form['search_name']
     dbsession = app.roStorageDB.DBSession()
@@ -418,8 +456,10 @@ def listings(page=1):
 
 @app.route('/profile/')
 @app.route('/profile/<string:keyid>')
-@login_required
+#@login_required
 def profile(keyid=None):
+    if not current_user.is_authenticated() and not app.looking_glass:
+        return app.login_manager.unauthorized()
     checkEvents()
     # TODO:Check to see if this user is in our contacts list
     # TODO:Message to client_backend to SUB target user profile and target
@@ -461,7 +501,11 @@ def profile(keyid=None):
             flash("Cached profile has expired, the latest profile has been requested in the background. Refresh the page.", category="message")
             if request.args.get('wait'):
                 return redirect('/profile/' + keyid) # Extra redirect to remove the ?wait=x from the URL
-    return render_template('profile.html', profile=profile)
+    if app.looking_glass:
+        listings_data = dbsession.query(app.roStorageDB.cacheItems).filter_by(key_id=keyid).all()
+        return render_template('profile.html', profile=profile,listings=listings_data) # pass list of seller items if any in looking glass mode
+    else:
+        return render_template('profile.html', profile=profile)
 
 
 @app.route('/contacts')
@@ -1076,8 +1120,10 @@ def setup(page=''):
             return render_template('setup-advanced.html')
 
 @app.route('/about')
-@login_required
+#@login_required
 def about():
+    if not current_user.is_authenticated() and not app.looking_glass:
+        return app.login_manager.unauthorized()
     checkEvents()
     return render_template('about.html')
 
@@ -1131,7 +1177,7 @@ def login():
         session['lg']= ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16)) # give user a new session, why not?
         if app.connection_status == "Off-line":
             messageThread = messaging_loop(app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey, "storage.db", app.homedir,
-                                           app.appdir, messageQueue, messageQueue_res, workoffline=app.workoffline)
+                                           app.appdir, messageQueue, messageQueue_res, workoffline=app.workoffline, looking_glass=app.looking_glass)
             messageThread.start()
             # it's better for the user to get a flashed message now rather than
             # on the next page load so
@@ -1243,6 +1289,13 @@ def client_shutdown(sender, **extra):
 
 def run():
     app.storageThreadID = ""
+    app.looking_glass = False
+    if not app.looking_glass:
+        app.add_url_rule('/', 'home', home)
+
+    else:
+        app.add_url_rule('/', 'home', lg_home)
+
     app.pgpkeycache = {}
     app.dbsecretkey = ""
     app.workoffline = False
@@ -1336,6 +1389,8 @@ if __name__ == '__main__':
     if get_os() == 'Windows':
         freeze_support()
 
+    # TODO read command line arguments
+
     print """
 
  AA  X   X III  SSS   M   M U   U N   N DDD  III
@@ -1345,6 +1400,7 @@ A  A  X X   I      S  M   M U   U N  NN D  D  I
 A  A X   X III SSSS   M   M  UUU  N   N DDD  III
     """
     print "Version " + VERSION + " starting up..."
+
 
     running = True
     option_nogui = False

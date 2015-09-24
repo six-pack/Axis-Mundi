@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Axis Mundi</title>
+    <strong><link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"></strong>
+  </head>
+  <body>
+{% set active_page = active_page|default('home') %}
+
+<header>
+  <div class="container">
+    <h1 class="logo">{{ g.connection_status }}</h1>
+
+    <strong><nav id="primary_nav_wrap" class="primary_nav_menu">
+      <ul>
+        <li{% if active_page == 'home' %} class="current-menu-item" {% endif %}><a href="{{ url_for('home') }}">Home</a></li>
+        <li{% if active_page == 'Trade' %} class="current-menu-item" {% endif %}><a href="{{ url_for('external_listings') }}">Catalog</a></li>
+        <li{% if active_page == 'Contacts' %} class="current-menu-item" {% endif %}><a href="{{ url_for('directory') }}">Directory</a></li>
+        <li{% if active_page == 'Cart' %} class="current-menu-item" {% endif %}><a href="{{ url_for('cart') }}">Cart</a></li>
+        <li><a href="{{ url_for('about') }}">About</a></li>
+      </ul>
+    </nav></strong>
+  </div>
+
+
+</header>
+<!--
+<div align="center">
+    {% with messages = get_flashed_messages(with_categories=true, category_filter=['error']) %}
+      {% if messages %}
+        <ul class="flashes-error flashes">
+        {% for category, message in messages %}
+          <li style="float:left">{{ message }}</li><br>
+        {% endfor %}
+        </ul>
+       {% endif %}
+    {% endwith %}
+    {% with messages = get_flashed_messages(with_categories=true, category_filter=['message']) %}
+      {% if messages %}
+        <ul class="flashes-message flashes">
+        {% for category, message in messages %}
+          <li style="float:left">{{ message }}</li><br>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+</div>
+-->
+    <div class="container" style="top:50px;position:relative;z-index:1;">
+      {% block content %}
+      {% endblock %}
+    </div>
+     
+  </body>
+</html>

@@ -1,4 +1,8 @@
-{% extends "layout.html" %}
+{%if looking_glass %}
+    {% extends "looking_glass/layout.html" %}
+{%else%}
+    {% extends "layout.html" %}
+{%endif%}
 {% set active_page = "Contacts" %}
 
 {% block content %}
@@ -9,12 +13,12 @@
         <p>Trust and reputation scores will be added to the directory in the future.</p>
     <table cellpadding="10" width="100%" class="stripetable">
         <tr>
-            <td colspan="3">
+            <td colspan="3" align="left">
                 <div class="round_box" style="height:40px;width: 97%">
                     <form method="post" action="{{ url_for('directory') }}" autocomplete="Off">
                     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
                     Search Filter
-                    &nbsp;&nbsp;&nbsp;<input type="text" name="search_name" size="20" class="inputs" placeholder="User to search for"  value="{{ search_filter }}">
+                    &nbsp;&nbsp;&nbsp;<input type="text" name="search_name" size="30" class="inputs" placeholder="User to search for"  value="{{ search_filter }}">
                     &nbsp;<input type="checkbox" name="filter_sellers" value="yes">Only display sellers
                     <button type="submit" class = "btnblu" name = "action" style="float:right" value="update_filter">Update Filter</button>
                 </div>

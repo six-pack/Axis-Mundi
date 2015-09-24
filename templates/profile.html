@@ -1,29 +1,46 @@
-{% extends "layout.html" %}
+{%if looking_glass %}
+    {% extends "looking_glass/layout.html" %}
+{%else%}
+    {% extends "layout.html" %}
+{%endif%}
 {% set active_page = "Profile" %}
 
 {% block content %}
       <br>
-        <table cellpadding="10">
+        <table>
             <tr><td width="300" rowspan="2"><img width="256" height="256" alt="{{profile.display_name}}" src={% if profile.avatar_base64 %}"data:image/png;base64,{{profile.avatar_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
-               <td width="600"><h2>&nbsp;&nbsp;{{profile.display_name}}</h2></td></tr>
+               <td width="600"><h2>&nbsp;&nbsp;{{profile.display_name}}</h2><p align="center">PGP Key ID: {{profile.key_id}}</p></td></tr>
             <tr><td><form method="post" action="{{ url_for('new_contact') }}">
                    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
                    <input type="hidden" name="name" value="{{profile.display_name}}">
                    <input type="hidden" name="pgpkey_id" value="{{profile.key_id}}">
                    <input type="hidden" name="pgpkey_block">
+                    {% if not looking_glass %}
                    <button type="submit" class = "btn" style="float:right">Add to Contacts</button>
                     <div style="float:right;margin-top: 12px"><a class="btn"  href="{{ url_for('new_message')}}{{profile.key_id}}">Send Message</a></div>
                     <div style="float:right;margin-top: 12px"><a class="btn" style="margin-top: 109px" href="{{ url_for('external_listings',keyid=profile.key_id)}}">View Listings</a></div>
                     <div style="float:right;margin-top: 12px"><a class="btn"  href="{{ url_for('not_yet')}}">Block User</a></div>
                     <div style="float:right;margin-top: 12px"><label class="btn" for="modal-one">Tag User</label></div>
+                    {% endif %}
             </td></tr>
             <tr>
-               <td colspan="2" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;"><div class="round_box"> {% if profile.profile_text %}{{profile.profile_text}}{%else%} This user is not publishing a public profile{%endif%}</div</td>
+               <td colspan="2" style="white-space: pre-wrap;max-width:960px;word-wrap: break-word;"><div class="round_box">{% if profile.profile_text %}{{profile.profile_text}}{%else%} This user is not publishing a public profile{%endif%}</div</td>
                <td></td>
             </tr>
-            <tr><td><label>PGP Key :</label></td>
-            <td><label>{{profile.key_id}}</label></td></tr>
         </table>
+        {% if looking_glass %}
+        <div class="round_box" style="width:96%;padding:10px;" align="center" >
+        <table cellpadding="10" class="stripetable" style="width:80%">
+        {% for listing in listings %}
+        <tr>
+        <td style="width:66px"><a href="/listings/view/{{listing.key_id}}/{{listing.id}}"><img width="64" height="64" alt="{{listing.item}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></a></td>
+        <td><a href="/listings/view/{{listing.key_id}}/{{listing.id}}">{{listing.title}}</a></td>
+        <td>{{listing.price}} {{listing.currency_code}} ({{ listing.price|to_btc(listing.currency_code) }} BTC)</td>
+        </tr>
+        {% endfor %}
+        </table>
+        </div>
+        {% endif %}
         <!-- Modal One -->
         <div class="modal">
           <input class="modal-open" id="modal-one" type="checkbox" hidden>

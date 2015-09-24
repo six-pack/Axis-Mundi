@@ -33,7 +33,7 @@ class messaging_loop(threading.Thread):
     # The date time shall not contain seconds and will be chekced on the
     # server to be no more than +/- 5 minutes fromcurrent server time
 
-    def __init__(self, pgpkeyid, pgppassphrase, dbpassphrase, database, homedir, appdir, q, q_res, workoffline=False):
+    def __init__(self, pgpkeyid, pgppassphrase, dbpassphrase, database, homedir, appdir, q, q_res, workoffline=False, looking_glass=False):
         print "NOTICE: Backend Thread Init"
         self.targetbroker = None
         self.mypgpkeyid = pgpkeyid
@@ -70,6 +70,7 @@ class messaging_loop(threading.Thread):
         self.storageDB = Storage
         self.connected = False
         self.workoffline = workoffline
+        self.looking_glass = looking_glass
         self.shutdown = False
         self.message_retention = 30  # default 30 day retention of messages before auto-purge
         self.allow_unsigned = True  # allow unsigned PMs by default
@@ -155,7 +156,8 @@ class messaging_loop(threading.Thread):
 # but we use the local keyserver
         elif re.match('user\/[A-F0-9]{16}\/directory', msg.topic):
             # Here is a directory entry, store it and unsubscribe
-            client.unsubscribe(msg.topic)
+            if not self.looking_glass:
+                client.unsubscribe(msg.topic)
             keyid = msg.topic[msg.topic.index('/') + 1:msg.topic.rindex('/')]
             print "Directory entry: " + msg.payload + " " + msg.topic
             # TODO: Use a memcache rather than write direct to database, use a periodic task to save memcache to cacheDirectory table (every 30 seconds or so)
@@ -291,7 +293,8 @@ class messaging_loop(threading.Thread):
 #                session.commit()
         elif re.match('user\/[A-F0-9]{16}\/profile', msg.topic) and incoming_message.signed:
             # Here is a profile, store it and unsubscribe
-            client.unsubscribe(msg.topic)
+            if not self.looking_glass:
+                client.unsubscribe(msg.topic)
             keyid = msg.topic[msg.topic.index('/') + 1:msg.topic.rindex('/')]
             # TODO: Check we have really been sent a valid profile message for the key indicated
             # print msg.payload
@@ -335,7 +338,8 @@ class messaging_loop(threading.Thread):
                 print "No profile message found in profile returned from " + keyid
         elif re.match('user\/[A-F0-9]{16}\/items', msg.topic) and incoming_message.signed:
             # Here is a listings message, store it and unsubscribe
-            client.unsubscribe(msg.topic)
+            if not self.looking_glass:
+                client.unsubscribe(msg.topic)
             keyid = msg.topic[msg.topic.index('/') + 1:msg.topic.rindex('/')]
             # print msg.payload
             # self.myMessaging.GetMessage(msg.payload,self,allow_unsigned=False)
@@ -419,6 +423,9 @@ class messaging_loop(threading.Thread):
         # TODO: We definitely don't want to do this each time user connects -
         # put such SUBs in an one time client SUB setup
         client.subscribe('user/+/directory', 1)
+        if self.looking_glass:
+            client.subscribe('user/+/items', 1)
+            client.subscribe('user/+/profile', 1)
         # Our generic incoming queue, qos=1
         client.subscribe(self.sub_inbox, 1)
         # Our published pgp key block, qos=1, durable

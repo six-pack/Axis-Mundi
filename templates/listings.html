@@ -1,5 +1,9 @@
-{% extends "layout.html" %}
-{% set active_page = "Listings" %}
+{%if looking_glass %}
+    {% extends "looking_glass/layout.html" %}
+{%else%}
+    {% extends "layout.html" %}
+{%endif%}
+{% set active_page = "Trade" %}
 
 {% block content %}
   <h2>Listings</h2>
@@ -7,20 +11,31 @@
     <div class="datagrid">
 
     <table cellpadding="10" class="stripetable">
+        <tr><td colspan="4" width="928" align="left">
+                    <div class="round_box" style="height:40px;width: 97%">
+                    <form method="post" action="{{ url_for('listings') }}/view" autocomplete="Off">
+                    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+                     Search Filter
+                    &nbsp;&nbsp;&nbsp;<input type="text" name="search_item" size="50" class="inputs" placeholder="Item or product to search for"  value="{{ search_filter }}">
+                    <button type="submit" class = "btnblu" name = "action" style="float:right" value="update_filter">Update Filter</button>
+                </div>
+        </td></tr>
         <tr>
-            <th></th>
-        <th width="400px" align="left"><strong>Title</strong></th>
-        <th width="100px"><strong>Price</strong></th>
-        <th width="80px"><strong>Quantity</strong></th>
-        <th width="200px"><strong>Actions</strong></th>
+        <th>  </th>
+        <th width="400px"><strong>Title</strong></th>
+        {% if looking_glass %}
+           <th width="200px"><strong>Seller</strong></th>
+        {%endif%}
+        <th width="200px"><strong>Price</strong></th>
         </tr>
         {% for listing in listings %}
         <tr>
-        <td style="width:66px"><img width="64" height="64" alt="{{listing.item}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
-        <td><a href="/listings/view/{{pgp_key}}/{{listing.id}}">{{listing.title}}</a></td>
-        <td>{{listing.price}} {{listing.currency_code}}</td>
-        <td>{{listing.qty_available}}</td>
-        <td></td>
+        <td style="width:66px"><a href="/listings/view/{{listing.key_id}}/{{listing.id}}"><img width="64" height="64" alt="{{listing.item}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></a></td>
+        <td><a href="/listings/view/{{listing.key_id}}/{{listing.id}}">{{listing.title}}</a></td>
+        {% if looking_glass %}
+           <td><a href="/profile/{{listing.key_id}}">{{listing.key_id|display_name}}</a></td>
+        {%endif%}
+        <td>{{listing.price}} {{listing.currency_code}} ({{ listing.price|to_btc(listing.currency_code) }} BTC)</td>
         </tr>
         {% endfor %}
         <tr>
@@ -29,7 +44,7 @@
             <a href="/listings/{{listings.previous_page}}"><b>&lt;Previous</b></a>
         {% endif %}
         </td>
-        <td colspan="3"></td></td>
+        <td colspan="2"></td></td>
         <td align="right">
         {% if listings.next_page %}
             <a href="/listings/{{listings.next_page}}"><b>Next&gt;</b></a>

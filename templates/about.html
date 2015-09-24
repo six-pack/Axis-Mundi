@@ -1,4 +1,8 @@
-{% extends "layout.html" %}
+{%if looking_glass %}
+    {% extends "looking_glass/layout.html" %}
+{%else%}
+    {% extends "layout.html" %}
+{%endif%}
 {% set active_page = "About" %}
 
 {% block content %}
@@ -6,7 +10,7 @@
   <table align="center"><tr><td><img src="/static/img/charlie.gif" LOOP=1></td></tr></table>
   <div class="round_box">
   <p><b>NOTE: This is development software. Be warned it will have many bugs and may cause bad things to happen.</b></p>
-  <p>This project aims to deliver a secure and resilient platform for messaging and person to person trading. For further details check http://github.com/six-pack/
+  <p>This project aims to deliver a secure and resilient platform for messaging and person to person trading. For further details check the <a href="https://six-pack.github.io/Axis-Mundi">overview on Github</a>
   <P>Please help fund the project if you can, it will speed up development and pays for stable brokers. </p>
   <p>Project Wallet: 15LvkwykwNEnQzQj353tijnhHqPLQpDvPb</p>
   <p></p>

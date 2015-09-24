@@ -1,5 +1,9 @@
-{% extends "layout.html" %}
-{% set active_page = "Trade" %}
+{%if looking_glass %}
+    {% extends "looking_glass/layout.html" %}
+{%else%}
+    {% extends "layout.html" %}
+{%endif%}
+{% set active_page = "Cart" %}
  {% set global_seller = [] %}<!-- jinja global hack needed -->
 {% block content %}
   <h2>Shopping Cart</h2>

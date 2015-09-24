@@ -434,9 +434,15 @@ list-style-type: none;
    background-color: #eee;
 }
 
+.stripetable tr:hover:not([th]){
+   background-color: #cccccc;
+   font-weight: bold;
+}
+
 .stripetable th {
     background-color: #bbbbbb;
 }
+
 
 /* textarea */
 .twrap {
