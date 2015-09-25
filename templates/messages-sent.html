@@ -15,9 +15,9 @@
         </tr>
         </thread>
         {% for o in sent_messages %}
-        <tr>
-        <td width="250px"><a href="/profile/{{ o.recipient_key }}">{{ o.recipient_key|display_name }} ({{o.recipient_key}})</a></td>
-        <td width="450px"><a href="/messages/view/{{ o.id }}">{{ o.subject }}</a></td>
+        <tr onclick="location.href='/messages/view/{{ o.id }}'">
+        <td width="250px"><a href="/profile/{{ o.recipient_key }}"><img src="data:image/png;base64,{{o.recipient_key|key_to_identicon}}"> {{ o.recipient_key|display_name }}</a></td>
+        <td width="450px">{{ o.subject }}</td>
         <td width="200px">{{ o.message_date }}</td>
 <!--        <td>
              <a href="{{ url_for('delete_message', id = o.id) }}">Delete</a>

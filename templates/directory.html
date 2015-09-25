@@ -31,9 +31,9 @@
         <th ><strong>Flags</strong></th>
         </tr>
         {% for entry in directory %}
-        <tr>
-        <td width="350px"><a href="{{ url_for('profile')}}{{entry.key_id}}">{{entry.display_name}}</a></td>
-        <td width="170px"><a href="{{ url_for('profile')}}{{entry.key_id}}">{{entry.key_id}}</a></td>
+        <tr onclick="location.href='{{ url_for('profile')}}{{entry.key_id}}'">
+        <td width="350px"><img src="data:image/png;base64,{{entry.key_id|key_to_identicon}}"> {{entry.display_name}}</td>
+        <td width="170px">{{entry.key_id}}</td>
         <td align="center">
              (Flags & Ratings etc.)
         </td>

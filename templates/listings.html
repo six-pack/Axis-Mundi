@@ -29,7 +29,7 @@
         <th width="200px"><strong>Price</strong></th>
         </tr>
         {% for listing in listings %}
-        <tr>
+        <tr onclick="location.href='/listings/view/{{listing.key_id}}/{{listing.id}}'">
         <td style="width:66px"><a href="/listings/view/{{listing.key_id}}/{{listing.id}}"><img width="64" height="64" alt="{{listing.item}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></a></td>
         <td><a href="/listings/view/{{listing.key_id}}/{{listing.id}}">{{listing.title}}</a></td>
         {% if looking_glass %}

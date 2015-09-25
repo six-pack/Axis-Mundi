@@ -9,7 +9,7 @@
       <br>
         <table>
             <tr><td width="300" rowspan="2"><img width="256" height="256" alt="{{profile.display_name}}" src={% if profile.avatar_base64 %}"data:image/png;base64,{{profile.avatar_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
-               <td width="600"><h2>&nbsp;&nbsp;{{profile.display_name}}</h2><p align="center">PGP Key ID: {{profile.key_id}}</p></td></tr>
+               <td width="600"><h2><img src="data:image/png;base64,{{profile.key_id|key_to_identicon(30)}}">&nbsp;&nbsp;{{profile.display_name}}</h2><p align="center">PGP Key ID: {{profile.key_id}}</p></td></tr>
             <tr><td><form method="post" action="{{ url_for('new_contact') }}">
                    <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
                    <input type="hidden" name="name" value="{{profile.display_name}}">

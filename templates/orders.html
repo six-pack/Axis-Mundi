@@ -18,10 +18,10 @@
         <th width="100px"><strong>Payment</strong></th>
         </tr>
         {% for o in orders %}
-        <tr>
+        <tr onclick="location.href='/orders/view/{{ o.id }}'">
         <td >{{ o.order_date.strftime('%Y-%m-%d') }}</td>
-        <td ><a href="/orders/view/{{ o.id }}">{{ o.title }}</a></td>
-        <td ><a href="/profile/{{ o.seller_key}}">{{ o.seller_key|display_name }}</a></td>
+        <td >{{ o.title }}</td>
+        <td ><a href="/profile/{{ o.seller_key}}"><img src="data:image/png;base64,{{o.seller_key|key_to_identicon}}"> {{ o.seller_key|display_name }}</a></td>
         <td >{{ o.order_status }}</td>
         <td>{{ o.payment_status }}</td>
         </tr>

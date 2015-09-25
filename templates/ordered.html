@@ -6,12 +6,12 @@
 {% set active_page = "Trade" %}
 
 {% block content %}
-  <h2>Order has been placed With {{seller_key|display_name}}</h2>
+  <h2>Order has been placed with <img src="data:image/png;base64,{{seller_key|key_to_identicon}}"> {{seller_key|display_name}}</h2>
   {% if order %}
     <div class="datagrid">
 
             <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
-            <p>Your order has been placed with the seller ({{seller_key|display_name}}). Please make the following Bitcoin payment(s) now:</p>
+            <p>Your order has been placed with <img src="data:image/png;base64,{{seller_key|key_to_identicon}}"> {{seller_key|display_name}}. Please make the following Bitcoin payment(s) now:</p>
               {% for item in order %}
                   <div class="round_box">
                     <p><b><a href="/orders/view/{{item.id}}">Order ID: {{item.orderid}}</a> &nbsp;&nbsp;&nbsp;   <a href="/orders/view/{{item.id}}">{{item.quantity}} x {{ item.title }}</a></b></p>

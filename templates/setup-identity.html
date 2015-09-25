@@ -10,7 +10,7 @@
         <table cellpadding="10">
             <tr><td></td><td></td><td></td><td></td></tr>
             <tr><td><label>Name</label></td> <td colspan="2"><input type="text" name="displayname" size="44" class="inputs" placeholder="Display Name" required value="{{ displayname[0] }}"></td></tr>
-            <tr><td><label>PGP Key</label></td> <td><label>{{ pgpkeyid[0] }}</label></td></tr>
+            <tr><td><label>PGP Key</label></td> <td>{{ pgpkeyid[0] }}<img src="data:image/png;base64,{{pgpkeyid[0]|key_to_identicon}}"></td></tr>
             <tr><td><label>Avatar</label></td> <td style="width:130px"><img width="128" height="128" alt="{{displayname[0]}}" src={% if avatar[0] %}"data:image/png;base64,{{avatar[0]}}"{% else %}"/static/img/none.png"{% endif %} /></td><td style="width:400px"><input type="file" name="avatar_image"  class="inputs-file" style="float:left;vertical-align:middle" placeholder="Optionally select an image to use as an avatar"></td></tr>
             <tr><td><label>Public Profile</label></td> <td colspan="3"><textarea name="profile" cols="80" rows = "8" class="inputs" placeholder="Optionally you may provide some publicly viewable profile">{{profile[0]}}</textarea></td></tr>
             <tr><td><div style="btn"><button type="submit" class = "btn">Update</button></div></td></tr>

@@ -13,9 +13,9 @@
 <!--        <th width="110px"><strong>Actions</strong></th>    -->
         </tr>
         {% for o in inbox_messages %}
-        <tr>
-        <td width="250px"><a href="/profile/{{ o.sender_key }}">{{ o.sender_key|display_name }} ({{ o.sender_key }})</a></td>
-        <td width="450px"><a href="/messages/view/{{ o.id }}">{{ o.subject }}</a></td>
+        <tr onclick="location.href='/messages/view/{{ o.id }}'">
+        <td width="250px"><a href="/profile/{{ o.sender_key }}"><img src="data:image/png;base64,{{o.sender_key|key_to_identicon}}"> {{ o.sender_key|display_name }}</a></td>
+        <td width="450px">{{ o.subject }}</td>
         <td width="200px">{{ o.message_date }}</td>
 <!--        <td width="110px">
              <a href="{{ url_for('reply_message', id = o.id) }}">Reply</a>  -

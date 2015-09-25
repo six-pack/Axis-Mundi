@@ -24,6 +24,9 @@ from multiprocessing import Process, freeze_support
 import multiprocessing.forking
 import webbrowser
 import os
+import pydenticon, hashlib
+from PIL import Image
+import StringIO
 
 app = Flask(__name__)
 # (8Mb maximum upload to local webserver) - make sure we dont need to use the disk
@@ -123,6 +126,26 @@ def display_name(value):
     filter = value
     dname = dbsession.query(app.roStorageDB.cacheDirectory).filter_by(key_id=filter).first()
     return (dname.display_name) # TODO - check the contacts list and also add status flags/verfication/trust status
+
+@app.template_filter('key_to_identicon')
+# take a pgp keyid and return an identicon PNG
+def key_to_identicon(value,size=20):
+    if value == '':
+        return
+    else:
+        size = int(size)
+    foreground = [ "rgb(45,79,255)",
+                   "rgb(254,180,44)",
+                   "rgb(226,121,234)",
+                   "rgb(30,179,253)",
+                   "rgb(232,77,65)",
+                   "rgb(49,203,115)",
+                   "rgb(141,69,170)" ]
+    background = "rgba(255,255,255,0)"
+    generator = pydenticon.Generator(5,5,digest=hashlib.sha256, foreground=foreground, background=background,)
+    identicon_png = generator.generate(value, size, size, output_format="png")
+    image =encode_image(identicon_png,(size,size))
+    return (image)
 
 @app.template_filter('to_btc')
 # convert a given amount in a given currency to btc

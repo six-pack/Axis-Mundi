@@ -21,7 +21,7 @@
         <th width="200px"></th>
         </tr>
         {% for listing in listings %}
-        <tr>
+        <tr onclick="location.href='{{ url_for('edit_listing', id = listing.id) }}'">
         <td style="width:66px"><img width="64" height="64" alt="{{listing.title}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
         <td>{{listing.title}}</td>
         <td>{{listing.price}} {{listing.currency_code}}</td>

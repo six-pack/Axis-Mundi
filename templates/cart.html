@@ -16,7 +16,7 @@
         <table cellpadding="5">
         <form method="post" action="{{ url_for('cart') }}">
             <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
-            <tr><td colspan="3"><p style="font-size:20px"><b>Seller: {{current_seller|display_name}} ({{current_seller}})</b></p></td><td colspan="2">
+            <tr><td colspan="3"><p style="font-size:20px"><b>Seller: <img src="data:image/png;base64,{{current_seller|key_to_identicon}}"> {{current_seller|display_name}} ({{current_seller}})</b></p></td><td colspan="2">
                 <label class="btnblu" for="modal-one-{{current_seller}}" style="float:right">Checkout</label>
                 <button type="submit" style="float:right" class = "btn" name ="action" value="update">Update</button>
                 <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Remove</button>
@@ -113,7 +113,7 @@
                 <table cellpadding="5">
                 <form method="post" action="{{ url_for('cart') }}">
                     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
-                    <tr><td colspan="3"><p style="font-size:20px"><b>Seller: {{current_seller|display_name}} ({{current_seller}})</b></p></td><td colspan="2">
+                    <tr><td colspan="3"><p style="font-size:20px"><b>Seller: <img src="data:image/png;base64,{{current_seller|key_to_identicon}}"> {{current_seller|display_name}} ({{current_seller}})</b></p></td><td colspan="2">
                         <label class="btnblu" for="modal-one-{{global_seller[-1]}}" style="float:right">Checkout</label>
                         <button type="submit" style="float:right" class = "btn" name ="action" value="update">Update</button>
                         <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Remove</button>

@@ -49,9 +49,9 @@
                     <td width="200">Order state error</td></tr>
                 {%endif %}
                {% set shipping = order.shipping_options|from_json %}
-                <tr><td width="150px"><b>Order ID:</b></td><td width="120px">{{ order.orderid}}</td><td width="150px"><b>Order Date:</b></td><td width="120px">{{ order.order_date.strftime('%Y-%m-%d') }}</td><td width="150px"><b>Seller:</b></td><td width="200px">{{ order.seller_key|display_name }} </td> </tr>
-                <tr><td width="150px"><b>Order Type:</b></td><td>{{ order.order_type }}</td><td width="150px"><b>Quantity:</b></td><td>{{ order.quantity }}</td><td width="150px"><b>Shipping:</b></td><td>{{shipping[order.shipping][0]}} </td> </tr>
-                <tr><td width="150px"><b>Order Status:</b></td><td>{{ order.order_status }}</td><td width="150px"><b>Payment Status:</b></td><td>{{ order.payment_status }}</td><td width="150px"><b>Total Price:</b></td><td>{{ order.line_total_price}} {{order.currency_code}} ({{order.line_total_btc_price}} BTC)</td> </tr>
+                <tr><td width="150px"><b>Order ID:</b></td><td width="120px">{{ order.orderid}}</td><td width="150px"><b>Order Date:</b></td><td width="120px">{{ order.order_date.strftime('%Y-%m-%d') }}</td><td width="120px"><b>Seller:</b></td><td width="230px"> <img src="data:image/png;base64,{{order.seller_key|key_to_identicon}}"> {{ order.seller_key|display_name }} </td> </tr>
+                <tr><td width="150px"><b>Order Type:</b></td><td>{{ order.order_type }}</td><td width="150px"><b>Quantity:</b></td><td>{{ order.quantity }}</td><td width="120px"><b>Shipping:</b></td><td>{{shipping[order.shipping][0]}} </td> </tr>
+                <tr><td width="150px"><b>Order Status:</b></td><td>{{ order.order_status }}</td><td width="150px"><b>Payment Status:</b></td><td>{{ order.payment_status }}</td><td width="120px"><b>Total Price:</b></td><td>{{ order.line_total_price}} {{order.currency_code}} ({{order.line_total_btc_price}} BTC)</td> </tr>
 
            </table>
         </div>
@@ -67,7 +67,7 @@
             <tr><td width="200"><b>Price</b></td><td><b>{{order.price}} {{order.currency_code}} ({{order.price|to_btc(order.currency_code)}} BTC)</b></td><td>
 
 </td></tr>
-            <tr><td width="200"><B>Seller</b></td><td><a href="/profile/{{ order.seller_key}}">{{ order.seller_key|display_name }}</a></td><td></td></tr>
+            <tr><td width="200"><B>Seller</b></td><td><a href="/profile/{{ order.seller_key}}"><img src="data:image/png;base64,{{order.seller_key|key_to_identicon}}"> {{ order.seller_key|display_name }}</a></td><td></td></tr>
             <tr><td width="200"><B>Ships From</b></td><td>Not Specified</td></tr>
             <tr><td width="200"><B>Ships To</b></td><td>Worldwide</td></tr>
 
