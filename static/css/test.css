@@ -5,12 +5,6 @@ body {
   color: #444;
 }
 
-.div_cell_link {
-    height:100%;
-    width:100%;
-    display:block;
-}
-
 .cell_link {
   display: block;
   width: 100%;
@@ -470,11 +464,6 @@ list-style-type: none;
 .stripetable th {
     background-color: #bbbbbb;
 }
-
-.stripetable td a {
-    text-decoration:none;
-}
-
 
 
 

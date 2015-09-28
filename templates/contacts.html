@@ -5,22 +5,26 @@
   <h2>Contacts</h2>
 
     <div class="datagrid">
-               <a class="btnblu" href="{{ url_for('new_contact') }}">New Contact</a>
+    <a class="btnblu" href="{{ url_for('new_contact') }}">New Contact</a>
     <br>
     <br>
-    <table cellpadding="10" width="100%" class="stripetable">
+    <table cellpadding="7" width="100%" class="stripetable" style="border:collapse">
         <tr>
-        <th width="350px" align="left"><strong>Name</strong></th>
+        <th width="350px"><strong>Name</strong></th>
         <th width="170px"><strong>PGP Key</strong></th>
         <th ><strong>Actions</strong></th>
         </tr>
         {% for contact in contacts %}
         <tr>
-        <td width="350px"><img src="data:image/png;base64,{{contact.contact_key|key_to_identicon}}"> {{contact.contact_name}}</td>
-        <td width="170px">{{contact.contact_key}}</td>
+        <td width="350px"><a href="{{ url_for('profile')}}{{contact.contact_key}}"><div class="div_cell_link"><img src="data:image/png;base64,{{contact.contact_key|key_to_identicon}}"> {{contact.contact_name}}</div></a></td>
+        <td width="170px"><a href="{{ url_for('profile')}}{{contact.contact_key}}"><div class="div_cell_link">{{contact.contact_key}}</div></a></td>
         <td align="center">
-             <a href="{{ url_for('new_message')}}{{contact.contact_key}}">Message</a> -
-             <a href="{{ url_for('external_listings',keyid=contact.contact_key)}}">Listings</a>
+            <div style="position:relative">
+                 <a class="cell_link" href="{{ url_for('profile')}}{{contact.contact_key}}"></a>
+                 <a class ="in_cell_link" href="{{ url_for('new_message')}}{{contact.contact_key}}">Message</a> -
+                 <a class="in_cell_link" href="{{ url_for('external_listings',keyid=contact.contact_key)}}">Listings</a>
+                 <a class="cell_link" href="{{ url_for('profile')}}{{contact.contact_key}}"></a>
+            </div>
         </td>
         </tr>
         {% endfor %}
@@ -39,6 +43,7 @@
         </tr>
     </table>
     </div>
+
 
 
 {% endblock %}

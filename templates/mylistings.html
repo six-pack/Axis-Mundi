@@ -22,11 +22,21 @@
         </tr>
         {% for listing in listings %}
         <tr onclick="location.href='{{ url_for('edit_listing', id = listing.id) }}'">
-        <td style="width:66px"><img width="64" height="64" alt="{{listing.title}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></td>
-        <td>{{listing.title}}</td>
-        <td>{{listing.price}} {{listing.currency_code}}</td>
-        <td>{{listing.qty_available}}</td>
-        <td>{% if listing.public == True %}Yes{% else %}No{% endif %} </td>
+        <td style="width:66px">
+            <img width="64" height="64" alt="{{listing.title}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} />
+        </td>
+        <td>
+            {{listing.title}}
+        </td>
+        <td>
+            {{listing.price}} {{listing.currency_code}}
+        </td>
+        <td>
+            {{listing.qty_available}}
+        </td>
+        <td>
+            {% if listing.public == True %}Yes{% else %}No{% endif %}
+        </td>
         <td>
              <a class="btn" href="{{ url_for('edit_listing', id = listing.id) }}"> Edit </a>  &nbsp;
              <a class="btn" href="{{ url_for('delete_listing', id = listing.id) }}">Delete</a>

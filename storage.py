@@ -156,6 +156,10 @@ class Storage():
         key_id = Column(String(16), nullable=False)
         updated = Column(DateTime, nullable=False)
         display_name = Column(String())
+        is_seller = Column(Boolean)
+        is_notary = Column(Boolean)
+        is_arbiter = Column(Boolean)
+        is_looking_glass = Column(Boolean)
         # TODO: Add other key fields but keep it light
 
     class cacheListings(Base):

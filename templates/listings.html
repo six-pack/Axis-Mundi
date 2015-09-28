@@ -10,8 +10,12 @@
 
     <div class="datagrid">
 
-    <table cellpadding="10" class="stripetable">
-        <tr><td colspan="4" width="928" align="left">
+    <table cellpadding="5" class="stripetable">
+        {% if looking_glass %}
+           <tr><td colspan="5" width="928" align="left">
+        {% else %}
+           <tr><td colspan="4" width="928" align="left">
+        {%endif%}
                     <div class="round_box" style="height:40px;width: 97%">
                     <form method="post" action="{{ url_for('listings') }}/view" autocomplete="Off">
                     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
@@ -22,20 +26,43 @@
         </td></tr>
         <tr>
         <th>  </th>
-        <th width="400px"><strong>Title</strong></th>
+        <th width="300px"><strong>Title</strong></th>
         {% if looking_glass %}
            <th width="200px"><strong>Seller</strong></th>
         {%endif%}
+        <th width="200px"><strong>Ships From</strong></th>
         <th width="200px"><strong>Price</strong></th>
         </tr>
         {% for listing in listings %}
-        <tr onclick="location.href='/listings/view/{{listing.key_id}}/{{listing.id}}'">
-        <td style="width:66px"><a href="/listings/view/{{listing.key_id}}/{{listing.id}}"><img width="64" height="64" alt="{{listing.item}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} /></a></td>
-        <td><a href="/listings/view/{{listing.key_id}}/{{listing.id}}">{{listing.title}}</a></td>
+        <tr>
+        <td style="width:66px">
+           <div style="position:relative">
+                <a class="cell_link" href="/listings/view/{{listing.key_id}}/{{listing.id}}"></a><img width="64" height="64" alt="{{listing.item}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} />
+           </div>
+        </td>
+        <td>
+             <div style="position:relative">
+              <a class="cell_link" href="/listings/view/{{listing.key_id}}/{{listing.id}}"></a>{{listing.title}}
+            </div>
+        </td>
         {% if looking_glass %}
-           <td><a href="/profile/{{listing.key_id}}">{{listing.key_id|display_name}}</a></td>
+           <td>
+               <div style="position:relative">
+                  <img src="data:image/png;base64,{{listing.key_id|key_to_identicon}}">
+                  <a class = "in_cell_link" href="/profile/{{listing.key_id}}">{{listing.key_id|display_name}}</a>
+                 </div>
+               </td>
         {%endif%}
-        <td>{{listing.price}} {{listing.currency_code}} ({{ listing.price|to_btc(listing.currency_code) }} BTC)</td>
+        <td>
+            <div style="position:relative">
+                <a class="cell_link" href="/listings/view/{{listing.key_id}}/{{listing.id}}"></a>Not specified
+            </div>
+        </td>
+        <td>
+            <div style="position:relative">
+              <a class="cell_link" href="/listings/view/{{listing.key_id}}/{{listing.id}}"></a>{{listing.price}} {{listing.currency_code}} ({{ listing.price|to_btc(listing.currency_code) }} BTC)
+            </div>
+        </td>
         </tr>
         {% endfor %}
         <tr>

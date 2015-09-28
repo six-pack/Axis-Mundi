@@ -83,6 +83,13 @@ class messaging_loop(threading.Thread):
 #        self.memcache_listing_items = defaultdict(defaultdict)
         self.publish_identity = True
         self.btc_master_key = ''
+        # Published Roles
+        self.is_seller = False
+        self.is_notary = False # if true once dbconfig is read then notary screens and functions will be available
+        self.is_arbiter = False # if true once dbconfig is read then arbiter screens and functions will be available
+        # Non-published roles (these roles must not be exposed to Axis Mundi)
+        self.is_broker_admin = False # if true once dbconfig is read then broker admin screens and functions will be available
+
         threading.Thread.__init__(self)
 
     # TODO: Check that these parameters are right, had to add "flags" which
@@ -100,6 +107,7 @@ class messaging_loop(threading.Thread):
         # transaction) - github issue #5
 
     def on_disconnect(self, client, userdata, rc):
+        print "MQTT on_disconnect..."
         self.connected = False
         flash_msg = queue_task(0, 'flash_status', 'Off-line')
         self.q_res.put(flash_msg)
@@ -107,13 +115,27 @@ class messaging_loop(threading.Thread):
             flash_msg = queue_task(
                 0, 'flash_message', 'Disconnected from ' + self.targetbroker)
         else:
+            # We were disconnected - try another broker
+            self.select_random_broker()
             flash_msg = queue_task(
-                0, 'flash_message', 'Broker was disconnected, attempting to reconnect to ' + self.targetbroker)
+                0, 'flash_message', 'Broker unavailable, trying another broker: ' + self.targetbroker)
+            self.q_res.put(flash_msg)
             try:
-                client.reconnect()
+                #client._password = self.make_pgp_auth() # original token only valid for 3 minutes
+                print "Attempting to connect to another broker: " + self.targetbroker
+                self.client.username_pw_set(self.mypgpkeyid, self.make_pgp_auth())
+                self.client.connect(self.targetbroker, 1883, 30)
+                #self.connected = True
+                #flash_msg = queue_task(0, 'flash_status', 'On-line')
+                #self.q_res.put(flash_msg)
             except:
                 print "Reconnection failure"
-        self.q_res.put(flash_msg)
+                self.connected = False
+                flash_msg = queue_task(0, 'flash_status', 'Off-line')
+                self.q_res.put(flash_msg)
+                flash_msg = queue_task(
+                    0, 'flash_message', 'Reconnection failed, giving up for now. Check your Tor/i2p connection')
+                self.q_res.put(flash_msg)
 
     # TODO - make use of onpublish and onsubscribe callbacks instead of
     # checking status of call to publish or subscribe
@@ -164,20 +186,45 @@ class messaging_loop(threading.Thread):
             # TODO: This memory cache will be necessary to deal with a large
             # number of users in the directory
             print "Adding directory entry "
-            display_dict = json.loads(msg.payload)
+            try:
+                display_dict = json.loads(msg.payload) # This is one of the few unsigned messages (the oother being /key (the pgp public key itself))
+                display_name = display_dict['display_name'] # This must always be present even if empty
+            except:
+                print "Unable to decode directory message from " + keyid
+                return
+#            print display_dict['is_seller']
+            try:
+                is_seller = display_dict['is_seller'] # Separate try block for pre 0.1 clients TODO: remove and place these in the preceeding try block
+                is_notary = display_dict['is_notary'] # Separate try block for pre 0.1 clients TODO: remove and place these in the preceeding try block
+                is_arbiter = display_dict['is_arbiter'] # Separate try block for pre 0.1 clients TODO: remove and place these in the preceeding try block
+                is_looking_glass = display_dict['is_looking_glass'] # Separate try block for pre 0.1 clients TODO: remove and place these in the preceeding try block
+
+            except:
+                print "Error reading directory flags for " + keyid
+                is_seller = False
+                is_notary = False
+                is_arbiter = False
+                is_looking_glass = False
             session = self.storageDB.DBSession()
             # If it already exists then update
             if session.query(self.storageDB.cacheDirectory).filter(self.storageDB.cacheDirectory.key_id == keyid).count() > 0:
                 direntry = session.query(self.storageDB.cacheDirectory).filter(self.storageDB.cacheDirectory.key_id == keyid).update({
                     self.storageDB.cacheDirectory.updated: datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
-                    self.storageDB.cacheDirectory.display_name: display_dict['display_name']
+                    self.storageDB.cacheDirectory.display_name: display_name,
+                    self.storageDB.cacheDirectory.is_notary: is_notary,
+                    self.storageDB.cacheDirectory.is_arbiter: is_arbiter,
+                    self.storageDB.cacheDirectory.is_seller: is_seller,
+                    self.storageDB.cacheDirectory.is_looking_glass: is_looking_glass
                 })
             else:
                 direntry = self.storageDB.cacheDirectory(key_id=keyid,
                                                          updated=datetime.strptime(
                                                              current_time(), "%Y-%m-%d %H:%M:%S"),
-                                                         display_name=display_dict['display_name'])
-
+                                                         display_name=display_name,
+                                                         is_notary=is_notary,
+                                                         is_arbiter=is_arbiter,
+                                                         is_seller=is_seller,
+                                                         is_looking_glass=is_looking_glass)
                 session.add(direntry)
             session.commit()
             return
@@ -402,6 +449,7 @@ class messaging_loop(threading.Thread):
                             session.commit()
                         else:
                             print "No items message found in listings returned from " + keyid
+                            # TODO - should we remove existing items from the cache? some items may have been directly imported (sent from seller via email or pm)
                     else:
                         print "Dropping incoming message because it is not a Listings Message"
 
@@ -463,6 +511,10 @@ class messaging_loop(threading.Thread):
             #            directory_message.sender = self.mypgpkeyid
             directory_dict = {}
             directory_dict['display_name'] = self.display_name
+            directory_dict['is_seller'] = self.is_seller
+            directory_dict['is_notary'] = self.is_notary
+            directory_dict['is_arbiter'] = self.is_arbiter
+            directory_dict['is_looking_glass'] = self.looking_glass
             str_directory = json.dumps(directory_dict)
             print "Directory string to publish : " + str_directory
             # Our published items queue, qos=1, durable
@@ -744,7 +796,14 @@ class messaging_loop(threading.Thread):
                 self.storageDB.Config.name == "accept_unsigned").first()
             wallet_seed = session.query(self.storageDB.Config.value).filter(
                 self.storageDB.Config.name == "wallet_seed").first()
+            is_notary = session.query(self.storageDB.Config.value).filter(
+                self.storageDB.Config.name == "is_notary").first()
+            is_arbiter = session.query(self.storageDB.Config.value).filter(
+                self.storageDB.Config.name == "is_arbiter").first()
+            is_looking_glass = session.query(self.storageDB.Config.value).filter(
+                self.storageDB.Config.name == "is_looking_glass").first()
         except:
+            print "ERROR: Failed to read configuration from database"
             return False
         # Calculate btc master key from wallet seed
         if wallet_seed.value:
@@ -777,6 +836,12 @@ class messaging_loop(threading.Thread):
             self.avatar_image = ''
         self.retention_period = message_retention
         self.allow_unsigned = bool(allow_unsigned)
+        if is_notary.value == 'True':
+            self.is_notary = True
+        if is_arbiter.value == 'True':
+            self.is_arbiter = True
+#        self.looking_glass = bool(is_looking_glass)    # TODO enable looking_glass mode based on database config
+                                                        # TODO send a message to frontend to switch to looking glass mode
         if publish_identity.value:
             self.publish_identity = publish_identity
         # TODO: Read and assign all config options
@@ -1103,8 +1168,17 @@ class messaging_loop(threading.Thread):
         # 1 - purge all PM's older than the configured retention period (unless message has been marked for retention)
         # 2 - purge addresses (buyer & seller side) for address information related to finalized transactions
         # -------------------------
+        if self.is_notary:
+            print "You are a notary"
+        if self.is_arbiter:
+            print "You are an arbiter"
+        # are we selling anything?
+        session = self.storageDB.DBSession()
+        listings = session.query(self.storageDB.Listings).filter(self.storageDB.Listings.public==True).all()
+        if listings:
+            self.is_seller = True
+            print "Public listings present"
         # COnfirm proxy settings
-
         # sort the broker list into Tor, i2p and clearnet
         for broker in self.brokers:
             broker = broker[0]
@@ -1167,16 +1241,13 @@ class messaging_loop(threading.Thread):
                 self.connected = False
                 # client.connect_async(self.targetbroker, 1883, 60)  # This is
                 # now async
-                self.client.connect(self.targetbroker, 1883,
-                               60)  # This is now async
+                self.client.connect(self.targetbroker, 1883, 30)  # This is now async
 # time.sleep(0.5) # TODO: Find a better way to prevent the
 # disconnect/reconnection loop following a connect
 
             except:  # TODO: Async connect now means this error code will need to go elsewhere
-                flash_msg = queue_task(
-                    0, 'flash_error', 'Unable to connect to broker ' + self.targetbroker + ', retrying...')
-                self.q_res.put(flash_msg)
-                pass
+                self.on_disconnect(self, self.client, None) # todo: bit lazy buttakes care of a single reconnection attempt to another broker
+                                                            # ideally we want to keep trying for x attempts - rewrite this all at some point
         while not self.shutdown:
             if not self.workoffline:
                 self.client.loop(0.05)  # deal with mqtt events
@@ -1362,7 +1433,7 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'get_directory':
                         # Request list of all users
                     key_topic = 'user/+/directory'
-                    self.client.subscribe(str(key_topic), 1)
+                    self.client.subscribe(str(key_topic), 0)
                     print "Requesting directory of users"
 
                 elif task.command == 'new_contact':

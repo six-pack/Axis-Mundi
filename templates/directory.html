@@ -7,11 +7,10 @@
 
 {% block content %}
   <h2>Directory</h2>
-
     <div class="datagrid">
         <p>The Axis Mundi directory is maintained automatically by your software. The directory shows all users on the system who have 'opted in'. Please remember that a user can choose any name they wish and could spoof other users names. You should rely on the PGP key ID which cannot be spoofed.</p>
         <p>Trust and reputation scores will be added to the directory in the future.</p>
-    <table cellpadding="10" width="100%" class="stripetable">
+    <table cellpadding="7" width="100%" class="stripetable">
         <tr>
             <td colspan="3" align="left">
                 <div class="round_box" style="height:40px;width: 97%">
@@ -26,16 +25,20 @@
             </td>
         </tr>
         <tr>
-        <th width="350px" align="left"><strong>Name</strong></th>
+        <th width="350px"><strong>Name</strong></th>
         <th width="170px"><strong>PGP Key ID</strong></th>
         <th ><strong>Flags</strong></th>
         </tr>
         {% for entry in directory %}
-        <tr onclick="location.href='{{ url_for('profile')}}{{entry.key_id}}'">
-        <td width="350px"><img src="data:image/png;base64,{{entry.key_id|key_to_identicon}}"> {{entry.display_name}}</td>
-        <td width="170px">{{entry.key_id}}</td>
-        <td align="center">
-             (Flags & Ratings etc.)
+        <tr>
+        <td width="350px"><a href="{{ url_for('profile')}}{{entry.key_id}}"><div class="div_cell_link"><img src="data:image/png;base64,{{entry.key_id|key_to_identicon}}"> {{entry.display_name}}</div></a></td>
+        <td width="170px"><a href="{{ url_for('profile')}}{{entry.key_id}}"><div class="div_cell_link">{{entry.key_id}}</div></a></td>
+        <td align="center"><a href="{{ url_for('profile')}}{{entry.key_id}}"><div class="div_cell_link">
+            {% if entry.is_seller == True %}<img src="/static/img/cart.png" width="24" height="24"> {%endif%}
+            {% if entry.is_notary == True %}<img src="/static/img/notary.png" width="24" height="24"> {%endif%}
+            {% if entry.is_arbiter == True %}<img src="/static/img/arbiter.png" width="24" height="24"> {%endif%}
+            {% if entry.is_looking_glass == True %}<<img src="/static/img/looking_glass.png" width="24" height="24">{%endif%}
+            </div></a>
         </td>
         </tr>
         {% endfor %}

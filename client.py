@@ -144,7 +144,7 @@ def key_to_identicon(value,size=20):
     background = "rgba(255,255,255,0)"
     generator = pydenticon.Generator(5,5,digest=hashlib.sha256, foreground=foreground, background=background,)
     identicon_png = generator.generate(value, size, size, output_format="png")
-    image =encode_image(identicon_png,(size,size))
+    image=encode_image(identicon_png,(size,size))
     return (image)
 
 @app.template_filter('to_btc')
@@ -1018,6 +1018,10 @@ def setup(page=''):
             app.roStorageDB.Config.name == "accept_unsigned").first()
         wallet_seed = dbsession.query(app.roStorageDB.Config).filter(
             app.roStorageDB.Config.name == "wallet_seed").first()
+        is_notary = dbsession.query(app.roStorageDB.Config).filter(
+            app.roStorageDB.Config.name == "is_notary").first()
+        is_arbiter = dbsession.query(app.roStorageDB.Config).filter(
+            app.roStorageDB.Config.name == "is_arbiter").first()
         #
         if page == "identity":
             if displayname:
@@ -1080,6 +1084,15 @@ def setup(page=''):
                 new_conf_item.value = node
                 new_conf_item.displayname = "Stratum Servers"
                 dbsession.add(new_conf_item)
+        elif page == "trading":
+            if request.form.get('is_notary') == 'True':
+                is_notary.value = 'True'
+            else:
+                is_notary.value = 'False'
+            if request.form.get('is_arbiter') == 'True':
+                is_arbiter.value = 'True'
+            else:
+                is_arbiter.value = 'False'
         try:
             dbsession.commit()
         except:
@@ -1126,6 +1139,10 @@ def setup(page=''):
             app.roStorageDB.Config.name == "wallet_seed").first()
         stratum_servers = dbsession.query(app.roStorageDB.Config.value).filter(
             app.roStorageDB.Config.name == "stratum_servers").all()
+        is_notary = dbsession.query(app.roStorageDB.Config.value).filter(
+            app.roStorageDB.Config.name == "is_notary").first()
+        is_arbiter = dbsession.query(app.roStorageDB.Config.value).filter(
+            app.roStorageDB.Config.name == "is_arbiter").first()
         dbsession.close()
         if page == '':
             return render_template('setup.html', displayname=displayname, pgpkeyid=pgpkeyid, hubnodes=hubnodes, notaries=notaries)
@@ -1136,7 +1153,7 @@ def setup(page=''):
         elif page == 'security':
             return render_template('setup-security.html', message_retention=message_retention, accept_unsigned=accept_unsigned.value)
         elif page == 'trading':
-            return render_template('setup-trading.html', notaries=notaries)
+            return render_template('setup-trading.html', notaries=notaries,is_notary=is_notary,is_arbiter=is_arbiter)
         elif page == 'bitcoin':
             return render_template('setup-bitcoin.html', wallet_seed=wallet_seed, stratum_servers=stratum_servers)
         elif page == 'advanced':
@@ -1231,6 +1248,9 @@ def login():
 # TODO: Move this whole function to client_backend and run as a small
 # thread with a listener on a dedicated port
 
+@app.route('/test')
+def test():
+    return render_template('test.html')
 
 @app.route('/pks/lookup')
 def pks_lookup():

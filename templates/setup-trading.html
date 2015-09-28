@@ -8,7 +8,9 @@
     <form method="post" action="{{ url_for('setup') }}/trading">
     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
         <table cellpadding="10">
-            <tr><td><label>Notaries :</label></td> <td><textarea name="notaries" cols="44" rows = "4" class="inputs" placeholder="Notary keys" required>{% for notary in notaries %}{{ notary[0] }}&#013;&#010;{% endfor %}</textarea></td></tr>
+            <tr><td><label>Act as a Notary :</label></td> <td><input type="checkbox" name="is_notary" value="True" {% if is_notary[0] == 'True' %}checked{% endif %}></td></tr>
+            <tr><td><label>Act as an Arbiter :</label></td> <td><input type="checkbox" name="is_arbiter" value="True" {% if is_arbiter[0] == 'True' %}checked{% endif %}></td></tr>
+            <tr><td><label>Notaries :</label></td> <td><textarea name="notaries" cols="44" rows = "4" class="inputs" placeholder="Notary keys" >{% for notary in notaries %}{{ notary[0] }}&#013;&#010;{% endfor %}</textarea></td></tr>
             <tr><td><div style="btn"><button type="submit" class = "btn">Update</button></div></td></tr>
         </table></form>
 

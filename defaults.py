@@ -153,6 +153,18 @@ def create_defaults(db, session, pgp_keyid, display_name, publish_id, btc_master
         new_conf_item.value = "1234567812345678"
         new_conf_item.displayname = "Market Feedback Helpers"
         session.add(new_conf_item)
+        new_conf_item = db.Config(name="is_looking_glass")
+        new_conf_item.value = "False"
+        new_conf_item.displayname = "Looking Glass mode"
+        session.add(new_conf_item)
+        new_conf_item = db.Config(name="is_notary")
+        new_conf_item.value = "False"
+        new_conf_item.displayname = "Act as a notary"
+        session.add(new_conf_item)
+        new_conf_item = db.Config(name="is_arbiter")
+        new_conf_item.value = "False"
+        new_conf_item.displayname = "Act as an arbiter"
+        session.add(new_conf_item)
         session.commit()
         # Now static data
         # TODO: Countries

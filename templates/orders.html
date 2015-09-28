@@ -18,12 +18,45 @@
         <th width="100px"><strong>Payment</strong></th>
         </tr>
         {% for o in orders %}
-        <tr onclick="location.href='/orders/view/{{ o.id }}'">
-        <td >{{ o.order_date.strftime('%Y-%m-%d') }}</td>
-        <td >{{ o.title }}</td>
-        <td ><a href="/profile/{{ o.seller_key}}"><img src="data:image/png;base64,{{o.seller_key|key_to_identicon}}"> {{ o.seller_key|display_name }}</a></td>
-        <td >{{ o.order_status }}</td>
-        <td>{{ o.payment_status }}</td>
+        <tr>
+        <td >
+            <div style="position:relative">
+            <a class = "cell_link" href="/orders/view/{{ o.id }}"></a>{{ o.order_date.strftime('%Y-%m-%d') }}
+            </div>
+        </td>
+        <td >
+            <div style="position:relative">
+            <a class = "cell_link" href="/orders/view/{{ o.id }}"></a>{{ o.title }}
+            </div>
+        </td>
+        <td >
+            <div style="position:relative">
+            {% if view == 'buying' %}
+                <a class = "in_cell_link" href="/profile/{{ o.seller_key}}"><img src="data:image/png;base64,{{o.seller_key|key_to_identicon}}"> {{ o.seller_key|display_name }}</a>
+            {% elif view == 'selling' %}
+               <a class = "in_cell_link" href="/profile/{{ o.buyer_key}}"><img src="data:image/png;base64,{{o.buyer_key|key_to_identicon}}"> {{ o.buyer_key|display_name }}</a>
+            {% endif %}
+
+            <a class = "cell_link" href="/orders/view/{{ o.id }}"></a>
+            </div>
+        </td>
+        <td >
+            <div style="position:relative">
+            <a class = "cell_link" href="/orders/view/{{ o.id }}"></a>{{ o.order_status }}
+            </div>
+        </td>
+        <td>
+            <div style="position:relative">
+            <a class = "cell_link" href="/orders/view/{{ o.id }}"></a>{{ o.payment_status }}
+            </div>
+        </td>
+
+
+
+
+
+
+
         </tr>
         {% endfor %}
         <tr>
