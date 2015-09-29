@@ -31,7 +31,7 @@ import StringIO
 app = Flask(__name__)
 # (8Mb maximum upload to local webserver) - make sure we dont need to use the disk
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
-# app.config['SERVER_NAME'] = 'xxxxxxxxx.onion:5000' # Set this if running Looking Glass mode TODO : automate
+#app.config['SESSION_COOKIE_DOMAIN'] = 'xxxxxxxx.onion'
 looking_glass = False
 messageQueue = Queue.Queue()    # work Queue for mqtt client thread
 messageQueue_res = Queue.Queue()    # Results Queue for mqtt client thread
@@ -79,7 +79,7 @@ def generate_csrf_token():
 ######## STATUS, PAGE GLOBALS AND UPDATES ################################
 @app.before_request
 def looking_glass_session(): # this session cookie will be used for looking glass mode
-    if session.get('lg','') == '':
+    if session.get('lg') == '':
         session['lg']= ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16))
 
 @app.before_request
@@ -126,6 +126,20 @@ def display_name(value):
     filter = value
     dname = dbsession.query(app.roStorageDB.cacheDirectory).filter_by(key_id=filter).first()
     return (dname.display_name) # TODO - check the contacts list and also add status flags/verfication/trust status
+
+@app.template_filter('key_to_feedback_label')
+# take a pgp keyid and return a feedback label html block
+def key_to_feedback_label(value):
+    if value == '':
+        return
+    dbsession = app.roStorageDB.DBSession()
+    filter = value
+#    feedback = dbsession.query(app.roStorageDB.cacheDirectory).filter_by(key_id=filter).first()# TODO - aggregate feedback from UPLs
+    ########
+    rating = "N"
+    txcount = "A"
+    color = "gray"
+    return (rating,txcount,color)  # shitty tuple - lazy '
 
 @app.template_filter('key_to_identicon')
 # take a pgp keyid and return an identicon PNG
@@ -1332,7 +1346,7 @@ def client_shutdown(sender, **extra):
 
 def run():
     app.storageThreadID = ""
-    app.looking_glass = False
+    app.looking_glass = True
     if not app.looking_glass:
         app.add_url_rule('/', 'home', home)
 
