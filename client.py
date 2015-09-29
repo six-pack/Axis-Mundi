@@ -1346,7 +1346,7 @@ def client_shutdown(sender, **extra):
 
 def run():
     app.storageThreadID = ""
-    app.looking_glass = True
+    app.looking_glass = False
     if not app.looking_glass:
         app.add_url_rule('/', 'home', home)
 
