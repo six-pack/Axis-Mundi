@@ -8,7 +8,7 @@ from os.path import expanduser, isfile, isdir, dirname
 from os import makedirs, sys, unsetenv, putenv, sep
 import string
 import random
-from storage import Storage, SqlalchemyOrmPage
+from storage import Storage, SqlalchemyOrmPage, memory_cache
 from client_backend import messaging_loop
 import Queue
 from utilities import queue_task, encode_image, generate_seed, current_time, get_age, resource_path, os_is_tails, replace_in_file
@@ -81,6 +81,7 @@ def generate_csrf_token():
 def looking_glass_session(): # this session cookie will be used for looking glass mode
     if session.get('lg') == '':
         session['lg']= ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16))
+        print "Setting new sessionid..."
 
 @app.before_request
 def get_connection_status():
@@ -122,9 +123,10 @@ def from_json(value):
 def display_name(value):
     if value == '':
         return
-    dbsession = app.roStorageDB.DBSession()
+    dbsession = app.memory_cache.DBSession()
     filter = value
-    dname = dbsession.query(app.roStorageDB.cacheDirectory).filter_by(key_id=filter).first()
+    dname = dbsession.query(app.memory_cache.cacheFullDirectory).filter_by(key_id=filter).first()
+    print dname.__dict__
     return (dname.display_name) # TODO - check the contacts list and also add status flags/verfication/trust status
 
 @app.template_filter('key_to_feedback_label')
@@ -132,13 +134,15 @@ def display_name(value):
 def key_to_feedback_label(value):
     if value == '':
         return
-    dbsession = app.roStorageDB.DBSession()
+    dbsession = app.memory_cache.DBSession()
     filter = value
 #    feedback = dbsession.query(app.roStorageDB.cacheDirectory).filter_by(key_id=filter).first()# TODO - aggregate feedback from UPLs
+    dname = dbsession.query(app.memory_cache.cacheFullDirectory).filter_by(key_id=filter).first()
     ########
     rating = "N"
     txcount = "A"
     color = "gray"
+
     return (rating,txcount,color)  # shitty tuple - lazy '
 
 @app.template_filter('key_to_identicon')
@@ -466,15 +470,14 @@ def directory(page=1,filter=''):
         return app.login_manager.unauthorized()
     if request.method == "POST":
         filter = request.form['search_name']
-    dbsession = app.roStorageDB.DBSession()
+    dbsession = app.memory_cache.DBSession()
     if filter:
-        directory = dbsession.query(app.roStorageDB.cacheDirectory).filter(app.roStorageDB.cacheDirectory.display_name.like("%"+filter+"%")).order_by(
-            app.roStorageDB.cacheDirectory.display_name.asc())
+        directory = dbsession.query(app.memory_cache.cacheFullDirectory).filter(app.memory_cache.cacheFullDirectory.display_name.like("%"+filter+"%")).order_by(
+            app.memory_cache.cacheFullDirectory.display_name.asc())
     else:
-        directory = dbsession.query(app.roStorageDB.cacheDirectory).order_by(
-            app.roStorageDB.cacheDirectory.display_name.asc())
-    page_results = SqlalchemyOrmPage(
-        directory, page=page, items_per_page=pager_items * 2)
+        directory = dbsession.query(app.memory_cache.cacheFullDirectory).order_by(
+            app.memory_cache.cacheFullDirectory.display_name.asc())
+    page_results = SqlalchemyOrmPage(directory, page=page, items_per_page=pager_items * 2)
     checkEvents()
     return render_template('directory.html', directory=page_results)
 
@@ -1226,6 +1229,12 @@ def login():
         if not app.roStorageDB.Start():
             flash('You were authenticated however there is a problem with the storage database', category="error")
             return render_template('login.html', key_list=private_keys)
+        app.memory_cache = memory_cache(app.roStorageDB)
+        app.memory_cache.rebuild()
+        dbsession = app.memory_cache.DBSession()
+        cache_dir_res = dbsession.query(app.memory_cache.cacheFullDirectory).all()
+        for row in cache_dir_res:
+            print row.display_name
         user = User.get(app.pgp_keyid)
         login_user(user)
         session['lg']= ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16)) # give user a new session, why not?

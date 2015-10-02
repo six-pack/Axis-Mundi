@@ -9,8 +9,60 @@ from os.path import isfile
 import paginate
 from platform import system as get_os
 
+class memory_cache(): # In-memory cache db to hold a potentially large user directory comprising both the AM user directory and supplementary lists from notaries and other UPLs
 
-class Storage():
+    Base = declarative_base()
+
+    def __init__(self,main_db):
+        self.main_db = main_db # This will be set to the main local RO database in the front end client
+        self.engine = create_engine('sqlite://',connect_args={'check_same_thread': False},poolclass=StaticPool) # simple in-memory db
+        self.Base.metadata.create_all(self.engine)
+        self.Base.metadata.bind = self.engine
+        self.DBSession = sessionmaker(bind=self.engine)
+        self.rebuild()
+
+    class cacheFullDirectory(Base): # This table  contains the aggregate of all user publihed lists and notary lists subscribed to
+        __tablename__ = 'cachefulldirectory'
+        key_id = Column(String(16), primary_key=True, nullable=False)
+        updated = Column(DateTime, nullable=False)
+        display_name = Column(String())
+        is_active_user = Column(Boolean)
+        is_seller = Column(Boolean)
+        is_notary = Column(Boolean)
+        is_arbiter = Column(Boolean)
+        is_contact = Column(Boolean)
+        is_looking_glass = Column(Boolean)
+        aggregate_transactions = Column(Integer)
+        aggregate_feedback = Column(String(4))
+
+    def rebuild(self):
+        print "Rebuilding front end in-memory cache db"
+        session = self.DBSession()
+        session.query(self.cacheFullDirectory).delete() # full rebuild so clear the table
+        session.commit()
+        main_session = self.main_db.DBSession()
+        # First copy over the current cacheDirectory as is
+        cache_dir_res = main_session.query(self.main_db.cacheDirectory).all()
+        for row in cache_dir_res:
+            cache_dir_entry = self.cacheFullDirectory(key_id=row.key_id,
+                                                updated=row.updated,
+                                                display_name=row.display_name,
+                                                is_active_user = True, # Since this is from the directory it must be an active user
+                                                is_seller = row.is_seller,
+                                                is_notary = row.is_notary,
+                                                is_arbiter = row.is_arbiter,
+                                                is_contact = False, # TODO: xref contacts table
+                                                is_looking_glass = row.is_looking_glass)
+                                                # aggregate_transactions = # TODO caclulate based on available cached UPL's
+                                                # aggregate_feedback = # TODO caclulate based on available cached UPL's
+            session.add(cache_dir_entry)
+        session.commit()
+        # Now read in keyids from UPLs including notary lists, add these and update where necessary
+        pass
+        # Now read in keyids from the users contacts, add these and update where necessary (usually the contact will also be in teh directory but not always)
+        pass
+
+class Storage(): # Main, persistent, encrypted local database
 
     def __init__(self, passphrase, database, appdir):
         self.database = database
@@ -205,15 +257,16 @@ class Storage():
         print dbfilepath
         # DATABASE ENCRYPTION CAN BE DISABLED/ENABLED HERE
         if get_os() == 'Windows':
-            # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
             self.engine = create_engine(
                 r'sqlite+pysqlcipher://:'+passphrase+'/' + dbfilepath, connect_args={'check_same_thread': False}) # Encrypted database
+                # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
 #                r'sqlite:///' + dbfilepath, connect_args={'check_same_thread': False}) # Cleartext database (testing)
             #  poolclass=StaticPool
         else:
-            # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
+
             self.engine = create_engine(
                 'sqlite+pysqlcipher://:'+passphrase+'//' + dbfilepath, connect_args={'check_same_thread': False}) # Encrypted database
+                # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
 #                'sqlite:////' + dbfilepath, connect_args={'check_same_thread': False}) # Cleartext database (testing)
             #  poolclass=StaticPool
         try:
