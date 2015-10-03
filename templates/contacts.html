@@ -2,9 +2,10 @@
 {% set active_page = "Contacts" %}
 
 {% block content %}
-  <h2>Contacts</h2>
+  <h2>Verified Contacts</h2>
 
     <div class="datagrid">
+    <p>You should only add contacts here if you are fairly sure of their anonymous identity. Any Axis Mundi user added to your contacts list will have a small shield icon before their name whenever it is displayed.</p>
     <a class="btnblu" href="{{ url_for('new_contact') }}">New Contact</a>
     <br>
     <br>
@@ -16,7 +17,7 @@
         </tr>
         {% for contact in contacts %}
         <tr>
-        <td width="350px"><a href="{{ url_for('profile')}}{{contact.contact_key}}"><div class="div_cell_link"><img src="data:image/png;base64,{{contact.contact_key|key_to_identicon}}"> {{contact.contact_name}}</div></a></td>
+        <td width="350px"><a href="{{ url_for('profile')}}{{contact.contact_key}}"><div class="div_cell_link"> <img src="/static/img/contact.png" width="24" height="24"> <img src="data:image/png;base64,{{contact.contact_key|key_to_identicon}}"> {{contact.contact_name}}</div></a></td>
         <td width="170px"><a href="{{ url_for('profile')}}{{contact.contact_key}}"><div class="div_cell_link">{{contact.contact_key}}</div></a></td>
         <td align="center">
             <div style="position:relative">

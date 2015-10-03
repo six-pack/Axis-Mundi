@@ -15,7 +15,7 @@
                 <input type="hidden" name="action" value="add">
                 <input type="hidden" name="pgpkey_id" value="{{pgp_key}}"><input type="hidden" name="listing_id" value="{{item.id}}"><div style="btn"><button type="submit" class = "btnblu">Add to Cart</button></div></form></td></tr>
             <tr><td width="150"><B>Quantity Available </b></td><td width="250">{{item.qty_available}}</td></tr>
-            <tr><td width="150"><B>Seller</b></td><td width="250"><a href="/profile/{{ pgp_key }}"><img src="data:image/png;base64,{{pgp_key|key_to_identicon}}"> {{ pgp_key|display_name }} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" /></a></td><td>{%if not looking_glass%}<a class="btn" href="{{ url_for('new_message')}}{{pgp_key}}">Send Message</a>{%endif%}</td></tr>
+            <tr><td width="150"><B>Seller</b></td><td width="250"><a href="/profile/{{ pgp_key }}"><img src="data:image/png;base64,{{pgp_key|key_to_identicon}}"> {{ pgp_key|display_name }} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" style="vertical-align: top;"/></a></td><td>{%if not looking_glass%}<a class="btn" href="{{ url_for('new_message')}}{{pgp_key}}">Send Message</a>{%endif%}</td></tr>
             <tr><td width="150"><B>Ships From</b></td><td width="250">Not Specified</td></tr>
             <tr><td width="150"><B>Ships To</b></td><td width="250">Worldwide</td></tr>
 

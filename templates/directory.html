@@ -18,26 +18,28 @@
                     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
                     Search Filter
                     &nbsp;&nbsp;&nbsp;<input type="text" name="search_name" size="30" class="inputs" placeholder="User to search for"  value="{{ search_filter }}">
-                    &nbsp;<input type="checkbox" name="filter_sellers" value="yes">Only display sellers
+                    &nbsp;<input type="checkbox" name="filter_sellers" value="yes">Sellers only
+                    &nbsp;<input type="checkbox" name="filter_active" value="yes">Active only
                     <button type="submit" class = "btnblu" name = "action" style="float:right" value="update_filter">Update Filter</button>
                 </div>
 
             </td>
         </tr>
         <tr>
-        <th width="350px"><strong>Name</strong></th>
-        <th width="170px"><strong>PGP Key ID</strong></th>
+        <th width="450px"><strong>Name</strong></th>
+        <th width="150px"><strong>PGP Key ID</strong></th>
         <th ><strong>Flags</strong></th>
         </tr>
         {% for entry in directory %}
           {% set feedback = entry.key_id|key_to_feedback_label %}
         <tr>
-        <td width="350px"><a href="{{ url_for('profile')}}{{entry.key_id}}">
-            <div class="div_cell_link"><img src="data:image/png;base64,{{entry.key_id|key_to_identicon}}"> {{entry.display_name}} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" /></div>
+        <td width="450px"><a href="{{ url_for('profile')}}{{entry.key_id}}">
+            <div class="div_cell_link">{% if entry.is_contact == True %} <img src="/static/img/contact.png" width="24" height="24">{%endif%} <img src="data:image/png;base64,{{entry.key_id|key_to_identicon}}"> {{entry.display_name}} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" style="vertical-align: top;"/>  </div>
           </a>
         </td>
         <td width="170px"><a href="{{ url_for('profile')}}{{entry.key_id}}"><div class="div_cell_link">{{entry.key_id}}</div></a></td>
         <td align="center"><a href="{{ url_for('profile')}}{{entry.key_id}}"><div class="div_cell_link">
+            {% if entry.is_contact == True %}<img src="/static/img/contact.png" width="24" height="24"> {%endif%}
             {% if entry.is_active_user == True %}<img src="/static/img/user.png" width="24" height="24"> {%endif%}
             {% if entry.is_seller == True %}<img src="/static/img/cart.png" width="24" height="24"> {%endif%}
             {% if entry.is_notary == True %}<img src="/static/img/notary.png" width="24" height="24"> {%endif%}

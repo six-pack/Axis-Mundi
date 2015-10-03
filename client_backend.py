@@ -283,34 +283,38 @@ class messaging_loop(threading.Thread):
                 current_stage_sig_check = self.gpg.verify(current_stage_signed)
 #                print "current_stage_signed"
 #                print current_stage_signed
-                while current_stage_sig_check.fingerprint: #  using fingerprint means we must already have the pgpkey which we will if received the order message over the network
-                                                        # TODO get pgp key first if needed (like with messages) so we can process orders out of band (like email)
-                    current_stage_verified = json_from_clearsigned(current_stage_signed)
-                    try:
-                        order_stage = (json.loads(current_stage_verified))
-                    except:
-                        print "Error unable to decode json order stage message " + current_stage_verified
-                        return False
-                    order_stages.append(order_stage)
-                    # see if there is a parent block
-                    try:
-                        current_stage_signed = str(order_stage['parent_contract_block'])#.replace('\\n','\n') # process the next most outermost clearsigned message
-                    except KeyError:
-                        # This will happen once we reach the top of the chain
-                        # or it could be some invalid crap to be dropped
-                        current_stage_signed = ''
-#                    current_stage_signed = re.sub('(?m)^- ',"",current_stage_signed) # pgp wont do this for us
-                    print "Verifying nested signature"
-                    print current_stage_signed
-                    current_stage_sig_check = self.gpg.verify(current_stage_signed)
-                order_stages.reverse()
-                print "Order message contains a contract chain of " + str(len(order_stages)) + " blocks"
-                for stage in order_stages:
-                    print "-------------------------------------------------------------------------------"
-                    try:
-                        print 'Order Stage: ' + stage['order_status'] +' '+ str(stage)
-                    except:
-                        print 'Item: ' + str(stage)
+                try:
+                    while current_stage_sig_check.fingerprint: #  using fingerprint means we must already have the pgpkey which we will if received the order message over the network
+                                                            # TODO get pgp key first if needed (like with messages) so we can process orders out of band (like email)
+                        current_stage_verified = json_from_clearsigned(current_stage_signed)
+                        try:
+                            order_stage = (json.loads(current_stage_verified))
+                        except:
+                            print "Error unable to decode json order stage message " + current_stage_verified
+                            return False
+                        order_stages.append(order_stage)
+                        # see if there is a parent block
+                        try:
+                            current_stage_signed = str(order_stage['parent_contract_block'])#.replace('\\n','\n') # process the next most outermost clearsigned message
+                        except KeyError:
+                            # This will happen once we reach the top of the chain
+                            # or it could be some invalid crap to be dropped
+                            current_stage_signed = ''
+    #                    current_stage_signed = re.sub('(?m)^- ',"",current_stage_signed) # pgp wont do this for us
+                        print "Verifying nested signature"
+                        print current_stage_signed
+                        current_stage_sig_check = self.gpg.verify(current_stage_signed)
+                    order_stages.reverse()
+                    print "Order message contains a contract chain of " + str(len(order_stages)) + " blocks"
+                    for stage in order_stages:
+                        print "-------------------------------------------------------------------------------"
+                        try:
+                            print 'Order Stage: ' + stage['order_status'] +' '+ str(stage)
+                        except:
+                            print 'Item: ' + str(stage)
+                except:
+                    print "Error during order decode...discarding order message"
+                print str(current_stage_signed)
                 #status = order_stages['order_status']# order_stages[0]['order_status']
                 flash_msg = queue_task(
                     0, 'flash_message', 'Order message received from ' + message.sender)

@@ -41,7 +41,7 @@ class memory_cache(): # In-memory cache db to hold a potentially large user dire
         session.query(self.cacheFullDirectory).delete() # full rebuild so clear the table
         session.commit()
         main_session = self.main_db.DBSession()
-        # First copy over the current cacheDirectory as is
+        # 1st copy over the current cacheDirectory as is
         cache_dir_res = main_session.query(self.main_db.cacheDirectory).all()
         for row in cache_dir_res:
             cache_dir_entry = self.cacheFullDirectory(key_id=row.key_id,
@@ -51,16 +51,24 @@ class memory_cache(): # In-memory cache db to hold a potentially large user dire
                                                 is_seller = row.is_seller,
                                                 is_notary = row.is_notary,
                                                 is_arbiter = row.is_arbiter,
-                                                is_contact = False, # TODO: xref contacts table
                                                 is_looking_glass = row.is_looking_glass)
                                                 # aggregate_transactions = # TODO caclulate based on available cached UPL's
                                                 # aggregate_feedback = # TODO caclulate based on available cached UPL's
             session.add(cache_dir_entry)
         session.commit()
+        # Now read in keyids from the users contacts, add these and update where necessary (usually the contact will also be in teh directory but not always)
+        contacts_res = main_session.query(self.main_db.Contacts).all()
+        for row in contacts_res:
+            qry_res = session.query(self.cacheFullDirectory).filter_by(key_id=row.contact_key).first()
+            if qry_res:
+                qry_res.is_contact = True
+            else:
+                contact = self.cacheFullDirectory(key_id=row.contact_key, is_contact = True, display_name = row.display_name)
+                session.add(contact)
+        session.commit()
         # Now read in keyids from UPLs including notary lists, add these and update where necessary
         pass
-        # Now read in keyids from the users contacts, add these and update where necessary (usually the contact will also be in teh directory but not always)
-        pass
+
 
 class Storage(): # Main, persistent, encrypted local database
 

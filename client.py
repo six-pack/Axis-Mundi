@@ -541,11 +541,14 @@ def profile(keyid=None):
             flash("Cached profile has expired, the latest profile has been requested in the background. Refresh the page.", category="message")
             if request.args.get('wait'):
                 return redirect('/profile/' + keyid) # Extra redirect to remove the ?wait=x from the URL
+    cachedbsession = app.memory_cache.DBSession()
+    directory_entry = cachedbsession.query(app.memory_cache.cacheFullDirectory).filter(app.memory_cache.cacheFullDirectory.key_id == keyid).one()
+    # TODO make sure is_notary and is_arbiter are derived from the (signed) profile and not from the (unsigned) directory entry
     if app.looking_glass:
         listings_data = dbsession.query(app.roStorageDB.cacheItems).filter_by(key_id=keyid).all()
-        return render_template('profile.html', profile=profile,listings=listings_data) # pass list of seller items if any in looking glass mode
+        return render_template('profile.html', profile=profile,listings=listings_data,entry=directory_entry) # pass list of seller items if any in looking glass mode
     else:
-        return render_template('profile.html', profile=profile)
+        return render_template('profile.html', profile=profile, entry=directory_entry)
 
 
 @app.route('/contacts')
@@ -586,6 +589,7 @@ def new_contact(contact_pgpkey=""):
         # we will wait for 0.1 seconds here because usually this is long enough
         # to get the queue response back
         checkEvents()
+        app.memory_cache.rebuild() # TODO - we don't need to do a full rebuild necessarily
         return redirect(url_for('contacts'))
     else:
         dbsession = app.roStorageDB.DBSession()
