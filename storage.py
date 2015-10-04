@@ -112,6 +112,20 @@ class Storage(): # Main, persistent, encrypted local database
         contact_name = Column(String(64))
         contact_flags = Column(String(1024))
 
+    class UPL_lists(Base):
+        __tablename__ = 'upl_lists'
+        id = Column(Integer, primary_key=True)
+        author_key_id = Column(String(16), nullable=False)
+        name = Column(String(64))
+        description = Column(String(255))
+        type = Column(String(16))
+
+    class UPL(Base):
+        __tablename__ = 'upl'
+        key_id = Column(String(16), nullable=False, primary_key=True)
+        upl_list = Column(Integer, ForeignKey('upl_lists.id'),primary_key=True)
+        json_data = Column(String(4096))        # 4kb limit for UPL data
+
     class Listings(Base):
         __tablename__ = 'listings'
         id = Column(Integer, primary_key=True)
@@ -315,6 +329,7 @@ class Storage(): # Main, persistent, encrypted local database
         try:
             #            self.engine.close()
             self.engine.remove()
+            # TODO - compress database on exit using: self.engine.execute("VACUUM")
         except:
             print "Error removing DB session"
 

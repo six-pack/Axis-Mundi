@@ -493,6 +493,20 @@ def listings(page=1):
         listings, page=page, items_per_page=pager_items)
     return render_template('mylistings.html', listings=page_results)
 
+@app.route('/lists')
+@app.route('/lists/<int:page>')
+@login_required
+def upl(page=1):
+    checkEvents()
+    dbsession = app.roStorageDB.DBSession()
+    my_lists = dbsession.query(app.roStorageDB.UPL_lists).filter_by(author_key_id=app.pgp_keyid).all()
+    subscribed_lists = dbsession.query(app.roStorageDB.UPL_lists).filter(app.roStorageDB.UPL_lists.author_key_id != app.pgp_keyid).all()
+    if subscribed_lists:
+        page_results = SqlalchemyOrmPage(
+        subscribed_lists, page=page, items_per_page=pager_items)
+        return render_template('lists.html', subscribed_lists=page_results)
+    else:
+        return render_template('lists.html', my_lists=my_lists, subscribed_lists=subscribed_lists)
 
 @app.route('/profile/')
 @app.route('/profile/<string:keyid>')

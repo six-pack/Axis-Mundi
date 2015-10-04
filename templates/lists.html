@@ -1,0 +1,80 @@
+{% extends "layout.html" %}
+{% set active_page = "People" %}
+
+{% block content %}
+<h2>User Published Lists</h2>
+
+<div class="datagrid">
+    <p>Here you can subscribe to user lists,including notary lists, published by other Axis Mundi users and also create and manage any of your own lists that you wish to publish.</p>
+    <h5>My published lists</h5>
+    <div class="round_box">
+        {% if not my_lists %} You are not currently maintaining any lists{%else%}
+
+        <table cellpadding="10" class="stripetable">
+            <tr>
+            <th width="250px"><strong>Title</strong></th>
+            <th width="450px"><strong>Description</strong></th>
+            <th width="200px"><strong>Actions</strong></th>
+            </tr>
+            {% for o in my_lists %}
+            <tr>
+            <td width="250px">
+                <div style="position:relative">
+                 <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}" >{{ o.name }}</a>
+                 </div>
+            </td>
+            <td width="450px">
+                <div style="position:relative">
+                <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}" > {{ o.description }}</a>
+                </div>
+            </td>
+            <td width="200px">
+                <div style="position:relative">
+                <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}" >xxx</a>
+                </div>
+            </td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        {%endif%}
+    </div>
+    <h5>Lists I am subscribed to</h5>
+    <div class="round_box">
+        {% if not subscribed_lists %} You are not currently subscribed to any lists{%else%}
+
+        <table cellpadding="10" class="stripetable">
+            <tr>
+            <th width="250px"><strong>Title</strong></th>
+            <th width="450px"><strong>Description</strong></th>
+            <th width="200px"><strong>Actions</strong></th>
+            </tr>
+            {% for o in subscribed_lists %}
+            <tr>
+            <td width="250px">
+                <div style="position:relative">
+                 <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}" >{{ o.name }}</a>
+                 </div>
+            </td>
+            <td width="450px">
+                <div style="position:relative">
+                <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}" > {{ o.description }}</a>
+                </div>
+            </td>
+            <td width="200px">
+                <div style="position:relative">
+                <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}" >xxx</a>
+                </div>
+            </td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        {%endif%}
+    </div>
+
+
+</div>
+
+
+{% endblock %}
