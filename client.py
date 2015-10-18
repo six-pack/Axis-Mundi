@@ -1495,9 +1495,9 @@ def run():
         app.appdir = app.homedir + '/.dnmng'  # This is the default appdir location
         if os_is_tails():
             # If TAILS is being used and persistence is enabled we will use it as the default location
-            if isdir('/home/amnesia/Persistence'):
-                print "Tails persistence detected, Axis Mundi data store location defaulting to /home/amnesia/Persistence folder"
-                app.appdir = app.homedir + '/Persistence/.dnmng'  # This is the default appdir location
+            if isdir('/home/amnesia/Persistent'):
+                print "Tails persistence detected, Axis Mundi data store location defaulting to /home/amnesia/Persistent folder"
+                app.appdir = app.homedir + '/Persistent/.dnmng'  # This is the default appdir location
         # we want to encrypt the secret with throw keys
         app.gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg', options={
                             '--throw-keyids', '--no-emit-version', '--trust-model=always'})
