@@ -1,5 +1,5 @@
 flask
-flask-login
+flask-login>=0.3
 paginate
 sqlalchemy
 pycountry
@@ -10,4 +10,3 @@ pybitcointools
 pillow
 pysqlcipher
 json2html
-grequests

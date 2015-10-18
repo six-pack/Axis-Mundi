@@ -301,7 +301,7 @@ def export_listings():
 @app.route('/listings/view/<string:keyid>/<string:id>')
 #@login_required
 def external_listings(keyid='none', id='none'):
-    if not current_user.is_authenticated() and not app.looking_glass:
+    if not current_user.is_authenticated and not app.looking_glass:
         return app.login_manager.unauthorized()
     #todo remove listingscache (completely) and just work with itemcache
     # View another users listings or listing
@@ -407,7 +407,7 @@ def external_listings(keyid='none', id='none'):
 @app.route('/cart', methods=["GET", "POST"])
 #@login_required
 def cart(action=''):
-    if not current_user.is_authenticated() and not app.looking_glass:
+    if not current_user.is_authenticated and not app.looking_glass:
         return app.login_manager.unauthorized()
     # todo check items from same seller are in same currency or deal with it
     dbsession = app.roStorageDB.DBSession()
@@ -503,7 +503,7 @@ def not_yet():
 @app.route('/directory/<int:page>',methods=["GET", "POST"])
 #@login_required
 def directory(page=1,filter=''):
-    if not current_user.is_authenticated() and not app.looking_glass:
+    if not current_user.is_authenticated and not app.looking_glass:
         return app.login_manager.unauthorized()
     filter_sellers = False
     filter_active=False
@@ -594,7 +594,7 @@ def upl_detail(key='',id=0,page=1):
 @app.route('/profile/<string:keyid>')
 #@login_required
 def profile(keyid=None):
-    if not current_user.is_authenticated() and not app.looking_glass:
+    if not current_user.is_authenticated and not app.looking_glass:
         return app.login_manager.unauthorized()
     # TODO:Check to see if this user is in our contacts list
     # TODO:Message to client_backend to SUB target user profile and target
@@ -1281,7 +1281,7 @@ def setup(page=''):
 @app.route('/about')
 #@login_required
 def about():
-    if not current_user.is_authenticated() and not app.looking_glass:
+    if not current_user.is_authenticated and not app.looking_glass:
         return app.login_manager.unauthorized()
     checkEvents()
     return render_template('about.html')
