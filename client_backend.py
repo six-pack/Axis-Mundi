@@ -336,7 +336,7 @@ class messaging_loop(threading.Thread):
                         print "Warning: Unable to process incoming order message and associated chain - discarding"
                 except:
                     print "Error during order decode...discarding order message"
-                    raise # TODO - disable after debugging
+                    #raise # TODO - disable after debugging
                 print str(current_stage_signed)
                 #status = order_stages['order_status']# order_stages[0]['order_status']
                 flash_msg = queue_task(
