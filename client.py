@@ -27,6 +27,8 @@ import os
 import pydenticon, hashlib
 from PIL import Image
 import StringIO
+import json2html
+import datetime
 
 app = Flask(__name__)
 # (8Mb maximum upload to local webserver) - make sure we dont need to use the disk
@@ -84,11 +86,30 @@ def looking_glass_session(): # this session cookie will be used for looking glas
         print "Setting new sessionid..."
 
 @app.before_request
+# return a dict with  the current exchange rates
+def get_btc_x(): # TODO: Move this somewhere where it doesnt run on every request - for now check db no more than once every 60 secs
+    if app.SetupDone:
+        if get_age(app.btc_x_rates['updated']) > 60:
+            btc_x=dict()
+            try:
+                dbsession = app.roStorageDB.DBSession()
+            except:
+                return
+            currency_res = dbsession.query(app.roStorageDB.currencies).all()
+            for currency in currency_res:
+                rate = round(float(currency.exchange_rate),2)
+                code = currency.code
+                btc_x[code]=rate
+            btc_x['updated']=datetime.datetime.utcnow()
+            app.btc_x_rates = btc_x
+    g.btc_x = app.btc_x_rates
+
+@app.before_request
 def get_connection_status():
     checkEvents()
     g.connection_status = app.connection_status
     # If we are running in Looking Glass mode then check the backend is running - if not redirect to login screen (for now)
-    if app.looking_glass:
+    if app.looking_glass and app.SetupDone:
         try:
             x= app.roStorageDB.DBSession()
         except:
@@ -111,6 +132,14 @@ def inject_mykey():
     return dict(mykey=app.pgp_keyid)
 
 @app.context_processor
+def inject_current_broker():
+    return dict(current_broker=app.current_broker)
+
+@app.context_processor
+def inject_is_online():
+    return dict(online = app.connection_status)
+
+@app.context_processor
 def inject_looking_glass():
     return dict(looking_glass=app.looking_glass)
 
@@ -126,7 +155,7 @@ def display_name(value):
     dbsession = app.memory_cache.DBSession()
     filter = value
     dname = dbsession.query(app.memory_cache.cacheFullDirectory).filter_by(key_id=filter).first()
-    print dname.__dict__
+#    print dname.__dict__
     return (dname.display_name) # TODO - check the contacts list and also add status flags/verfication/trust status
 
 @app.template_filter('key_to_feedback_label')
@@ -137,12 +166,12 @@ def key_to_feedback_label(value):
     dbsession = app.memory_cache.DBSession()
     filter = value
 #    feedback = dbsession.query(app.roStorageDB.cacheDirectory).filter_by(key_id=filter).first()# TODO - aggregate feedback from UPLs
+    # TODO query UPL filtering on keyid and listtype=notary (or do this as part of the directry cache creation which may be more efficient)
     dname = dbsession.query(app.memory_cache.cacheFullDirectory).filter_by(key_id=filter).first()
     ########
     rating = "N"
     txcount = "A"
     color = "gray"
-
     return (rating,txcount,color)  # shitty tuple - lazy '
 
 @app.template_filter('key_to_identicon')
@@ -158,7 +187,7 @@ def key_to_identicon(value,size=20):
                    "rgb(30,179,253)",
                    "rgb(232,77,65)",
                    "rgb(49,203,115)",
-                   "rgb(141,69,170)" ]
+                   "rgb(141,69,170)"]
     background = "rgba(255,255,255,0)"
     generator = pydenticon.Generator(5,5,digest=hashlib.sha256, foreground=foreground, background=background,)
     identicon_png = generator.generate(value, size, size, output_format="png")
@@ -171,8 +200,9 @@ def to_btc(value,currency_code):
     dbsession = app.roStorageDB.DBSession()
     currency_rec = dbsession.query(app.roStorageDB.currencies).filter_by(code=currency_code).first()
     rate = currency_rec.exchange_rate
-    btc_val = str(float(rate) * float(value))
-    return (btc_val) # TODO - convert amount to btc
+    btc_val = str(round(float(value) / float(rate),5))
+    return (btc_val) # c
+
 
 ########## Flask Routes ##################################
 
@@ -180,8 +210,15 @@ def to_btc(value,currency_code):
 #@app.route('/')
 @login_required
 def home():
+    cachedbsession = app.memory_cache.DBSession()
+    directory_entry = cachedbsession.query(app.memory_cache.cacheFullDirectory).filter(app.memory_cache.cacheFullDirectory.key_id == app.pgp_keyid).first()
+    dbsession = app.roStorageDB.DBSession()
+    unpaid_count = dbsession.query(app.roStorageDB.Orders).filter_by(buyer_key=app.pgp_keyid).filter_by(payment_status='unpaid').count()
+    unread_count = dbsession.query(app.roStorageDB.PrivateMessaging).filter_by(recipient_key=app.pgp_keyid).filter_by(message_read=False).filter_by(message_sent=False).count()
+    unprocessed_orders_count = dbsession.query(app.roStorageDB.Orders).filter_by(seller_key=app.pgp_keyid).filter_by(order_status='submitted').count()
+    unshipped_orders_count = dbsession.query(app.roStorageDB.Orders).filter_by(seller_key=app.pgp_keyid).filter_by(order_status='processing').count()
     checkEvents()
-    return render_template('home.html')
+    return render_template('home.html',entry=directory_entry, unpaid_orders=unpaid_count, unread_messages=unread_count,unprocessed_orders=unprocessed_orders_count,unshipped_orders=unshipped_orders_count)
 
 def lg_home():
     checkEvents()
@@ -468,18 +505,35 @@ def not_yet():
 def directory(page=1,filter=''):
     if not current_user.is_authenticated() and not app.looking_glass:
         return app.login_manager.unauthorized()
+    filter_sellers = False
+    filter_active=False
+    dbsession = app.memory_cache.DBSession()
     if request.method == "POST":
         filter = request.form['search_name']
-    dbsession = app.memory_cache.DBSession()
+
     if filter:
         directory = dbsession.query(app.memory_cache.cacheFullDirectory).filter(app.memory_cache.cacheFullDirectory.display_name.like("%"+filter+"%")).order_by(
             app.memory_cache.cacheFullDirectory.display_name.asc())
+        pass
     else:
         directory = dbsession.query(app.memory_cache.cacheFullDirectory).order_by(
             app.memory_cache.cacheFullDirectory.display_name.asc())
+
+    try:
+        filter_sellers  = bool(request.form['filter_sellers'])
+        directory = directory.filter(app.memory_cache.cacheFullDirectory.is_seller==True)
+    except:
+        pass
+
+    try:
+        filter_active  = bool(request.form['filter_active'])
+        directory = directory.filter(app.memory_cache.cacheFullDirectory.is_active_user==True)
+    except:
+        pass
+
     page_results = SqlalchemyOrmPage(directory, page=page, items_per_page=pager_items * 2)
     checkEvents()
-    return render_template('directory.html', directory=page_results)
+    return render_template('directory.html', directory=page_results,search_filter=filter,filter_sellers=filter_sellers,filter_active=filter_active)
 
 
 @app.route('/listings')
@@ -493,20 +547,48 @@ def listings(page=1):
         listings, page=page, items_per_page=pager_items)
     return render_template('mylistings.html', listings=page_results)
 
-@app.route('/lists')
+@app.route('/lists', methods=["GET", "POST"])
 @app.route('/lists/<int:page>')
 @login_required
 def upl(page=1):
-    checkEvents()
+    if request.method == 'POST':
+        name = request.form['name']
+        description = request.form['description']
+        type = request.form['type']
+        list_details = {"name": name, "description": description, "type": type}
+        task = queue_task(1, 'create_list', list_details)
+        messageQueue.put(task)
     dbsession = app.roStorageDB.DBSession()
-    my_lists = dbsession.query(app.roStorageDB.UPL_lists).filter_by(author_key_id=app.pgp_keyid).all()
-    subscribed_lists = dbsession.query(app.roStorageDB.UPL_lists).filter(app.roStorageDB.UPL_lists.author_key_id != app.pgp_keyid).all()
+    my_lists = dbsession.query(app.roStorageDB.UPL_lists).filter_by(author_key_id=app.pgp_keyid)
+    subscribed_lists = dbsession.query(app.roStorageDB.UPL_lists).filter(app.roStorageDB.UPL_lists.author_key_id != app.pgp_keyid)
+    checkEvents()
     if subscribed_lists:
         page_results = SqlalchemyOrmPage(
         subscribed_lists, page=page, items_per_page=pager_items)
-        return render_template('lists.html', subscribed_lists=page_results)
+        return render_template('lists.html', my_lists=my_lists, subscribed_lists=page_results)
     else:
         return render_template('lists.html', my_lists=my_lists, subscribed_lists=subscribed_lists)
+
+@app.route('/lists/user/<string:key>/<int:id>', methods=["GET", "POST"])
+@app.route('/lists/user/<string:key>/<int:id>/<int:page>')
+@login_required
+def upl_detail(key='',id=0,page=1):
+    if request.method == 'POST':
+        pass
+
+    dbsession = app.roStorageDB.DBSession()
+    list_info = dbsession.query(app.roStorageDB.UPL_lists).filter_by(author_key_id=key,id=id).first()
+    if list_info:
+        list_rows = dbsession.query(app.roStorageDB.UPL).filter_by(upl_list=id)
+    else:
+        list_rows = False
+    checkEvents()
+    if list_rows:
+        page_results = SqlalchemyOrmPage(
+        list_rows, page=page, items_per_page=pager_items)
+        return render_template('list.html', list_info=list_info, list_rows=page_results)
+    else:
+        return render_template('list.html', list_info=list_info, list_rows=list_rows)
 
 @app.route('/profile/')
 @app.route('/profile/<string:keyid>')
@@ -514,7 +596,6 @@ def upl(page=1):
 def profile(keyid=None):
     if not current_user.is_authenticated() and not app.looking_glass:
         return app.login_manager.unauthorized()
-    checkEvents()
     # TODO:Check to see if this user is in our contacts list
     # TODO:Message to client_backend to SUB target user profile and target
     # user listings
@@ -526,6 +607,7 @@ def profile(keyid=None):
     dbsession = app.roStorageDB.DBSession()
     profile = dbsession.query(app.roStorageDB.cacheProfiles).filter_by(
         key_id=keyid).first()
+    checkEvents()
     if not profile:  # no existing profile found in cache, request it
         if not request.args.get('wait'):
             timer = 0
@@ -556,7 +638,7 @@ def profile(keyid=None):
             if request.args.get('wait'):
                 return redirect('/profile/' + keyid) # Extra redirect to remove the ?wait=x from the URL
     cachedbsession = app.memory_cache.DBSession()
-    directory_entry = cachedbsession.query(app.memory_cache.cacheFullDirectory).filter(app.memory_cache.cacheFullDirectory.key_id == keyid).one()
+    directory_entry = cachedbsession.query(app.memory_cache.cacheFullDirectory).filter(app.memory_cache.cacheFullDirectory.key_id == keyid).first()
     # TODO make sure is_notary and is_arbiter are derived from the (signed) profile and not from the (unsigned) directory entry
     if app.looking_glass:
         listings_data = dbsession.query(app.roStorageDB.cacheItems).filter_by(key_id=keyid).all()
@@ -646,7 +728,9 @@ def view_message(id):
     dbsession = app.roStorageDB.DBSession()
     message = dbsession.query(
         app.roStorageDB.PrivateMessaging).filter_by(id=id).one()
-    print message.body
+    data = {"id": id}
+    task = queue_task(1, 'read_pm', data) # mark as read in the database
+    messageQueue.put(task)
     return render_template('message.html', message=message)
 
 
@@ -1247,12 +1331,12 @@ def login():
         if not app.roStorageDB.Start():
             flash('You were authenticated however there is a problem with the storage database', category="error")
             return render_template('login.html', key_list=private_keys)
-        app.memory_cache = memory_cache(app.roStorageDB)
+        app.memory_cache = memory_cache(app.roStorageDB,app.pgp_keyid,app.display_name)
         app.memory_cache.rebuild()
-        dbsession = app.memory_cache.DBSession()
-        cache_dir_res = dbsession.query(app.memory_cache.cacheFullDirectory).all()
-        for row in cache_dir_res:
-            print row.display_name
+#        dbsession = app.memory_cache.DBSession()
+#        cache_dir_res = dbsession.query(app.memory_cache.cacheFullDirectory).all()
+#        for row in cache_dir_res:
+#            print row.display_name
         user = User.get(app.pgp_keyid)
         login_user(user)
         session['lg']= ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16)) # give user a new session, why not?
@@ -1356,7 +1440,11 @@ def checkEvents():
         elif results.command == 'flash_error':
             flash(results.data, category="error")
         elif results.command == 'flash_status':
-            app.connection_status = results.data
+            (app.connection_status,app.current_broker) = results.data
+        elif results.command == 'directory_update':
+            # The backend has a directory update, commit it to the in-memory cache
+            # TODO: This section of code should probably be locked
+            app.memory_cache.update(results.data)
         elif results.command == 'resolved_key':
             print "Backend resolved a key for front end " + results.data['keyid']
             app.pgpkeycache[results.data['keyid']] = results.data[
@@ -1420,6 +1508,8 @@ def run():
         app.SetupDone = True  # TODO: A better check is needed here
     # TODO: turn off threading - either move PKS lookup handler to backend
     # thread or inject retreived keys directly into keyring
+    app.btc_x_rates = dict()
+    app.btc_x_rates['updated']=(datetime.datetime.utcnow()-datetime.timedelta(hours=1)) # set to 1 hour ago to force a refresh)
     app.run(debug=True, threaded=True, use_reloader=False, port=5000)
  # use_reloader added to prevent initialization running twice when in flask
  # debug mode

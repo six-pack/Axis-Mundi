@@ -11,12 +11,13 @@
     <div class="datagrid">
         {% set current_seller = cart_items[0]['seller_key_id'] %} <!-- Set first seller key and open display block-->
         {% if global_seller.append(current_seller) %}{% endif %} <!-- hack to get a global for last block -->
+        {% set feedback = current_seller|key_to_feedback_label %}
         <!--open seller block-->
         <div class="round_box">
         <table cellpadding="5">
         <form method="post" action="{{ url_for('cart') }}">
             <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
-            <tr><td colspan="3"><p style="font-size:20px"><b>Seller: <img src="data:image/png;base64,{{current_seller|key_to_identicon}}"> {{current_seller|display_name}} ({{current_seller}})</b></p></td><td colspan="2">
+            <tr><td colspan="3"><p style="font-size:20px"><b>Seller: <img src="data:image/png;base64,{{current_seller|key_to_identicon}}"> {{current_seller|display_name}} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" style="vertical-align: top;"/></b></p></td><td colspan="2">
                 <label class="btnblu" for="modal-one-{{current_seller}}" style="float:right">Checkout</label>
                 <button type="submit" style="float:right" class = "btn" name ="action" value="update">Update</button>
                 <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Remove</button>
@@ -54,9 +55,7 @@
                                         <br>
                                         No feedback possible
                                         <br>
-                                        Maximum privacy
-                                        <br>
-                                        No additional cost
+                                        No cost
                                     </td>
                                 </tr>
                             </table>
@@ -69,8 +68,6 @@
                                         <br>
                                         Buyer and seller can both leave feedback
                                         <br>
-                                        Notary aware of order
-                                        <br>
                                         Costs of around 1%
                                     </td>
                                 </tr>
@@ -80,15 +77,13 @@
                             <table cellpadding="5">
                                 <tr>
                                     <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="escrow" value="escrow" disabled><label for="escrow" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Escrow</b></label></div></td>
-                                    <td>Seller receives payment after order is finalized
+                                    <td>Seller paid after order is finalized
                                         <br>
                                         Buyer and seller can both leave feedback
                                         <br>
-                                        Notary aware of order and bitcoin addresses
-                                        <br>
                                         Arbiters can be used in the event of dispute
                                         <br>
-                                        Costs of around 1% to 2%
+                                        Costs of around 2%
                                     </td>
                                 </tr>
                             </table>
@@ -108,12 +103,13 @@
                 <!-- set current_seller -->
                 {% set current_seller = cart_item['seller_key_id'] %}
                  {% if global_seller.append(current_seller) %}{% endif %} <!-- hack to get a global for last block -->
+                {% set feedback = current_seller|key_to_feedback_label %}
                 <!--open seller block -->
                 <div class="round_box">
                 <table cellpadding="5">
                 <form method="post" action="{{ url_for('cart') }}">
                     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
-                    <tr><td colspan="3"><p style="font-size:20px"><b>Seller: <img src="data:image/png;base64,{{current_seller|key_to_identicon}}"> {{current_seller|display_name}} ({{current_seller}})</b></p></td><td colspan="2">
+                    <tr><td colspan="3"><p style="font-size:20px"><b>Seller: <img src="data:image/png;base64,{{current_seller|key_to_identicon}}"> {{current_seller|display_name}} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" style="vertical-align: top;"/></b></p></td><td colspan="2">
                         <label class="btnblu" for="modal-one-{{global_seller[-1]}}" style="float:right">Checkout</label>
                         <button type="submit" style="float:right" class = "btn" name ="action" value="update">Update</button>
                         <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Remove</button>
@@ -164,7 +160,7 @@
         {%endfor%}
         </table>
         </div>
-        <br>
+        <br> <br>
         <!-- Modal One -->
         <div class="modal">
           <input class="modal-open" id="modal-one-{{global_seller[-1]}}" type="checkbox" hidden>
@@ -185,9 +181,7 @@
                                 <br>
                                 No feedback possible
                                 <br>
-                                Maximum privacy
-                                <br>
-                                No additional cost
+                                No cost
                             </td>
                         </tr>
                     </table>
@@ -200,8 +194,6 @@
                                 <br>
                                 Buyer and seller can both leave feedback
                                 <br>
-                                Notary aware of order
-                                <br>
                                 Costs of around 1%
                             </td>
                         </tr>
@@ -211,15 +203,13 @@
                     <table cellpadding="5">
                         <tr>
                             <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="escrow" value="escrow" disabled><label for="escrow" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Escrow</b></label></div></td>
-                            <td>Seller receives payment after order is finalized
+                            <td>Seller paid after order is finalized
                                 <br>
                                 Buyer and seller can both leave feedback
                                 <br>
-                                Notary aware of order and bitcoin addresses
-                                <br>
                                 Arbiters can be used in the event of dispute
                                 <br>
-                                Costs of around 1% to 2%
+                                Costs of around 2%
                             </td>
                         </tr>
                     </table>

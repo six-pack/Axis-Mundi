@@ -78,6 +78,27 @@
       {% block content %}
       {% endblock %}
     </div>
-     
+<div id="footer">
+{% set rates = g.btc_x %}
+
+<marquee behavior="scroll" direction="left" scrollamount="4">
+    {% if rates['USD'] != 0 %}
+    USD: {{ rates['USD'] }} &nbsp;&nbsp;
+    EUR: {{ rates['EUR'] }} &nbsp;&nbsp;
+    GBP: {{ rates['GBP'] }} &nbsp;&nbsp;
+    CAD: {{ rates['CAD'] }} &nbsp;&nbsp;
+    AUD: {{ rates['AUD'] }} &nbsp;&nbsp;
+    SEK: {{ rates['SEK'] }} &nbsp;&nbsp;
+    DKK: {{ rates['DKK'] }} &nbsp;&nbsp;
+    ISK: {{ rates['ISK'] }} &nbsp;&nbsp;
+    NOK: {{ rates['NOK'] }} &nbsp;&nbsp;
+    RUB: {{ rates['RUB'] }} &nbsp;&nbsp;
+    ZAR: {{ rates['ZAR'] }} &nbsp;&nbsp;
+    {% else %}
+    Waiting for initial Bitcoin/fiat exchange rates...
+    {% endif %}
+</marquee>
+
+</div>
   </body>
 </html>

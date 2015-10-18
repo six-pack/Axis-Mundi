@@ -1,3 +1,5 @@
+from constants import *
+
 def create_defaults(db, session, pgp_keyid, display_name, publish_id, btc_master_seed):
     try:
         # Identity default settings
@@ -218,6 +220,15 @@ def create_defaults(db, session, pgp_keyid, display_name, publish_id, btc_master
         curr_db_item.exchange_rate = 0
         session.add(curr_db_item)
         # Finally commit
+        session.commit()
+        # Default trading helpers
+        curr_lists_item = db.UPL_lists()  # EPs key ID
+        curr_lists_item.author_key_id ='1DC7E25594D92DEC'
+        curr_lists_item.name = 'AMVD Historic Vendor Data'
+        curr_lists_item.description = "This notary data has been extracted from El Presidente's All Market Vendor Directory"
+        curr_lists_item.type = LIST_TYPE_NOTARY
+        # Finally commit
+        session.add(curr_lists_item)
         session.commit()
         return True
     except:

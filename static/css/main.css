@@ -60,6 +60,19 @@ header h1.logo:hover {
   text-decoration: none;
 }
 
+#footer {
+clear:both;
+  background-color: #2B2B2B;
+  text-align: middle;
+  color: #fff;
+  opacity: .9;
+   position:fixed;
+   bottom:0;
+   width:100%;
+   height:32px;   /* Height of the footer */
+   z-index: 10;
+}
+
 /*
  * Center the body content
  */
@@ -491,10 +504,37 @@ list-style-type: none;
 }
 
 .stripetable {
-   border: 1px solid #bbbbbb;
-   border-collapse: collapse;
+   border:solid black 1px;
+   border-collapse: separate;
    text-align: center;
+
+    border-radius:10px;
+    -moz-border-radius:10px;
+
 }
+
+.stripetable td, th {
+    padding: 5px;
+
+}
+
+.stripetable th {
+    border-top: none;
+    background-color: #bbbbbb;
+}
+
+.stripetable  td:first-child, th:first-child {
+     border-left: none;
+}
+
+.stripetable  th:first-child { -moz-border-radius: 10px 0 0 0; }
+.stripetable  th:last-child { -moz-border-radius: 0 10px 0 0; }
+
+.stripetable  tr:last-child td:first-child { -moz-border-radius: 0 0 0 10px; }
+.stripetable  tr:last-child td:last-child { -moz-border-radius: 0 0 10px 0; }
+
+
+
 
 .stripetable tr:nth-child(odd) {
    background-color: #eee;
@@ -503,10 +543,6 @@ list-style-type: none;
 .stripetable tr:hover:not([th]){
    background-color: #cccccc;
    font-weight: bold;
-}
-
-.stripetable th {
-    background-color: #bbbbbb;
 }
 
 .stripetable td a {

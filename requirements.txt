@@ -9,3 +9,5 @@ paho-mqtt
 pybitcointools
 pillow
 pysqlcipher
+json2html
+grequests

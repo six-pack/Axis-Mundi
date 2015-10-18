@@ -5,9 +5,9 @@
 {% block content %}
   <h2>Orders</h2>
     <div class="datagrid">
-    <table cellpadding="10" class="stripetable">
+    <table cellpadding="10" class="stripetable" style="font-size: 90%;" cellspacing=0>
         <tr>
-        <th width="100px"><strong>Date Created</strong></th>
+        <th width="100px"><strong>Date</strong></th>
         <th width="350px"><strong>Item</strong></th>
         {% if view == 'buying' %}
             <th width="200px"><strong>Seller</strong></th>
@@ -74,5 +74,5 @@
         </tr>
     </table>
     </div>
-
+<br><br>
 {% endblock %}

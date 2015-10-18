@@ -8,9 +8,8 @@
 {% block content %}
   <h2>Directory</h2>
     <div class="datagrid">
-        <p>The Axis Mundi directory is maintained automatically by your software. The directory shows all users on the system who have 'opted in'. Please remember that a user can choose any name they wish and could spoof other users names. You should rely on the PGP key ID which cannot be spoofed.</p>
-        <p>Trust and reputation scores will be added to the directory in the future.</p>
-    <table cellpadding="7" width="100%" class="stripetable">
+        <p>The Axis Mundi directory is maintained automatically by your software. The directory shows all users on the system who have 'opted in'. Please remember that a user can choose any name including another users name.  The users identicon however cannot be changed and is based on their PGP key ID.</p>
+    <table cellpadding="7" width="100%" class="stripetable" style="font-size: 90%;" cellspacing=0>
         <tr>
             <td colspan="3" align="left">
                 <div class="round_box" style="height:40px;width: 97%">
@@ -18,8 +17,8 @@
                     <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
                     Search Filter
                     &nbsp;&nbsp;&nbsp;<input type="text" name="search_name" size="30" class="inputs" placeholder="User to search for"  value="{{ search_filter }}">
-                    &nbsp;<input type="checkbox" name="filter_sellers" value="yes">Sellers only
-                    &nbsp;<input type="checkbox" name="filter_active" value="yes">Active only
+                    &nbsp;<input type="checkbox" name="filter_sellers" value="True" {% if filter_sellers %}checked{% endif %}>Sellers
+                    &nbsp;<input type="checkbox" name="filter_active" value="True" {% if filter_active %}checked{% endif %}>Active
                     <button type="submit" class = "btnblu" name = "action" style="float:right" value="update_filter">Update Filter</button>
                 </div>
 
@@ -44,6 +43,7 @@
             {% if entry.is_seller == True %}<img src="/static/img/cart.png" width="24" height="24"> {%endif%}
             {% if entry.is_notary == True %}<img src="/static/img/notary.png" width="24" height="24"> {%endif%}
             {% if entry.is_arbiter == True %}<img src="/static/img/arbiter.png" width="24" height="24"> {%endif%}
+            {% if entry.is_upl == True %}<img src="/static/img/list.png" width="24" height="24"> {%endif%}
             {% if entry.is_looking_glass == True %}<img src="/static/img/looking_glass.png" width="24" height="24">{%endif%}
             </div></a>
         </td>
@@ -64,6 +64,6 @@
         </tr>
     </table>
     </div>
-
+<br><br>
 
 {% endblock %}

@@ -1,4 +1,45 @@
-{% extends "layout.html" %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Axis Mundi</title>
+    <strong><link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"></strong>
+  </head>
+  <body>
+{% set active_page = "" %}
+<header>
+  <div class="container">
+    <h1 class="logo">{{ g.connection_status }}</h1>
+
+    <strong><nav id="primary_nav_wrap" class="primary_nav_menu">
+      <ul>
+      </ul>
+    </nav></strong>
+  </div>
+
+
+</header>
+
+<div align="center">
+    {% with messages = get_flashed_messages(with_categories=true, category_filter=['error']) %}
+      {% if messages %}
+        <ul class="flashes-error flashes">
+        {% for category, message in messages %}
+          <li style="float:left">{{ message }}</li><br>
+        {% endfor %}
+        </ul>
+       {% endif %}
+    {% endwith %}
+    {% with messages = get_flashed_messages(with_categories=true, category_filter=['message']) %}
+      {% if messages %}
+        <ul class="flashes-message flashes">
+        {% for category, message in messages %}
+          <li style="float:left">{{ message }}</li><br>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+</div>
+    <div class="container" style="top:50px;position:relative;z-index:1;">
 {% set active_page = "" %}
 
 {% block content %}
@@ -20,4 +61,7 @@
         </table></form>
 
 {% endblock %}
-
+    </div>
+</div>
+  </body>
+</html>

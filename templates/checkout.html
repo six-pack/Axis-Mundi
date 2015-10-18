@@ -4,7 +4,7 @@
     {% extends "layout.html" %}
 {%endif%}
 {% set active_page = "Trade" %}
-
+{% set feedback = seller_key|key_to_feedback_label %}
 {% block content %}
   <h2>Checkout</h2>
   {% if cart_items %}
@@ -14,7 +14,7 @@
         <table cellpadding="5">
         <form method="post" action="{{ url_for('cart') }}">
             <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
-            <tr><td colspan="3"><p style="font-size:20px"><b>Seller: <img src="data:image/png;base64,{{seller_key|key_to_identicon}}"> {{seller_key|display_name}} ({{seller_key}})</b></p></td><td colspan="2">
+            <tr><td colspan="3"><p style="font-size:20px"><b>Seller: <img src="data:image/png;base64,{{seller_key|key_to_identicon}}"> {{seller_key|display_name}} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" style="vertical-align: top;"/></b></p></td><td colspan="2">
                 <button type="submit" style="float:right" class = "btnblu" name ="action" value="create_order">Place Order</button>
                 <button type="submit" style="float:right" class = "btn" name ="action" value="remove">Cancel Order</button>
 
@@ -69,5 +69,5 @@
   {% else %}
         <h3><center>Your shopping cart is empty</center></h3>
   {% endif %}
-
+ <br> <br>
 {% endblock %}

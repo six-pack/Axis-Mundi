@@ -5,7 +5,7 @@
   <h2>Message Inbox</h2>
 
     <div class="datagrid">
-    <table cellpadding="10" class="stripetable">
+    <table cellpadding="10" class="stripetable" cellspacing=0>
         <tr>
         <th width="250px"><strong>From</strong></th>
         <th width="450px"><strong>Subject</strong></th>
@@ -22,12 +22,12 @@
         </td>
         <td width="450px">
             <div style="position:relative">
-            <a class ="cell_link" href="/messages/view/{{ o.id }}"></a> {{ o.subject }}
+            <a class ="cell_link" href="/messages/view/{{ o.id }}"></a> {%if not o.message_read %} <b>{%endif%}{{ o.subject }}{%if not o.message_read %} </b>{%endif%}
             </div>
         </td>
         <td width="200px">
             <div style="position:relative">
-            <a class ="cell_link" href="/messages/view/{{ o.id }}"></a>{{ o.message_date }}
+            <a class ="cell_link" href="/messages/view/{{ o.id }}"></a>{%if not o.message_read %} <b>{%endif%}{{ o.message_date }}{%if not o.message_read %} </b>{%endif%}
             </div>
         </td>
 <!--        <td width="110px">

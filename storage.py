@@ -8,13 +8,18 @@ import time
 from os.path import isfile
 import paginate
 from platform import system as get_os
+import constants
+from utilities import current_time
+from datetime import datetime
 
 class memory_cache(): # In-memory cache db to hold a potentially large user directory comprising both the AM user directory and supplementary lists from notaries and other UPLs
 
     Base = declarative_base()
 
-    def __init__(self,main_db):
+    def __init__(self,main_db,my_key,my_display_name):
         self.main_db = main_db # This will be set to the main local RO database in the front end client
+        self.my_key = my_key
+        self.my_display_name = my_display_name
         self.engine = create_engine('sqlite://',connect_args={'check_same_thread': False},poolclass=StaticPool) # simple in-memory db
         self.Base.metadata.create_all(self.engine)
         self.Base.metadata.bind = self.engine
@@ -30,10 +35,37 @@ class memory_cache(): # In-memory cache db to hold a potentially large user dire
         is_seller = Column(Boolean)
         is_notary = Column(Boolean)
         is_arbiter = Column(Boolean)
+        is_upl = Column(Boolean)
         is_contact = Column(Boolean)
         is_looking_glass = Column(Boolean)
         aggregate_transactions = Column(Integer)
         aggregate_feedback = Column(String(4))
+
+    def update(self,update_data):
+        session = self.DBSession()
+        target_key = session.query(self.cacheFullDirectory).filter_by(key_id = update_data['key_id']).first() #
+        if target_key:
+            # This user is already present in the directory so we need to update
+            target_key.display_name = update_data['display_name']
+            target_key.is_seller = update_data['is_seller']
+            target_key.is_notary = update_data['is_notary']
+            target_key.is_arbiter = update_data['is_arbiter']
+            target_key.is_looking_glass = update_data['is_looking_glass']
+            target_key.is_upl = update_data['is_upl']
+        else:
+            # New user for the directory
+            cache_dir_entry = self.cacheFullDirectory(key_id=update_data['key_id'],
+                                                updated=update_data['updated'],
+                                                display_name=update_data['display_name'],
+                                                is_active_user = True, # Since this is from a directory_update it must be an active user
+                                                is_seller = update_data['is_seller'],
+                                                is_upl = update_data['is_upl'],
+                                                is_notary = update_data['is_notary'],
+                                                is_arbiter = update_data['is_arbiter'],
+                                                is_looking_glass = update_data['is_looking_glass'])
+            session.add(cache_dir_entry)
+        session.commit()
+#        print "Updated front-end directory cache for user " + update_data['display_name']  + "("+update_data['key_id']+")"
 
     def rebuild(self):
         print "Rebuilding front end in-memory cache db"
@@ -49,6 +81,7 @@ class memory_cache(): # In-memory cache db to hold a potentially large user dire
                                                 display_name=row.display_name,
                                                 is_active_user = True, # Since this is from the directory it must be an active user
                                                 is_seller = row.is_seller,
+                                                is_upl = row.is_upl,
                                                 is_notary = row.is_notary,
                                                 is_arbiter = row.is_arbiter,
                                                 is_looking_glass = row.is_looking_glass)
@@ -56,6 +89,18 @@ class memory_cache(): # In-memory cache db to hold a potentially large user dire
                                                 # aggregate_feedback = # TODO caclulate based on available cached UPL's
             session.add(cache_dir_entry)
         session.commit()
+        # our own key should go in now if it hasn't already come from the directory (this is usually only needed for the very first run following installation)
+        my_entry = session.query(self.cacheFullDirectory).filter_by(key_id=self.my_key).first()
+        if my_entry:
+            pass # our key is already present
+        else:
+            my_dir_entry = self.cacheFullDirectory(key_id=self.my_key,
+                                                   updated=datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
+                                                   is_contact=True,
+                                                   is_active_user=True,
+                                                   display_name = self.my_display_name)
+            session.add(my_dir_entry)
+            session.commit()
         # Now read in keyids from the users contacts, add these and update where necessary (usually the contact will also be in teh directory but not always)
         contacts_res = main_session.query(self.main_db.Contacts).all()
         for row in contacts_res:
@@ -63,7 +108,7 @@ class memory_cache(): # In-memory cache db to hold a potentially large user dire
             if qry_res:
                 qry_res.is_contact = True
             else:
-                contact = self.cacheFullDirectory(key_id=row.contact_key, is_contact = True, display_name = row.display_name)
+                contact = self.cacheFullDirectory(key_id=row.contact_key, updated=datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),is_contact = True, display_name = row.display_name)
                 session.add(contact)
         session.commit()
         # Now read in keyids from UPLs including notary lists, add these and update where necessary
@@ -118,7 +163,7 @@ class Storage(): # Main, persistent, encrypted local database
         author_key_id = Column(String(16), nullable=False)
         name = Column(String(64))
         description = Column(String(255))
-        type = Column(String(16))
+        type = Column(Integer)
 
     class UPL(Base):
         __tablename__ = 'upl'
@@ -233,6 +278,7 @@ class Storage(): # Main, persistent, encrypted local database
         is_seller = Column(Boolean)
         is_notary = Column(Boolean)
         is_arbiter = Column(Boolean)
+        is_upl = Column(Boolean)
         is_looking_glass = Column(Boolean)
         # TODO: Add other key fields but keep it light
 

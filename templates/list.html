@@ -1,0 +1,73 @@
+{% extends "layout.html" %}
+{% set active_page = "People" %}
+
+{% block content %}
+{% if not list_info %} No such user published list appears to exist in your database
+{%else%}
+<h2>{% if list_info.type == 1 %}Notary List{%elif list_info.type == 2%}User Published Lists{%else%}UNKNOWN LIST TYPE{%endif%} - {{list_info.name}}</h2>
+{% set feedback = list_info.author_key_id|key_to_feedback_label %}
+<div class="datagrid">
+    <p><b>List Publisher: </b><img src="data:image/png;base64,{{list_info.author_key_id|key_to_identicon}}"> {{list_info.author_key_id|display_name}} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" style="vertical-align: top;"/>  </p>
+    <p><b>List Description: </b>{{list_info.description}}</p>
+    <div class="round_box">
+
+
+        <table cellpadding="10" class="stripetable" cellspacing=0>
+            <tr>
+            <th width="300px"><strong>User</strong></th>
+            <th width="400px"><strong>JSON Data</strong></th>
+            </tr>
+            {% for o in list_rows %}
+                {% set feedback = o.key_id|key_to_feedback_label %}
+                <tr>
+                <td width="250px"><a href="/profile/{{ o.key_id }}" >
+                    <div style="position:relative" class="div_cell_link"><a href="/profile/{{ o.key_id }}" >
+                     <img src="data:image/png;base64,{{o.key_id|key_to_identicon}}"> {{o.key_id|display_name}} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" style="vertical-align: top;"/>  </a>
+                     </div>
+                </td>
+                <td width="450px">
+                    {{o.json_data}}
+                </td>
+                 </tr>
+            {%endfor%}
+        </table>
+
+
+    </div>
+
+
+</div>
+{%endif%}
+
+<!-- Modal One -->
+<div class="modal">
+  <input class="modal-open" id="modal-two" type="checkbox" hidden>
+  <div class="modal-wrap" aria-hidden="true" role="dialog">
+    <label class="modal-overlay" for="modal-two"></label>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2>Create new User Published List</h2>
+        <label class="btn-close" for="modal-two" aria-hidden="true">×</label>
+      </div>
+      <div class="modal-body">
+          <form method="post" action="{{ url_for('upl') }}">
+          <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+          <table cellpadding="5">
+            <tr><td><label>Name :</label></td> <td><input type="text" name="name" size="40" class="inputs" placeholder="Name of your list" required ></td></tr>
+            <tr><td><label>Description:</label></td><td><textarea name="description" cols="40" style="height: auto;" rows = "2" class="inputs" placeholder="Provide a short description of this list for other users"></textarea></td></tr>
+            <tr><td><label>Type:</label></td> <td><div class = "select_style"><select name="type" style="width:200px">
+                <option value="1">Notary List</option>
+                <option value="2" selected="selected">User Published List</option>
+            </select></div></td></tr>
+          </table>
+      </div>
+      <div class="modal-footer">
+         <button type="submit" style="float:right" class = "btnblu" name ="action" value="checkout">Create List</button>
+        <label class="btn" style="float:right" for="modal-two">Cancel</label>
+      </div>
+    </div>
+  </div>
+</div>
+</form>
+
+{% endblock %}

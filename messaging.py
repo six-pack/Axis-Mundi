@@ -198,8 +198,8 @@ class Messaging():
         if clear_lrawmessage.startswith('-----BEGIN PGP SIGNED MESSAGE-----'):
             signed = True
             verify_signature = self.gpg.verify(clear_lrawmessage)
-# if verify_signature.pubkey_fingerprint:    # Proper signature check,
-# full fp only returned if key present
+            # if verify_signature.pubkey_fingerprint:    # Proper signature check,
+            # full fp only returned if key present
             if verify_signature.key_id:     # Weak signature check - TODO: TESTING ONLY!
                 input_message_signed = True
                 try:

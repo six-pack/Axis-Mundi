@@ -11,7 +11,7 @@
     <br>
     <br>
 
-    <table cellpadding="10" class="stripetable">
+    <table cellpadding="10" class="stripetable" cellspacing=0>
         <tr>
             <th></th>
         <th width="400px" align="left"><strong>Title</strong></th>
@@ -21,25 +21,41 @@
         <th width="200px"></th>
         </tr>
         {% for listing in listings %}
-        <tr onclick="location.href='{{ url_for('edit_listing', id = listing.id) }}'">
+        <tr>
         <td style="width:66px">
+            <div style="position:relative">
+           <a class="cell_link" href="{{ url_for('edit_listing', id = listing.id) }}"></a>
             <img width="64" height="64" alt="{{listing.title}}" src={% if listing.image_base64 %}"data:image/png;base64,{{listing.image_base64}}"{% else %}"/static/img/none.png"{% endif %} />
+        </div>
         </td>
         <td>
+            <div style="position:relative">
+            <a class="cell_link" href="{{ url_for('edit_listing', id = listing.id) }}"></a>
             {{listing.title}}
+        </div>
         </td>
         <td>
+            <div style="position:relative">
+            <a class="cell_link" href="{{ url_for('edit_listing', id = listing.id) }}"></a>
             {{listing.price}} {{listing.currency_code}}
+        </div>
         </td>
         <td>
+            <div style="position:relative">
+            <a class="cell_link" href="{{ url_for('edit_listing', id = listing.id) }}"></a>
             {{listing.qty_available}}
+        </div>
         </td>
         <td>
+            <div style="position:relative">
+            <a class="cell_link" href="{{ url_for('edit_listing', id = listing.id) }}"></a>
             {% if listing.public == True %}Yes{% else %}No{% endif %}
+        </div>
         </td>
         <td>
              <a class="btn" href="{{ url_for('edit_listing', id = listing.id) }}"> Edit </a>  &nbsp;
              <a class="btn" href="{{ url_for('delete_listing', id = listing.id) }}">Delete</a>
+        </div>
         </td>
         </tr>
         {% endfor %}

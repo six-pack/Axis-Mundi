@@ -28,6 +28,7 @@ class Listing(object):
         self.image_str = ''
         self.quantity_available = 0
         self.order_max_qty = 0
+        self.seller_key= ''
         self.ships_from = ''
         self.ships_to = []
         self.shipping_options = ''

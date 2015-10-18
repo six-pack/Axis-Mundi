@@ -1,9 +1,38 @@
 {% extends "layout.html" %}
 {% set active_page = "home" %}
+{% set feedback = mykey|key_to_feedback_label %}
 
 {% block content %}
-  <div class="jumbo">
-    <h2>Welcome<h2>
-    <h3>This is the home page</h3>
+<h2>Axis Mundi Dashboard</h2>
+  <div class="round_box" style='width:47%;float:left;margin-top:0px;'>
+    <table>
+    <tr><td width="100px">
+    {% if current_broker and online%}Broker :</td><td>{{current_broker}}{%else%}You are not connected to a broker{%endif%}</td></tr>
+    <tr><td>Identity :</td><td><img src="data:image/png;base64,{{mykey|key_to_identicon}}"> {{mykey|display_name}} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" style="vertical-align: top;"/><br>
+    </td></tr>
+    </table>
+  </div>
+
+  <div class="round_box" style='width:45%;margin-left:52%;'>
+    <table>
+    <tr><td>Roles :</td><td>
+            {% if entry.is_active_user == True %}<img src="/static/img/user.png" width="48" height="48"> {%endif%}
+            {% if entry.is_seller == True %}<img src="/static/img/cart.png" width="48" height="48"> {%endif%}
+            {% if entry.is_notary == True %}<img src="/static/img/notary.png" width="48" height="48"> {%endif%}
+            {% if entry.is_arbiter == True %}<img src="/static/img/arbiter.png" width="48" height="48"> {%endif%}
+            {% if entry.is_upl == True %}<img src="/static/img/list.png" width="48" height="48"> {%endif%}
+            {% if entry.is_looking_glass == True %}<img src="/static/img/looking_glass.png" width="48" height="48">{%endif%}
+
+    </td></tr>
+    </table>
+  </div>
+<br>
+  <div class="round_box" style='width:97%;'>
+  {% set actions_pending = False %}
+  {% if unpaid_orders > 0 %}<p>You need to pay for {{unpaid_orders}} item, please do so now {%set actions_pending = True%}<a href="/orders">Click here to view</a></p>{%endif%}
+  {% if unread_messages > 0 %}<p>You have {{unread_messages}} unread private messages. <a href="/messages">Click here to view</a></p>{%set actions_pending = True%}{%endif%}
+  {% if unprocessed_orders > 0 %}<p>You have {{unprocessed_orders}} submitted orders to process. <a href="/orders/selling">Click here to view</a></p>{%set actions_pending = True%}{%endif%}
+  {% if unshipped_orders > 0 %}<p>You have {{unshipped_orders}} orders that need to be shipped. <a href="/orders/selling">Click here to view</a></p>{%set actions_pending = True%}{%endif%}
+  {% if actions_pending == False %}<p>You do not have any outstanding actions to complete. Kick back and take it easy...</p>{%endif%}
   </div>
 {% endblock %}

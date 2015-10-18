@@ -10,7 +10,7 @@
 
     <div class="datagrid">
 
-    <table cellpadding="5" class="stripetable">
+    <table class="stripetable" style="font-size: 90%;" cellspacing=0>
         {% if looking_glass %}
            <tr><td colspan="5" width="928" align="left">
         {% else %}
@@ -28,9 +28,9 @@
         <th>  </th>
         <th width="300px"><strong>Title</strong></th>
         {% if looking_glass %}
-           <th width="200px"><strong>Seller</strong></th>
+           <th width="300px"><strong>Seller</strong></th>
         {%endif%}
-        <th width="200px"><strong>Ships From</strong></th>
+        <th width="150px"><strong>Ships From</strong></th>
         <th width="200px"><strong>Price</strong></th>
         </tr>
         {% for listing in listings %}
@@ -46,10 +46,11 @@
             </div>
         </td>
         {% if looking_glass %}
+            {% set feedback = listing.key_id|key_to_feedback_label %}
            <td>
                <div style="position:relative">
                   <img src="data:image/png;base64,{{listing.key_id|key_to_identicon}}">
-                  <a class = "in_cell_link" href="/profile/{{listing.key_id}}">{{listing.key_id|display_name}}</a>
+                  <a class = "in_cell_link" href="/profile/{{listing.key_id}}">{{listing.key_id|display_name}} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" style="vertical-align: top;"/>  </a>
                  </div>
                </td>
         {%endif%}
@@ -80,6 +81,6 @@
         </tr>
     </table>
     </div>
-
+<br><br>
 
 {% endblock %}

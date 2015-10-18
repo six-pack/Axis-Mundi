@@ -25,7 +25,7 @@ import textwrap
 from constants import *
 import pybitcointools as btc
 from btc_utils import *
-
+from btc_exchange_rate import *
 
 class messaging_loop(threading.Thread):
     # Authentication shall set the password to a PGP clear-signed message containing the follow data only
@@ -85,6 +85,7 @@ class messaging_loop(threading.Thread):
         self.btc_master_key = ''
         # Published Roles
         self.is_seller = False
+        self.is_upl = False
         self.is_notary = False # if true once dbconfig is read then notary screens and functions will be available
         self.is_arbiter = False # if true once dbconfig is read then arbiter screens and functions will be available
         # Non-published roles (these roles must not be exposed to Axis Mundi)
@@ -97,7 +98,7 @@ class messaging_loop(threading.Thread):
     def on_connect(self, client, userdata, flags, rc):
         print "Connected"
         self.connected = True
-        flash_msg = queue_task(0, 'flash_status', 'On-line')
+        flash_msg = queue_task(0, 'flash_status', ('On-line',self.targetbroker))
         self.q_res.put(flash_msg)
         flash_msg = queue_task(
             0, 'flash_message', 'Connected to broker ' + self.targetbroker)
@@ -109,7 +110,7 @@ class messaging_loop(threading.Thread):
     def on_disconnect(self, client, userdata, rc):
         print "MQTT on_disconnect..."
         self.connected = False
-        flash_msg = queue_task(0, 'flash_status', 'Off-line')
+        flash_msg = queue_task(0, 'flash_status', ('Off-line',self.targetbroker))
         self.q_res.put(flash_msg)
         if self.shutdown:
             flash_msg = queue_task(
@@ -131,7 +132,7 @@ class messaging_loop(threading.Thread):
             except:
                 print "Reconnection failure"
                 self.connected = False
-                flash_msg = queue_task(0, 'flash_status', 'Off-line')
+                flash_msg = queue_task(0, 'flash_status', ('Off-line',self.targetbroker))
                 self.q_res.put(flash_msg)
                 flash_msg = queue_task(
                     0, 'flash_message', 'Reconnection failed, giving up for now. Check your Tor/i2p connection')
@@ -167,8 +168,7 @@ class messaging_loop(threading.Thread):
                                                         keyblock=msg.payload)
                 session.add(cachedkey)
                 session.commit()
-                self.task_state_pgpkeys[keyid][
-                    'state'] = KEY_LOOKUP_STATE_FOUND
+                self.task_state_pgpkeys[keyid]['state'] = KEY_LOOKUP_STATE_FOUND
                 print "Retrieved key committed"
             else:
                 print "Dropping unexpected pgp key received for keyid: " + keyid
@@ -182,8 +182,6 @@ class messaging_loop(threading.Thread):
                 client.unsubscribe(msg.topic)
             keyid = msg.topic[msg.topic.index('/') + 1:msg.topic.rindex('/')]
             print "Directory entry: " + msg.payload + " " + msg.topic
-            # TODO: Use a memcache rather than write direct to database, use a periodic task to save memcache to cacheDirectory table (every 30 seconds or so)
-            # TODO: This memory cache will be necessary to deal with a large
             # number of users in the directory
             print "Adding directory entry "
             try:
@@ -195,16 +193,21 @@ class messaging_loop(threading.Thread):
 #            print display_dict['is_seller']
             try:
                 is_seller = display_dict['is_seller'] # Separate try block for pre 0.1 clients TODO: remove and place these in the preceeding try block
+            except: is_seller = False
+            try:
+                is_upl = display_dict['is_upl'] # Separate try block for pre 0.1 clients TODO: remove and place these in the preceeding try block
+            except: is_upl = False
+            try:
                 is_notary = display_dict['is_notary'] # Separate try block for pre 0.1 clients TODO: remove and place these in the preceeding try block
+            except: is_notary=False
+            try:
                 is_arbiter = display_dict['is_arbiter'] # Separate try block for pre 0.1 clients TODO: remove and place these in the preceeding try block
+            except: is_arbiter = False
+            try:
                 is_looking_glass = display_dict['is_looking_glass'] # Separate try block for pre 0.1 clients TODO: remove and place these in the preceeding try block
-
             except:
-                print "Error reading directory flags for " + keyid
-                is_seller = False
-                is_notary = False
-                is_arbiter = False
                 is_looking_glass = False
+
             session = self.storageDB.DBSession()
             # If it already exists then update
             if session.query(self.storageDB.cacheDirectory).filter(self.storageDB.cacheDirectory.key_id == keyid).count() > 0:
@@ -214,6 +217,7 @@ class messaging_loop(threading.Thread):
                     self.storageDB.cacheDirectory.is_notary: is_notary,
                     self.storageDB.cacheDirectory.is_arbiter: is_arbiter,
                     self.storageDB.cacheDirectory.is_seller: is_seller,
+                    self.storageDB.cacheDirectory.is_upl: is_upl,
                     self.storageDB.cacheDirectory.is_looking_glass: is_looking_glass
                 })
             else:
@@ -224,9 +228,21 @@ class messaging_loop(threading.Thread):
                                                          is_notary=is_notary,
                                                          is_arbiter=is_arbiter,
                                                          is_seller=is_seller,
+                                                         is_upl=is_upl,
                                                          is_looking_glass=is_looking_glass)
                 session.add(direntry)
             session.commit()
+            # Now throw a copy to the front-end via the queue so it can keeps its in-memory cache up to date
+            directory_update_msg_data = {'key_id':keyid,
+                                        'display_name':display_name,
+                                        'updated':datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
+                                        'is_notary':is_notary,
+                                        'is_arbiter':is_arbiter,
+                                        'is_seller':is_seller,
+                                        'is_upl':is_upl,
+                                        'is_looking_glass':is_looking_glass}
+            directory_update_msg = queue_task(0,'directory_update',directory_update_msg_data)
+            self.q_res.put(directory_update_msg)
             return
         # let us see if we can parse the base message and have the necessary
         # public key to check signature, if any
@@ -289,6 +305,7 @@ class messaging_loop(threading.Thread):
                         current_stage_verified = json_from_clearsigned(current_stage_signed)
                         try:
                             order_stage = (json.loads(current_stage_verified))
+                            order_stage['signing_key_id'] = current_stage_sig_check.key_id
                         except:
                             print "Error unable to decode json order stage message " + current_stage_verified
                             return False
@@ -304,6 +321,7 @@ class messaging_loop(threading.Thread):
                         print "Verifying nested signature"
                         print current_stage_signed
                         current_stage_sig_check = self.gpg.verify(current_stage_signed)
+
                     order_stages.reverse()
                     print "Order message contains a contract chain of " + str(len(order_stages)) + " blocks"
                     for stage in order_stages:
@@ -312,8 +330,13 @@ class messaging_loop(threading.Thread):
                             print 'Order Stage: ' + stage['order_status'] +' '+ str(stage)
                         except:
                             print 'Item: ' + str(stage)
+                    if self.process_order_chain(order_stages):
+                        print "Processed order message & chain"
+                    else:
+                        print "Warning: Unable to process incoming order message and associated chain - discarding"
                 except:
                     print "Error during order decode...discarding order message"
+                    raise # TODO - disable after debugging
                 print str(current_stage_signed)
                 #status = order_stages['order_status']# order_stages[0]['order_status']
                 flash_msg = queue_task(
@@ -518,6 +541,7 @@ class messaging_loop(threading.Thread):
             directory_dict['is_seller'] = self.is_seller
             directory_dict['is_notary'] = self.is_notary
             directory_dict['is_arbiter'] = self.is_arbiter
+            directory_dict['is_upl'] = self.is_upl
             directory_dict['is_looking_glass'] = self.looking_glass
             str_directory = json.dumps(directory_dict)
             print "Directory string to publish : " + str_directory
@@ -553,6 +577,7 @@ class messaging_loop(threading.Thread):
                 listings_dict['qty'] = listing_item.qty_available
                 listings_dict['max_order_qty'] = listing_item.order_max_qty
                 listings_dict['publish_date'] = current_time()
+                listings_dict['seller_key'] = self.mypgpkeyid
                 listings_dict['stealth_address'] = stealth_address
                 listings_dict['shipping_options'] = listing_item.shipping_options
                 # listings_dict_str = json.dumps(listings_dict)
@@ -649,6 +674,15 @@ class messaging_loop(threading.Thread):
             id=id).delete()
         session.commit()
 
+    def mark_as_read_pm(self, id):
+        #mark msg as read in database
+        print "Reading " + str(id)
+        session = self.storageDB.DBSession()
+        msg = session.query(self.storageDB.PrivateMessaging).filter_by(
+            id=id).first()
+        msg.message_read = bool(True)
+        session.commit()
+
     def make_pgp_auth(self):
         password_message = {}
         password_message['time'] = str(timegm(gmtime()) / 60)
@@ -663,7 +697,7 @@ class messaging_loop(threading.Thread):
         session = self.storageDB.DBSession()
         currency_rec = session.query(self.storageDB.currencies).filter_by(code=currency).first()
         rate = currency_rec.exchange_rate
-        btc_val = str(float(rate) * float(price))
+        btc_val = str(round(float(price) / float(rate),5)) # TODO : is rounding to only 5 places ok?
         return (btc_val)
 
     def select_random_broker(self):
@@ -732,6 +766,21 @@ class messaging_loop(threading.Thread):
         session.add(new_listing)
         session.commit()
         time.sleep(0.1)
+
+    def create_upl(self, upl_data):
+        flash_msg = queue_task(
+            0, 'flash_message', 'Creating new list ' + upl_data['name'])
+        self.q_res.put(flash_msg)
+        session = self.storageDB.DBSession()
+
+        new_list = self.storageDB.UPL_lists(
+            name=upl_data['name'],
+            description=upl_data['description'],
+            author_key_id=self.mypgpkeyid,
+            type=int(upl_data['type'])
+        )
+        session.add(new_list)
+        session.commit()
 
     def update_listing(self, listing):
         if listing.title != "":
@@ -873,11 +922,12 @@ class messaging_loop(threading.Thread):
                     verified_item = json.loads(stripped_item)
                     print verified_item
                     # TODO: Additional input validation required here
-                    item_shipping_options = json.loads(
-                        verified_item['shipping_options'])
-                    verified_item['shipping_options'] = item_shipping_options
-                    verified_item['raw_contract'] = str(raw_item)
-                    verified_listings.append(verified_item)
+                    if verified_item['seller_key']==key_id:
+                        item_shipping_options = json.loads(
+                            verified_item['shipping_options'])
+                        verified_item['shipping_options'] = item_shipping_options
+                        verified_item['raw_contract'] = str(raw_item)
+                        verified_listings.append(verified_item)
                 except:
                     print "Error: item json not extracted from signed sub-message"
                     print item
@@ -1149,6 +1199,52 @@ class messaging_loop(threading.Thread):
             else:
                 print "Error: Unknown order state in order " + order.orderid + "=" + order.order_status
 
+    def process_order_chain(self,order_stages):
+        # Process an incoming order message and the assocated chain, return true if we can process this order message
+        # We may get messages if we are a buyer, seller, notary or arbiter
+        print "process_order_chain()"
+        if not order_stages:
+            return False
+        item = str(order_stages[0]['item'])
+        item_id = str(order_stages[0]['id'])
+        item_seller = str(order_stages[0]['seller_key'])
+        last_msg_stage = str(order_stages[-1]['order_status'])
+        print "Order message indicates "+ last_msg_stage +" and concerns " + item + "(" + item_id + ") from " + item_seller
+        session = self.storageDB.DBSession()
+        # TODO: Implement further actions for notary, arbiter, escrow/multi-sig stages
+        # TODO: Rewrite whole section once order flow design is complete
+        if item_seller == self.mypgpkeyid:
+            # I am the seller
+            print "This order message chain concerns an item I am selling"
+            if last_msg_stage=='submitted':
+                # This appears to be new order for something we are (or were) selling - see if we already know about it
+                order_id = str(order_stages[1]['id'])
+                order_buyer = str(order_stages[1]['signing_key_id'])
+                res=session.query(self.storageDB.Orders).filter_by(id=order_id,buyer_key=order_buyer).first()
+                if res:
+                    print "Warning: Existing order id found in database for this received order, dropping order message...."
+                    return False
+                # TODO: check this order better before committing to order database
+                print "You have received a new order!"
+        else:
+            # I am not the seller
+            print "This order message chain concerns an item that another user is selling"
+        return True
+
+    def update_currency_rates(self,rates):
+        session = self.storageDB.DBSession()
+#        session.query(self.storageDB.currencies).delete()
+#        session.commit()
+        print "Backend is updating exchange rates"
+        for rate in rates:
+            code = rate['code']
+            fiat_value = rate['rate']
+            res = session.query(self.storageDB.currencies).filter(self.storageDB.currencies.code==code).first()#.update({self.storageDB.currencies.exchange_rate: str(fiat_value)})
+            if res:
+                res.exchange_rate = fiat_value
+                res.last_update = datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S")
+                session.commit()
+
     def run(self):
         # TODO: Clean up this flow
         # make db connection
@@ -1181,7 +1277,13 @@ class messaging_loop(threading.Thread):
         listings = session.query(self.storageDB.Listings).filter(self.storageDB.Listings.public==True).all()
         if listings:
             self.is_seller = True
-            print "Public listings present"
+            print "You are a seller"
+        # are we publishing any lists ?
+        session = self.storageDB.DBSession()
+        lists = session.query(self.storageDB.UPL_lists).filter_by(author_key_id=self.mypgpkeyid).all()
+        if lists:
+            self.is_upl = True
+            print "You have UPL(s)"
         # COnfirm proxy settings
         # sort the broker list into Tor, i2p and clearnet
         for broker in self.brokers:
@@ -1239,7 +1341,7 @@ class messaging_loop(threading.Thread):
             password = self.make_pgp_auth()
             # print password
             self.client.username_pw_set(self.mypgpkeyid, password)
-            flash_msg = queue_task(0, 'flash_status', 'Connecting...')
+            flash_msg = queue_task(0, 'flash_status', ('Connecting...',self.targetbroker))
             self.q_res.put(flash_msg)
             try:
                 self.connected = False
@@ -1252,6 +1354,10 @@ class messaging_loop(threading.Thread):
             except:  # TODO: Async connect now means this error code will need to go elsewhere
                 self.on_disconnect(self, self.client, None) # todo: bit lazy buttakes care of a single reconnection attempt to another broker
                                                             # ideally we want to keep trying for x attempts - rewrite this all at some point
+        # Get exchange rates
+        self.exchange_rate_thread = btc_exchange_rate(self.proxy,self.proxy_port,self.q)
+        self.exchange_rate_thread.start()
+
         while not self.shutdown:
             if not self.workoffline:
                 self.client.loop(0.05)  # deal with mqtt events
@@ -1365,6 +1471,9 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'delete_pm':
                     message_to_del = task.data['id']
                     self.delete_pm(message_to_del)
+                elif task.command == 'read_pm':
+                    message_read = task.data['id']
+                    self.mark_as_read_pm(message_read)
                 elif task.command == 'get_key':  # fetch a key from a user
                     print "Client Requesting key from backend"
                     self.task_state_pgpkeys[task.data['keyid']][
@@ -1486,6 +1595,12 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'delete_listing':
                     listing_to_del = task.data['id']
                     self.delete_listing(listing_to_del)
+
+                elif task.command == 'update_exchange_rates':
+                    self.update_currency_rates(task.data)
+
+                elif task.command == 'create_list':
+                    self.create_upl(task.data)
 
                 elif task.command == 'shutdown':
                     self.shutdown = True

@@ -51,21 +51,17 @@ Then the following steps are necessary
 
     Axis Mundi requires a change to the firewall rules (to permit localhost to localhost traffic) and also a proxy exclusion for localhost in Torbrowser. Axis Mundi will prompt you at start up if you are running on Tails and will offer to make these changes for you, although you are welcome to make them manually if you prefer.
 
-4) If you wish to create an Axis Mundi binary from source then you must download and install latest development version of PyInstaller -
-    wget https://github.com/pyinstaller/pyinstaller/archive/develop.zip
-    unzip develop.zip
-    cd pyinstaller-develop
-    sudo python setup.py install
+4) If you wish to create an Axis Mundi binary from source then you must install PyInstaller (NOTE: version 3.0 and later will not work at the moment)-
+    sudo pip install PyInstaller==2.1
     sudo chmod -R o+r,o+X /usr/local/lib/python2.7/dist-packages
 
 Now that Pyinstaller is installed simply execute the following command from your Axis Mundi directory:
-    cd ..
     pyinstaller axismundi_pyinst.spec
 
 The binary will be built and placed into the dist directory. Keep a copy of it on a persistent volume for easy use:
-    cp dist/axismundi ~/Persistence
+    cp dist/axismundi ~/Persistent
 
-Next time you want to execute Axis Mundi you will find it in the Persistence folder which you cna navigate to from 'Places'. Simply double click 'axismundi' to start.
+Next time you want to execute Axis Mundi you will find it in the Persistence folder which you can navigate to from 'Places'. Simply double click 'axismundi' to start.
 
 
 

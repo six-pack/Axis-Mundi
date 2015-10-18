@@ -11,47 +11,71 @@
     <div class="datagrid">
         <div class="round_box">
            <table>
-                <tr><td width="800px" colspan="5"><h4>{{order.title}}</h4></td>
+                <tr>
+                    <td colspan="5"><h4>{{order.title}}</h4></td>
 
                 {% if order.order_status == "created" %}
-                    <td width="200"><div style="btn"><button type="submit" name="action" value="order_cancelled" class = "btn" style="float:right">Cancel</button></div></td></tr>
+                     <td><div style="btn"><button type="submit" name="action" value="order_cancelled" class = "btn" style="float:right">Cancel</button></div></td></tr>
                 {% elif order.order_status == "submitted" %}
-                    <td width="200"><div style="btn">
+                    <td><div style="btn">
                         {% if order.buyer_key == mykey %}
                             {% if order.payment_status == "unpaid" %}<label class="btnblu" style="float:right" for="modal-one">Pay Now</label>&nbsp;
-                            {% else %}<!--<button type="submit" class = "btn" name="action" value="order_dispute" style="float:right">Dispute</button>&nbsp;--><button type="submit" class = "btnblu" name="action" value="order_finalize" style="float:right" >Finalize</button>
+                            {% else %}<!--<button type="submit" class = "btn" name="action" value="order_dispute" style="float:right">Dispute</button>&nbsp;--><button type="submit" class = "btnblu" name="action" value="order_finalize" style="float:right" >Finalize</button></div>
                             {% endif %}
                         {%endif %}
                         {% if order.seller_key == mykey %}
-                            <td width="200"><div style="btn"><button type="submit" name="action" value="order_shipped"  class ="btnblu">Mark Shipped</button></div></td></tr>
+                            <button type="submit" name="action" value="order_shipped"  class ="btnblu">Mark Shipped</button></div>
                         {% endif %}
-                    </div></td></tr>
+                    </td></tr>
                 {% elif order.order_status == "cancelled" %}
-                    <td width="200"><!--TODO Add cancellation reason here --></td></tr>
+                    <td><!--TODO Add cancellation reason here --></td></tr>
                {% elif order.order_status == "rejected" %}
-                    <td width="200"><!--TODO Add rejection reason here --></td></td></tr>
+                    <td><!--TODO Add rejection reason here --></td></tr>
                {% elif order.order_status == "processing" %}
+                    <td>
                     {% if order.buyer_key == mykey %}
-                        <td width="200"><div style="btn"><button type="submit" name="action" value="order_finalize" class = "btnblu" style="float:right">Finalize</button></div></td></tr>
+                        <div style="btn"><button type="submit" name="action" value="order_finalize" class = "btnblu" style="float:right">Finalize</button></div>
                     {% endif %}
                     {% if order.seller_key == mykey %}
-                        <td width="200"><div style="btn"><button type="submit" name="action" value="order_shipped" class = "btnblu" style="float:right">Mark Shipped</button></div></td></tr>
+                        <div style="btn"><button type="submit" name="action" value="order_shipped" class = "btnblu" style="float:right">Mark Shipped</button></div>
                     {% endif %}
+                    </td></tr>
                {% elif order.order_status == "shipped" %}
                     {% if order.buyer_key == mykey %}
                         <button type="submit" name="action" value="order_finalize" class = "btnblu" style="float:right">Finalize</button></div></td></tr>
                     {% endif %}
                {% elif order.order_status == "disputed" %}
-                    <td width="200"><div style="btn"><button type="submit" class = "btn" style="float:right">Dispute</button>&nbsp;<button type="submit" name="action" value="order_finalize" class = "btn" style="float:right">Finalize</button></div></td></tr>
+                    <td><div style="btn"><button type="submit" class = "btn" style="float:right">Dispute</button>&nbsp;<button type="submit" name="action" value="order_finalize" class = "btn" style="float:right">Finalize</button></div></td></tr>
                {% elif order.order_status == "finalized" %}
-                    <button type="submit" name="action" value="order_leave_feedback" class = "btnblu" style="float:right">Leave Feedback</button></div></td></tr>
+                    <td><button type="submit" name="action" value="order_leave_feedback" class = "btnblu" style="float:right">Leave Feedback</button></div></td></tr>
                {% else  %}
-                    <td width="200">Order state error</td></tr>
+                    <td>Order state error</td></tr>
                 {%endif %}
+
                {% set shipping = order.shipping_options|from_json %}
-                <tr><td width="150px"><b>Order ID:</b></td><td width="120px">{{ order.orderid}}</td><td width="150px"><b>Order Date:</b></td><td width="120px">{{ order.order_date.strftime('%Y-%m-%d') }}</td><td width="120px"><b>Seller:</b></td><td width="230px"> <img src="data:image/png;base64,{{order.seller_key|key_to_identicon}}"> {{ order.seller_key|display_name }} </td> </tr>
-                <tr><td width="150px"><b>Order Type:</b></td><td>{{ order.order_type }}</td><td width="150px"><b>Quantity:</b></td><td>{{ order.quantity }}</td><td width="120px"><b>Shipping:</b></td><td>{{shipping[order.shipping][0]}} </td> </tr>
-                <tr><td width="150px"><b>Order Status:</b></td><td>{{ order.order_status }}</td><td width="150px"><b>Payment Status:</b></td><td>{{ order.payment_status }}</td><td width="120px"><b>Total Price:</b></td><td>{{ order.line_total_price}} {{order.currency_code}} ({{order.line_total_btc_price}} BTC)</td> </tr>
+                <tr>
+                    <td width="150px"><b>Order ID:</b></td>
+                    <td width="120px">{{ order.orderid}}</td>
+                    <td width="150px"><b>Order Date:</b></td>
+                    <td width="120px">{{ order.order_date.strftime('%Y-%m-%d') }}</td>
+                    <td width="120px"><b>Seller:</b></td>
+                    <td width="230px"> <img src="data:image/png;base64,{{order.seller_key|key_to_identicon}}"> {{ order.seller_key|display_name }} </td>
+                </tr>
+                <tr>
+                    <td width="150px"><b>Order Type:</b></td>
+                    <td>{{ order.order_type }}</td>
+                    <td width="150px"><b>Quantity:</b></td>
+                    <td>{{ order.quantity }}</td>
+                    <td width="120px"><b>Shipping:</b></td>
+                    <td>{{shipping[order.shipping][0]}} </td>
+                </tr>
+                <tr>
+                    <td width="150px"><b>Order Status:</b></td>
+                    <td>{{ order.order_status }}</td>
+                    <td width="150px"><b>Payment Status:</b></td>
+                    <td>{{ order.payment_status }}</td>
+                    <td width="120px"><b>Total Price:</b></td>
+                    <td>{{ order.line_total_price}} {{order.currency_code}} ({{order.line_total_btc_price}} BTC)</td> </tr>
 
            </table>
         </div>
@@ -76,7 +100,7 @@
             </tr>
         </table>
     </div>
-
+<br><br>
 <!-- Modal One -->
 <div class="modal">
   <input class="modal-open" id="modal-one" type="checkbox" hidden>

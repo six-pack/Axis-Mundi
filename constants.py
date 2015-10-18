@@ -14,3 +14,6 @@ KEY_LOOKUP_STATE_NOTFOUND = 3
 # After CACHE_EXPIRY_LIMIT seconds any cached listings, profiles etc will
 # be refetched when requested
 CACHE_EXPIRY_LIMIT = 3600
+
+LIST_TYPE_NOTARY = 1
+LIST_TYPE_UPL = 2

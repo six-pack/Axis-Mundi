@@ -6,31 +6,31 @@
 
 <div class="datagrid">
     <p>Here you can subscribe to user lists,including notary lists, published by other Axis Mundi users and also create and manage any of your own lists that you wish to publish.</p>
-    <h5>My published lists</h5>
+    <div><p><b>My published lists</b>    <label class="btn" style="float:right;" for="modal-two">Create New List</label></p></div>
     <div class="round_box">
         {% if not my_lists %} You are not currently maintaining any lists{%else%}
 
-        <table cellpadding="10" class="stripetable">
+        <table cellpadding="10" class="stripetable" cellspacing=0>
             <tr>
-            <th width="250px"><strong>Title</strong></th>
-            <th width="450px"><strong>Description</strong></th>
-            <th width="200px"><strong>Actions</strong></th>
+            <th width="400px"><strong>Title</strong></th>
+            <th width="150px"><strong>Type</strong></th>
+            <th width="350px"><strong>Actions</strong></th>
             </tr>
             {% for o in my_lists %}
             <tr>
-            <td width="250px">
+            <td width="400px">
                 <div style="position:relative">
-                 <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}" >{{ o.name }}</a>
+                 <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}/{{o.id}}" >{{ o.name }}</a>
                  </div>
             </td>
-            <td width="450px">
-                <div style="position:relative">
-                <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}" > {{ o.description }}</a>
+            <td width="150px">
+                <div style="position:relative" class="div_cell_link"><a href="/lists/user/{{ o.author_key_id }}/{{o.id}}" >
+                {% if o.type == 1 %}Notary{% else %}User List{%endif%}</a>
                 </div>
             </td>
-            <td width="200px">
+            <td width="250px">
                 <div style="position:relative">
-                <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}" >xxx</a>
+                <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}/{{o.id}}" >Edit - Remove - Republish</a>
                 </div>
             </td>
             </tr>
@@ -39,31 +39,38 @@
 
         {%endif%}
     </div>
-    <h5>Lists I am subscribed to</h5>
+    <p><b>Lists I am subscribed to</b></p>
     <div class="round_box">
         {% if not subscribed_lists %} You are not currently subscribed to any lists{%else%}
 
-        <table cellpadding="10" class="stripetable">
+        <table cellpadding="10" class="stripetable" cellspacing=0>
             <tr>
-            <th width="250px"><strong>Title</strong></th>
-            <th width="450px"><strong>Description</strong></th>
-            <th width="200px"><strong>Actions</strong></th>
+            <th width="300px"><strong>Author</strong></th>
+            <th width="400px"><strong>Title</strong></th>
+            <th width="100px"><strong>Type</strong></th>
+            <th width="100px"><strong>Actions</strong></th>
             </tr>
             {% for o in subscribed_lists %}
+             {% set feedback = o.author_key_id|key_to_feedback_label %}
             <tr>
-            <td width="250px">
-                <div style="position:relative">
-                 <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}" >{{ o.name }}</a>
+            <td width="250px"><a href="/profile/{{ o.author_key_id }}" >
+                <div style="position:relative" class="div_cell_link"><a href="/profile/{{ o.author_key_id }}" >
+                 <img src="data:image/png;base64,{{o.author_key_id|key_to_identicon}}"> {{o.author_key_id|display_name}} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" style="vertical-align: top;"/>  </a>
                  </div>
             </td>
             <td width="450px">
-                <div style="position:relative">
-                <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}" > {{ o.description }}</a>
+                <div style="position:relative" class="div_cell_link"><a href="/lists/user/{{ o.author_key_id }}/{{o.id}}" >
+                {{ o.name }}</a>
                 </div>
             </td>
-            <td width="200px">
-                <div style="position:relative">
-                <a class ="in_cell_link" href="/lists/user/{{ o.author_key_id }}" >xxx</a>
+            <td width="100px">
+                <div style="position:relative" class="div_cell_link"><a href="/lists/user/{{ o.author_key_id }}/{{o.id}}" >
+                {% if o.type == 1 %}Notary{% else %}User List{%endif%}</a>
+                </div>
+            </td>
+            <td width="100px">
+                <div style="position:relative" class="div_cell_link"><a href="/lists/user/{{ o.author_key_id }}/{{o.id}}/remove" >
+                Remove</a>
                 </div>
             </td>
             </tr>
@@ -76,5 +83,36 @@
 
 </div>
 
+
+<!-- Modal One -->
+<div class="modal">
+  <input class="modal-open" id="modal-two" type="checkbox" hidden>
+  <div class="modal-wrap" aria-hidden="true" role="dialog">
+    <label class="modal-overlay" for="modal-two"></label>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2>Create new User Published List</h2>
+        <label class="btn-close" for="modal-two" aria-hidden="true">×</label>
+      </div>
+      <div class="modal-body">
+          <form method="post" action="{{ url_for('upl') }}">
+          <input name="_csrf_token" type=hidden value="{{ csrf_token() }}">
+          <table cellpadding="5">
+            <tr><td><label>Name :</label></td> <td><input type="text" name="name" size="40" class="inputs" placeholder="Name of your list" required ></td></tr>
+            <tr><td><label>Description:</label></td><td><textarea name="description" cols="40" style="height: auto;" rows = "2" class="inputs" placeholder="Provide a short description of this list for other users"></textarea></td></tr>
+            <tr><td><label>Type:</label></td> <td><div class = "select_style"><select name="type" style="width:200px">
+                <option value="1">Notary List</option>
+                <option value="2" selected="selected">User Published List</option>
+            </select></div></td></tr>
+          </table>
+      </div>
+      <div class="modal-footer">
+         <button type="submit" style="float:right" class = "btnblu" name ="action" value="checkout">Create List</button>
+        <label class="btn" style="float:right" for="modal-two">Cancel</label>
+      </div>
+    </div>
+  </div>
+</div>
+</form>
 
 {% endblock %}
