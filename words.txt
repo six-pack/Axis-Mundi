@@ -75,7 +75,7 @@ costume
 frenchman
 general
 juanito
-pequeño
+Pequeno
 gerald
 yaya
 greater
