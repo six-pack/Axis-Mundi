@@ -7,7 +7,14 @@
   <div class="round_box" style='width:47%;float:left;margin-top:0px;'>
     <table>
     <tr><td width="100px">
-    {% if current_broker and online%}Broker :</td><td>{{current_broker}}{%else%}You are not connected to a broker{%endif%}</td></tr>
+    {% if current_broker and online%}
+        Broker: </td><td>{{current_broker}}
+    {% elif current_broker and not online%}
+        Broker: </td><td>Connecting...
+    {%else%}
+        Broker: </td><td>Off-line mode
+    {%endif%}
+    </td></tr>
     <tr><td>Identity :</td><td><img src="data:image/png;base64,{{mykey|key_to_identicon}}"> {{mykey|display_name}} <input type="button" class="feedback {{feedback[2]}}" value="{{feedback[0]}}/{{feedback[1]}}" style="vertical-align: top;"/><br>
     </td></tr>
     </table>
