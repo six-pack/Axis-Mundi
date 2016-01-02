@@ -155,7 +155,7 @@ class messaging_loop(threading.Thread):
             client.unsubscribe(msg.topic)
             # TODO: Check we have really been sent a PGP key block and check if
             # it really is the same as the topic key
-            keyid = msg.topic[msg.topic.index('user/') + 1:msg.topic.rindex('/')]
+            keyid = msg.topic[msg.topic.index('user/') + 5:msg.topic.rindex('/')]
             try:
                 state = self.task_state_pgpkeys[keyid]['state']
             except KeyError:
@@ -180,7 +180,7 @@ class messaging_loop(threading.Thread):
             # Here is a directory entry, store it and unsubscribe
             if not self.looking_glass:
                 client.unsubscribe(msg.topic)
-            keyid = msg.topic[msg.topic.index('user/') + 1:msg.topic.rindex('/')]
+            keyid = msg.topic[msg.topic.index('user/') + 5:msg.topic.rindex('/')]
             print "Directory entry: " + msg.payload + " " + msg.topic
             # number of users in the directory
             print "Adding directory entry "
@@ -258,7 +258,7 @@ class messaging_loop(threading.Thread):
             print "Incoming message has been deferred while signing key is requested"
             return
 
-        if msg.topic == self.sub_inbox and (self.allow_unsigned or incoming_message.signed):
+        if re.match('mesh/(local|remote)/user\/' + self.mypgpkeyid + '\/inbox', msg.topic) and (self.allow_unsigned or incoming_message.signed):
             message = incoming_message
             if message == False:
                 print "Message was invalid"
@@ -369,7 +369,7 @@ class messaging_loop(threading.Thread):
             # Here is a profile, store it and unsubscribe
             if not self.looking_glass:
                 client.unsubscribe(msg.topic)
-            keyid = msg.topic[msg.topic.index('user/') + 1:msg.topic.rindex('/')]
+            keyid = msg.topic[msg.topic.index('user/') + 5:msg.topic.rindex('/')]
             # TODO: Check we have really been sent a valid profile message for the key indicated
             # print msg.payload
             # self.myMessaging.GetMessage(msg.payload,self,allow_unsigned=False)
@@ -414,7 +414,7 @@ class messaging_loop(threading.Thread):
             # Here is a listings message, store it and unsubscribe
             if not self.looking_glass:
                 client.unsubscribe(msg.topic)
-            keyid = msg.topic[msg.topic.index('user/') + 1:msg.topic.rindex('/')]
+            keyid = msg.topic[msg.topic.index('user/') + 5:msg.topic.rindex('/')]
             # print msg.payload
             # self.myMessaging.GetMessage(msg.payload,self,allow_unsigned=False)
             # # Never allow unsigned listings
