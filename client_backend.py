@@ -62,11 +62,11 @@ class messaging_loop(threading.Thread):
         self.display_name = None
         self.myMessaging = Messaging(
             self.mypgpkeyid, self.pgp_passphrase, self.pgpdir, appdir)
-        self.sub_inbox = str("user/" + self.mypgpkeyid + "/inbox")
-        self.pub_profile = str("user/" + self.mypgpkeyid + "/profile")
-        self.pub_key = str("user/" + self.mypgpkeyid + "/key")
-        self.pub_items = str("user/" + self.mypgpkeyid + "/items")
-        self.pub_directory = str("user/" + self.mypgpkeyid + "/directory")
+        self.sub_inbox = str("mesh/+/user/" + self.mypgpkeyid + "/inbox")
+        self.pub_profile = str("mesh/local/user/" + self.mypgpkeyid + "/profile")
+        self.pub_key = str("mesh/local/user/" + self.mypgpkeyid + "/key")
+        self.pub_items = str("mesh/local/user/" + self.mypgpkeyid + "/items")
+        self.pub_directory = str("mesh/local/user/" + self.mypgpkeyid + "/directory")
         self.storageDB = Storage
         self.connected = False
         self.workoffline = workoffline
@@ -149,13 +149,13 @@ class messaging_loop(threading.Thread):
     def on_message(self, client, userdata, msg):
         # Key blocks and directory entries are a special case because they are
         # not signed so we check for them first
-        if re.match('user\/[A-F0-9]{16}\/key', msg.topic):
+        if re.match('mesh/(local|remote)/user\/[A-F0-9]{16}\/key', msg.topic):
             # Here is a key, store it and unsubscribe
             print "Key Retrieved from " + str(msg.topic)
             client.unsubscribe(msg.topic)
             # TODO: Check we have really been sent a PGP key block and check if
             # it really is the same as the topic key
-            keyid = msg.topic[msg.topic.index('/') + 1:msg.topic.rindex('/')]
+            keyid = msg.topic[msg.topic.index('user/') + 1:msg.topic.rindex('/')]
             try:
                 state = self.task_state_pgpkeys[keyid]['state']
             except KeyError:
@@ -176,11 +176,11 @@ class messaging_loop(threading.Thread):
             return None
 # imp_res = self.gpg.import_keys(msg.payload) # we could import it here
 # but we use the local keyserver
-        elif re.match('user\/[A-F0-9]{16}\/directory', msg.topic):
+        elif re.match('mesh/(local|remote)/user\/[A-F0-9]{16}\/directory', msg.topic):
             # Here is a directory entry, store it and unsubscribe
             if not self.looking_glass:
                 client.unsubscribe(msg.topic)
-            keyid = msg.topic[msg.topic.index('/') + 1:msg.topic.rindex('/')]
+            keyid = msg.topic[msg.topic.index('user/') + 1:msg.topic.rindex('/')]
             print "Directory entry: " + msg.payload + " " + msg.topic
             # number of users in the directory
             print "Adding directory entry "
@@ -365,11 +365,11 @@ class messaging_loop(threading.Thread):
 #                                                                 )
 #                session.add(new_db_message)
 #                session.commit()
-        elif re.match('user\/[A-F0-9]{16}\/profile', msg.topic) and incoming_message.signed:
+        elif re.match('mesh/(local|remote)/user\/[A-F0-9]{16}\/profile', msg.topic) and incoming_message.signed:
             # Here is a profile, store it and unsubscribe
             if not self.looking_glass:
                 client.unsubscribe(msg.topic)
-            keyid = msg.topic[msg.topic.index('/') + 1:msg.topic.rindex('/')]
+            keyid = msg.topic[msg.topic.index('user/') + 1:msg.topic.rindex('/')]
             # TODO: Check we have really been sent a valid profile message for the key indicated
             # print msg.payload
             # self.myMessaging.GetMessage(msg.payload,self,allow_unsigned=False)
@@ -410,11 +410,11 @@ class messaging_loop(threading.Thread):
         # but we use the local keyserver
             else:
                 print "No profile message found in profile returned from " + keyid
-        elif re.match('user\/[A-F0-9]{16}\/items', msg.topic) and incoming_message.signed:
+        elif re.match('mesh/(local|remote)/user\/[A-F0-9]{16}\/items', msg.topic) and incoming_message.signed:
             # Here is a listings message, store it and unsubscribe
             if not self.looking_glass:
                 client.unsubscribe(msg.topic)
-            keyid = msg.topic[msg.topic.index('/') + 1:msg.topic.rindex('/')]
+            keyid = msg.topic[msg.topic.index('user/') + 1:msg.topic.rindex('/')]
             # print msg.payload
             # self.myMessaging.GetMessage(msg.payload,self,allow_unsigned=False)
             # # Never allow unsigned listings
@@ -497,10 +497,10 @@ class messaging_loop(threading.Thread):
         # only publish if there is a difference with the local db copy
         # TODO: We definitely don't want to do this each time user connects -
         # put such SUBs in an one time client SUB setup
-        client.subscribe('user/+/directory', 1)
+        client.subscribe('mesh/+/user/+/directory', 1)
         if self.looking_glass:
-            client.subscribe('user/+/items', 1)
-            client.subscribe('user/+/profile', 1)
+            client.subscribe('mesh/+/user/+/items', 1)
+            client.subscribe('mesh/+/user/+/profile', 1)
         # Our generic incoming queue, qos=1
         client.subscribe(self.sub_inbox, 1)
         # Our published pgp key block, qos=1, durable
@@ -609,7 +609,7 @@ class messaging_loop(threading.Thread):
                 self.q_res.put(flash_msg)
                 return False
             res = client.publish(
-                "user/" + message.recipient + "/inbox", outMessage, 1, False)
+                "mesh/local/user/" + message.recipient + "/inbox", outMessage, 1, False)
             if res[0] == MQTT_ERR_SUCCESS:
                 flash_msg = queue_task(
                     0, 'flash_message', 'Message sent to ' + message.recipient)
@@ -1443,7 +1443,7 @@ class messaging_loop(threading.Thread):
                 except KeyError:
                     state = None
                 if state == KEY_LOOKUP_STATE_INITIAL:
-                    key_topic = 'user/' + pgp_key + '/key'
+                    key_topic = 'mesh/+/user/' + pgp_key + '/key'
                     res = self.client.subscribe(str(key_topic), 1)
                     if res[0] == MQTT_ERR_SUCCESS:
                         self.task_state_pgpkeys[pgp_key][
@@ -1483,13 +1483,13 @@ class messaging_loop(threading.Thread):
 # client.subscribe(str(key_topic),1) # disabked 24th July as duplicating
 # code in the state_table
                 elif task.command == 'get_profile':
-                    key_topic = 'user/' + task.data['keyid'] + '/profile'
+                    key_topic = 'mesh/+/user/' + task.data['keyid'] + '/profile'
                     self.client.subscribe(str(key_topic), 1)
                     print "Requesting profile for " + task.data['keyid']
                 elif task.command == 'get_listings':
                     item_id = task.data['id']
                     key_id = task.data['keyid']
-                    key_topic = 'user/' + key_id + '/items'
+                    key_topic = 'mesh/+/user/' + key_id + '/items'
                     self.client.subscribe(str(key_topic), 1)
                     print "Requesting listings for " + key_id
 
@@ -1546,7 +1546,7 @@ class messaging_loop(threading.Thread):
 
                 elif task.command == 'get_directory':
                         # Request list of all users
-                    key_topic = 'user/+/directory'
+                    key_topic = 'mesh/+/user/+/directory'
                     self.client.subscribe(str(key_topic), 0)
                     print "Requesting directory of users"
 
