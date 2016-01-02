@@ -983,7 +983,7 @@ def createidentity():                                               # This is a 
                   category="error")
             return redirect(url_for('install'))
     app.dbsecretkey = ''.join(random.SystemRandom().choice(
-        string.digits) for _ in range(128))
+        string.ascii_lowercase + string.digits) for _ in range(64))
     # Now create our empty pgp keyring it it does not exist in our app data dir
     if not isfile(app.appdir + '/pubkeys.gpg'):
         try:
@@ -1024,7 +1024,7 @@ def createidentity():                                               # This is a 
         return redirect('/') # TODO - error page
     #dbsession.commit()
     print "Created config database defaults. Rows created = " + str(dbsession.query(app.roStorageDB.Config).count())
-    print "Secret is " + app.dbsecretkey
+    #print "Secret is " + app.dbsecretkey
     while dbsession.query(app.roStorageDB.Config).filter_by(name='proxy').count() == 0:
         print "waiting for initial database to populate..."
         sleep(0.5)

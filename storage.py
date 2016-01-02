@@ -326,14 +326,14 @@ class Storage(): # Main, persistent, encrypted local database
         # DATABASE ENCRYPTION CAN BE DISABLED/ENABLED HERE
         if get_os() == 'Windows':
             self.engine = create_engine(
-                r'sqlite+pysqlcipher://:'+passphrase+'/' + dbfilepath, connect_args={'check_same_thread': False}) # Encrypted database
+                r'sqlite+pysqlcipher://:'+passphrase+'@/' + dbfilepath, connect_args={'check_same_thread': False}) # Encrypted database
                 # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
 #                r'sqlite:///' + dbfilepath, connect_args={'check_same_thread': False}) # Cleartext database (testing)
             #  poolclass=StaticPool
         else:
 
             self.engine = create_engine(
-                'sqlite+pysqlcipher://:'+passphrase+'//' + dbfilepath, connect_args={'check_same_thread': False}) # Encrypted database
+                'sqlite+pysqlcipher://:'+passphrase+'@//' + dbfilepath, connect_args={'check_same_thread': False}) # Encrypted database
                 # TESTING ONLY - THIS CREATES A CLEAR-TEXT STORAGE DATABASE!
 #                'sqlite:////' + dbfilepath, connect_args={'check_same_thread': False}) # Cleartext database (testing)
             #  poolclass=StaticPool

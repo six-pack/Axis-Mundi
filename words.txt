@@ -18,7 +18,7 @@ madame
 canadian
 mountie
 captain
-françois
+francois
 dubonais
 carriage
 driver
@@ -75,7 +75,7 @@ costume
 frenchman
 general
 juanito
-Pequeno
+pequeno
 gerald
 yaya
 greater

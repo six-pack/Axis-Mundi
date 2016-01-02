@@ -336,7 +336,7 @@ class messaging_loop(threading.Thread):
                         print "Warning: Unable to process incoming order message and associated chain - discarding"
                 except:
                     print "Error during order decode...discarding order message"
-                    #raise # TODO - disable after debugging
+                    # raise # TODO - disable after debugging
                 print str(current_stage_signed)
                 #status = order_stages['order_status']# order_stages[0]['order_status']
                 flash_msg = queue_task(
@@ -1015,6 +1015,7 @@ class messaging_loop(threading.Thread):
         session = self.storageDB.DBSession()
         for item in items:
             print "Update_cart is updating " + str(item) + " with " + str(items[item])
+            #TODO: For looking glass we need to use the lg_sessionid in the below query
             cart_entry = session.query(self.storageDB.Cart).filter(
                 self.storageDB.Cart.seller_key_id == key_id).filter(self.storageDB.Cart.item_id == item).first()
             (qty,shipping) = (items[item])
