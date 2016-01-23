@@ -23,5 +23,11 @@ To run Axis Mundi from source on OSX it it necessary to install the Homebrew pac
 5) Now you're done - just execute Axis Mundi
  $ ./client.py
  
+6) If you want to create a working binary executable then install pyinstaller and execute the supplied config file
+ $ pip install pyinstaller
+ $ pyinstaller -c axismundi_pyinst.spec
 
+7) Your single file Axis Mundi binary is now available in the dist directory - copy it to wherever you want to and in future just double click axismundi to run.
+
+ 
 
