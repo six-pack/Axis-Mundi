@@ -18,34 +18,21 @@ def create_defaults(db, session, pgp_keyid, display_name, publish_id, btc_master
         # Network default settings
         new_conf_item = db.Config(name="hubnodes")
         # Hardcode in these seed entry points
-        new_conf_item.value = "jqzxl4pxii7yjcjv.onion"
+        new_conf_item.value = "lhzcqh5m7pem46gb.onion"
         new_conf_item.displayname = "Entry Points"
         session.add(new_conf_item)
         new_conf_item = db.Config(name="hubnodes")
         # Hardcode in these seed entry points
-        new_conf_item.value = "c6gizttsgqhoqity.onion"
+        new_conf_item.value = "p5yzsirjhoqihhn7.onion"
         new_conf_item.displayname = "Entry Points"
         session.add(new_conf_item)
         new_conf_item = db.Config(name="hubnodes")
         # Hardcode in these seed entry points
-        new_conf_item.value = "r2j7zovmdkplwfrz.onion"
+        new_conf_item.value = "jbl6vf4h63vigyig.onion"
         new_conf_item.displayname = "Entry Points"
         session.add(new_conf_item)
         new_conf_item = db.Config(name="hubnodes")
-        # Hardcode in these seed entry points
-        new_conf_item.value = "evdjwy36ugatq2nm.onion"
-        new_conf_item.displayname = "Entry Points"
-        session.add(new_conf_item)
-        new_conf_item = db.Config(name="hubnodes")
-        # Hardcode in these i2p seed entry points
-        new_conf_item.value = "sq6bvhqsnopp7xqx32v6qriky4zmph7avh4n4jzfvudcqehhqifa.b32.i2p"
-        new_conf_item.displayname = "Entry Points"
-        session.add(new_conf_item)
-        new_conf_item = db.Config(name="hubnodes")
-        # Hardcode in these i2p seed entry points
-        new_conf_item.value = "o5bgiilpfir7nyofkruggiehk655brlr5xsrkdjdyv3mbpmaesrq.b32.i2p"
-        new_conf_item.displayname = "Entry Points"
-        session.add(new_conf_item)
+        # TODO: i2p seed nodes here
         new_conf_item = db.Config(name="stratum_servers")
         # Hardcode in these servers from electrum
         new_conf_item.value = "electrum.be:50002:s"
