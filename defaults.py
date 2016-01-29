@@ -31,8 +31,19 @@ def create_defaults(db, session, pgp_keyid, display_name, publish_id, btc_master
         new_conf_item.value = "jbl6vf4h63vigyig.onion"
         new_conf_item.displayname = "Entry Points"
         session.add(new_conf_item)
+        # i2p seeds
         new_conf_item = db.Config(name="hubnodes")
-        # TODO: i2p seed nodes here
+        # Hardcode in these seed entry points
+        new_conf_item.value = "3ntwoj37gxbsxd4262cy3xym4f55wj7iusmmrcghf7kl2u5c7bza.b32.i2p"
+        new_conf_item.displayname = "Entry Points"
+        session.add(new_conf_item)
+        new_conf_item = db.Config(name="hubnodes")
+        # Hardcode in these seed entry points
+        new_conf_item.value = "s6kgirfqsxgjykhj6wfzpbf6gpxd7t2cfvwk54qra2zmnjr2jlza.b32.i2p"
+        new_conf_item.displayname = "Entry Points"
+        session.add(new_conf_item)
+        
+        
         new_conf_item = db.Config(name="stratum_servers")
         # Hardcode in these servers from electrum
         new_conf_item.value = "electrum.be:50002:s"
