@@ -1,7 +1,7 @@
 Instructions for Tails users
 ============================
 
-You should be using Tails with encrypted persistence enabled. Any version of Tails should work fine.
+You should be using Tails with encrypted persistence enabled. Any version of Tails should work fine although these notes were written based on Tails 1.6
 
 You can either download and run the pre-built binaries (this is the simplest way) however if you wish to build your own binary rather from the source code rather than trust ours then follow these simple instructions. The "Build Your Own - Quick Start" method is the simplest and quickest. It is assumed that you are using Tails with encrypted persistence enabled.
 

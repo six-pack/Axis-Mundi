@@ -30,4 +30,3 @@ To run Axis Mundi from source on OSX it it necessary to install the Homebrew pac
 7) Your single file Axis Mundi binary is now available in the dist directory - copy it to wherever you want to and in future just double click axismundi to run.
 
 
-
