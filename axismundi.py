@@ -440,11 +440,12 @@ def cart(action=''):
                 cart_item_list[item_id]=(request.form['quantity_' + item_id],request.form['shipping_' + item_id])
             cart_updates = {"key_id": seller_key, "items": cart_item_list, "sessionid": session.get('lg','')}
             task = queue_task(1, 'update_cart', cart_updates)
-        elif action == "checkout":
+        elif str(action).startswith("checkout|"):
             # user is checking out their cart from a single seller
             seller_key = request.form['pgpkey_id']
-            transaction_type = request.form['data-value'] # TODO: check selected transaction type is allowed for each cart item
-            print "User is checking out from a cart from seller " + seller_key
+            transaction_type = str(action).split('|')[1]
+            #transaction_type = request.form['data-value'] # TODO: check selected transaction type is allowed for each cart item
+            print "User is checking out from a cart from seller " + seller_key + " with a transaction type of " + transaction_type
             seller_cart_items = dbsession.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
             cart_item_list = {}
             for seller_cart_item in seller_cart_items:
