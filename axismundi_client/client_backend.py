@@ -328,7 +328,7 @@ class messaging_loop(threading.Thread):
                         print "Warning: Unable to process incoming order message and associated chain - discarding"
                 except:
                     print "Error during order decode...discarding order message"
-                    # raise # TODO - disable after debugging
+                    raise # TODO - disable after debugging
                 print str(current_stage_signed)
                 #status = order_stages['order_status']# order_stages[0]['order_status']
                 flash_msg = queue_task(
@@ -509,6 +509,7 @@ class messaging_loop(threading.Thread):
         profile_message.sender = self.mypgpkeyid
         profile_dict = {}
         profile_dict['display_name'] = self.display_name
+        profile_dict['version'] = '1.0'
         profile_dict['profile'] = self.profile_text
         profile_dict['avatar_image'] = self.avatar_image
         profile_dict['stealth_address'] = stealth_address
@@ -530,6 +531,7 @@ class messaging_loop(threading.Thread):
             #            directory_message.sender = self.mypgpkeyid
             directory_dict = {}
             directory_dict['display_name'] = self.display_name
+            directory_dict['version'] = '1.0'
             directory_dict['is_seller'] = self.is_seller
             directory_dict['is_notary'] = self.is_notary
             directory_dict['is_arbiter'] = self.is_arbiter
@@ -560,6 +562,7 @@ class messaging_loop(threading.Thread):
             for listing_item in listings:
                 listings_dict = {}
                 listings_dict['id'] = listing_item.id
+                listings_dict['version'] = '1.0'
                 listings_dict['item'] = listing_item.title
                 listings_dict['category'] = listing_item.category
                 listings_dict['description'] = listing_item.description
@@ -678,6 +681,7 @@ class messaging_loop(threading.Thread):
     def make_pgp_auth(self):
         password_message = {}
         password_message['time'] = str(timegm(gmtime()) / 60)
+        password_message['version'] = '1.0'
         password_message['broker'] = self.targetbroker
         password_message['key'] = self.gpg.export_keys(
             self.mypgpkeyid, False, minimal=False)
@@ -1139,12 +1143,14 @@ class messaging_loop(threading.Thread):
                 order_msg.subject = order.orderid # put the order id in the subject for easy processing of outbound messages
                 order_dict = {}
                 order_dict['id'] = order.orderid
+                order_dict['version'] = '1.0'
                 order_dict['quantity'] = order.quantity
                 order_dict['shipping_option'] = order.shipping
                 order_dict['delivery_address'] = order.delivery_address
                 order_dict['buyer_notes'] = order.order_note
                 order_dict['order_status'] = 'submitted'
                 order_dict['order_type'] = order.order_type
+                order_dict['order_date'] = current_time()
                 order_dict['buyer_btc_pub_key'] = order.buyer_btc_pub_key
                 order_dict['payment_address'] = order.payment_btc_address # duplicate information but eases processing
                 order_dict['currency_code'] = order.currency_code
@@ -1218,7 +1224,44 @@ class messaging_loop(threading.Thread):
                     print "Warning: Existing order id found in database for this received order, dropping order message...."
                     return False
                 # TODO: check this order better before committing to order database
+                new_order = self.storageDB.Orders ( orderid = order_id,
+                                                    session_id = '000000000', # TODO - This doesn't matter for the seller
+                                                    seller_key = item_seller,
+                                                    buyer_key = order_buyer,
+                                                    notary_key = None,
+                                                    buyer_ephemeral_btc_seed = 0,
+                                                    buyer_btc_pub_key = order_stages[1]['buyer_btc_pub_key'],
+                                                    payment_btc_address = order_stages[1]['payment_address'],
+                                                    payment_status = 'unpaid', # unpaid/escrow/paid/refunded
+                                                    order_date = datetime.strptime(order_stages[1]['order_date'],"%Y-%m-%d %H:%M:%S"),
+                                                    #order_date = datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"), # TODO get this from the order stage
+                                                    order_status = 'submitted', # created/submitted/cancelled/rejected/processing/shipped/dispute/finalized
+                                                    is_synced = False,
+                                                    # TODO is a sync time/date needed?or is a order history structure (json) needed to store event & date/time for all events
+                                                    delivery_address = order_stages[1]['delivery_address'],
+                                                    order_note = order_stages[1]['buyer_notes'],
+                                                    order_type = order_stages[1]['order_type'],
+                                                    seller_btc_stealth = order_stages[0]['stealth_address'],
+                                                    item_id = item_id,
+                                                    title = order_stages[0]['item'],
+                                                    price = order_stages[0]['unit_price'],
+                                                    currency_code = order_stages[0]['currency'],
+                                                    shipping_options = order_stages[0]['shipping_options'],
+                                                    image_base64 = order_stages[0]['image'],
+                                                    publish_date = datetime.strptime(order_stages[0]['publish_date'],"%Y-%m-%d %H:%M:%S"),
+                                             #       raw_item = None,
+                                                    raw_seed = order_stages[1]['parent_contract_block'],
+                                                    quantity = order_stages[1]['quantity'],
+                                                    shipping = order_stages[1]['shipping_option'],
+                                                    line_total_price = order_stages[1]['total_price'],
+                                                    line_total_btc_price = order_stages[1]['total_price_btc'] # self.price_to_btc(entry.line_total_price,entry.currency_code) #
+                                                    )
+                session.add(new_order)
+                print "================== Committing new order to DB"
+                session.commit()
+                print "================== Done writing new order to DB"
                 print "You have received a new order!"
+
         else:
             # I am not the seller
             print "This order message chain concerns an item that another user is selling"
