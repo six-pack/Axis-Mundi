@@ -48,9 +48,11 @@
                       <div class="modal-body">
                         <div class="datagrid">
                         <div class="round_box" style="width:95%">
-                            <table cellpadding="5">
+                            <table cellpadding="2">
                                 <tr>
-                                    <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="direct" value="direct" checked><label for="direct" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Direct</b></label></div></td>
+                                    <td width = "160px"><div align="center">
+                                        <button type="submit"  class = "btnblu"  name="action" value="checkout|direct" >Direct Order</button>
+                                    </div></td>
                                     <td>Seller receives payment immediately
                                         <br>
                                         No feedback possible
@@ -61,13 +63,11 @@
                             </table>
                         </div>
                         <div class="round_box" style="width:95%">
-                            <table cellpadding="5">
+                            <table cellpadding="2">
                                 <tr>
-                                    <td width = "160px">
-                                        <div>
-                                            <button type="submit" style="float:right" class = "btnblu" name ="action" value="checkout-direct">Continue Order</button>
-                                        </div>
-                                    </td>
+                                    <td width = "160px"><div align="center">
+                                        <button type="submit" class = "btnblu"  name="action" value="checkout|notarized" disabled>Notarized Order</button>
+                                    </div></td>
                                     <td>Seller receives payment immediately
                                         <br>
                                         Buyer and seller can both leave feedback
@@ -78,27 +78,22 @@
                             </table>
                         </div>
                         <div class="round_box" style="width:95%">
-                            <table cellpadding="5">
+                            <table cellpadding="2">
                                 <tr>
-                                    <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="escrow" value="escrow" disabled><label for="escrow" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Escrow</b></label></div></td>
+                                    <td width = "160px"><div align="center">
+                                        <button type="submit" class = "btnblu"  name="action" value="checkout|escrow" disabled> Escrow Order </button>
+                                    </div></td>
                                     <td>Seller paid after order is finalized
                                         <br>
                                         Buyer and seller can both leave feedback
                                         <br>
-                                        Arbiters can be used in the event of dispute
+                                        Arbiters available in event of dispute
                                         <br>
                                         Costs of around 2%
                                     </td>
                                 </tr>
                             </table>
                         </div>
-                      </div>
-                      <div class="modal-footer" style="vertical-align:middle">
-                        <button type="submit" style="float:right" class = "btnblu" name ="action" value="checkout"> Continue Order </button>
-                        <label  style="float:right" class="btn" for="modal-one-{{global_seller[-1]}}">Cancel</label>
-
-                          <br>
-                      </div>
                       </div>
                     </div>
                   </div>
@@ -178,10 +173,10 @@
               <div class="modal-body">
                 <div class="datagrid">
                 <div class="round_box" style="width:95%">
-                    <table cellpadding="5">
+                    <table cellpadding="2">
                         <tr>
-                            <td width = "160px"><div>
-                                <button type="submit" style="float:right" class = "btnblu"  name="action" value="checkout|direct" >Direct Order</button>
+                            <td width = "160px"><div align="center">
+                                <button type="submit"  class = "btnblu"  name="action" value="checkout|direct" >Direct Order</button>
                             </div></td>
                             <td>Seller receives payment immediately
                                 <br>
@@ -193,10 +188,10 @@
                     </table>
                 </div>
                 <div class="round_box" style="width:95%">
-                    <table cellpadding="5">
+                    <table cellpadding="2">
                         <tr>
-                            <td width = "160px"><div>
-                                <button type="submit" style="float:right" class = "btnblu"  name="action" value="checkout|notarized">Notarized Order</button>
+                            <td width = "160px"><div align="center">
+                                <button type="submit" class = "btnblu"  name="action" value="checkout|notarized" disabled>Notarized Order</button>
                             </div></td>
                             <td>Seller receives payment immediately
                                 <br>
@@ -208,29 +203,22 @@
                     </table>
                 </div>
                 <div class="round_box" style="width:95%">
-                    <table cellpadding="5">
+                    <table cellpadding="2">
                         <tr>
-                            <td width = "160px"><div>
-                                <button type="submit" style="float:right" class = "btnblu"  name="action" value="checkout|escrow"> Escrow Order </button>
+                            <td width = "160px"><div align="center">
+                                <button type="submit" class = "btnblu"  name="action" value="checkout|escrow" disabled> Escrow Order </button>
                             </div></td>
                             <td>Seller paid after order is finalized
                                 <br>
                                 Buyer and seller can both leave feedback
                                 <br>
-                                Arbiters can be used in the event of dispute
+                                Arbiters available in event of dispute
                                 <br>
                                 Costs of around 2%
                             </td>
                         </tr>
                     </table>
                 </div>
-              </div>
-              <div class="modal-footer" style="vertical-align:middle">
-                 <button type="submit" style="float:right" class = "btnblu" name ="action" value="checkout">Continue Order</button>
-                <label  style="float:right" class="btn" for="modal-one-{{global_seller[-1]}}">Cancel</label>
-
-
-                  <br>
               </div>
               </div>
             </div>
