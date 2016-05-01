@@ -6,6 +6,7 @@ import json
 from time import sleep
 import socks
 from sockshandler import SocksiPyHandler
+import random
 
 class btc_exchange_rate(threading.Thread):
     # Thread to handle periodic exchange rate lookups. Queries multiple sources in case of failure
@@ -29,6 +30,7 @@ class btc_exchange_rate(threading.Thread):
 
         BTC_API_BITPAY = 'http://bitpay.com/api/rates'
         BTC_API_BITCOINCHARTS = 'http://api.bitcoincharts.com/v1/weighted_prices.json'
+        BTC_API_BITCOINAVERAGE = 'https://api.bitcoinaverage.com/ticker/global/all'
         sources = [BTC_API_BITPAY,BTC_API_BITCOINCHARTS]
         source_index = 0
         while self.running:
@@ -45,11 +47,16 @@ class btc_exchange_rate(threading.Thread):
                     for code in data_list:
                         if not (code == 'CHF' or code == 'timestamp'): # For some reasson CHF is broken in the bitcoincharts api
                             data.append({'code': code,'rate':data_list[code]['24h']})
+                elif source == BTC_API_BITCOINAVERAGE: # TODO - Process bitcoinaverage api output
+                    print "BTC_API_BITCOINAVERAGE NOT IMPLEMENTED"
+                    data = []
+                    for code in data_list:
+                        data.append({'code': code,'rate':data_list[code]['24h_avg']})
 
                 task = queue_task(1, 'update_exchange_rates', data)
                 print "Exchange rates updated OK using " + source
                 self.queue.put(task)
-                sleep(900) # default 15 minutes TODO: Randomize this slightly (between 10 - 30 minutes)
+                sleep(600 + random.randint(0, 1200)) # refresh every 10 - 30 minutes - randomize period
             except:
                 print "Warning: Failed to retrieve current exchange rates from " + source
                 if source_index < len(sources):

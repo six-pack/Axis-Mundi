@@ -63,7 +63,11 @@
                         <div class="round_box" style="width:95%">
                             <table cellpadding="5">
                                 <tr>
-                                    <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="notarized" value="notarized" disabled><label for="notarized" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Notarized</b></label></div></td>
+                                    <td width = "160px">
+                                        <div>
+                                            <button type="submit" style="float:right" class = "btnblu" name ="action" value="checkout-direct">Continue Order</button>
+                                        </div>
+                                    </td>
                                     <td>Seller receives payment immediately
                                         <br>
                                         Buyer and seller can both leave feedback
@@ -90,7 +94,7 @@
                         </div>
                       </div>
                       <div class="modal-footer" style="vertical-align:middle">
-                        <button type="submit" style="float:right" class = "btnblu" name ="action" value="checkout">Continue Order</button>
+                        <button type="submit" style="float:right" class = "btnblu" name ="action" value="checkout"> Continue Order </button>
                         <label  style="float:right" class="btn" for="modal-one-{{global_seller[-1]}}">Cancel</label>
 
                           <br>
@@ -176,7 +180,9 @@
                 <div class="round_box" style="width:95%">
                     <table cellpadding="5">
                         <tr>
-                            <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="direct" value="direct" checked><label for="direct" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Direct</b></label></div></td>
+                            <td width = "160px"><div>
+                                <button type="submit" style="float:right" class = "btnblu"  name="action" value="checkout|direct" >Direct Order</button>
+                            </div></td>
                             <td>Seller receives payment immediately
                                 <br>
                                 No feedback possible
@@ -189,7 +195,9 @@
                 <div class="round_box" style="width:95%">
                     <table cellpadding="5">
                         <tr>
-                            <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="notarized" value="notarized" disabled><label for="notarized" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Notarized</b></label></div></td>
+                            <td width = "160px"><div>
+                                <button type="submit" style="float:right" class = "btnblu"  name="action" value="checkout|notarized">Notarized Order</button>
+                            </div></td>
                             <td>Seller receives payment immediately
                                 <br>
                                 Buyer and seller can both leave feedback
@@ -202,7 +210,9 @@
                 <div class="round_box" style="width:95%">
                     <table cellpadding="5">
                         <tr>
-                            <td width = "160px"><div><input type="radio" class="radio" name="transaction_type" id="escrow" value="escrow" disabled><label for="escrow" style="width: 150px; border-radius: 3px; border: 1px solid #D1D3D4;"><b>Escrow</b></label></div></td>
+                            <td width = "160px"><div>
+                                <button type="submit" style="float:right" class = "btnblu"  name="action" value="checkout|escrow"> Escrow Order </button>
+                            </div></td>
                             <td>Seller paid after order is finalized
                                 <br>
                                 Buyer and seller can both leave feedback

@@ -1,34 +1,30 @@
 #!/usr/bin/env python
 
-from flask import Flask, render_template, request, redirect, url_for, abort, session, flash, g, make_response
-from flask_login import LoginManager, UserMixin, login_user, current_user, logout_user, login_required
-from functools import wraps, update_wrapper
-import gnupg
-from os.path import expanduser, isfile, isdir, dirname
-from os import makedirs, sys, unsetenv, putenv, sep
-import string
-import random
-from storage import Storage, SqlalchemyOrmPage, memory_cache
-from client_backend import messaging_loop
 import Queue
-from utilities import queue_task, encode_image, generate_seed, current_time, get_age, resource_path, os_is_tails, replace_in_file
-from defaults import create_defaults
-from time import sleep
-import base64
-from platform import system as get_os
-import pybitcointools as btc
-from collections import defaultdict
-import json
-from constants import *
-from multiprocessing import Process, freeze_support
-import multiprocessing.forking
-import webbrowser
-import os
-import pydenticon, hashlib
-from PIL import Image
-import StringIO
-import json2html
 import datetime
+import hashlib
+import json
+import multiprocessing.forking
+import os
+import random
+import string
+import webbrowser
+from collections import defaultdict
+from flask import Flask, render_template, request, redirect, url_for, session, flash, g, make_response
+from flask_login import LoginManager, UserMixin, login_user, current_user, logout_user, login_required
+from multiprocessing import Process, freeze_support
+from os import makedirs, sys, unsetenv, putenv, sep
+from os.path import expanduser, isfile, isdir, dirname
+from platform import system as get_os
+from time import sleep
+
+import axismundi_client.pydenticon
+from axismundi_client.storage import Storage, SqlalchemyOrmPage, memory_cache
+
+from axismundi_client.client_backend import messaging_loop
+from axismundi_client.constants import *
+from axismundi_client.defaults import create_defaults
+from axismundi_client.utilities import queue_task, encode_image, generate_seed, get_age, resource_path, os_is_tails
 
 app = Flask(__name__)
 # (8Mb maximum upload to local webserver) - make sure we dont need to use the disk
@@ -154,6 +150,7 @@ def display_name(value):
         return
     dbsession = app.memory_cache.DBSession()
     filter = value
+    print value
     dname = dbsession.query(app.memory_cache.cacheFullDirectory).filter_by(key_id=filter).first()
 #    print dname.__dict__
     return (dname.display_name) # TODO - check the contacts list and also add status flags/verfication/trust status
@@ -189,7 +186,7 @@ def key_to_identicon(value,size=20):
                    "rgb(49,203,115)",
                    "rgb(141,69,170)"]
     background = "rgba(255,255,255,0)"
-    generator = pydenticon.Generator(5,5,digest=hashlib.sha256, foreground=foreground, background=background,)
+    generator = axismundi_client.pydenticon.Generator(5, 5, digest=hashlib.sha256, foreground=foreground, background=background, )
     identicon_png = generator.generate(value, size, size, output_format="png")
     image=encode_image(identicon_png,(size,size))
     return (image)
@@ -446,7 +443,7 @@ def cart(action=''):
         elif action == "checkout":
             # user is checking out their cart from a single seller
             seller_key = request.form['pgpkey_id']
-            transaction_type = request.form['transaction_type'] # TODO: check selected transaction type is allowed for each cart item
+            transaction_type = request.form['data-value'] # TODO: check selected transaction type is allowed for each cart item
             print "User is checking out from a cart from seller " + seller_key
             seller_cart_items = dbsession.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
             cart_item_list = {}
@@ -1489,7 +1486,7 @@ def run():
     if get_os() == 'Windows':
         # This is the default appdir location
         app.appdir = app.homedir + '\\application data\\.dnmng'
-        app.gpg = gnupg.GPG(gnupghome=app.homedir + '/application data/gnupg', options={
+        app.gpg = axismundi_client.gnupg.GPG(gnupghome=app.homedir + '/application data/gnupg', options={
                             '--throw-keyids', '--no-emit-version', '--trust-model=always'})  # we want to encrypt the secret with throw keys
     else:
         app.appdir = app.homedir + '/.dnmng'  # This is the default appdir location
@@ -1499,7 +1496,7 @@ def run():
                 print "Tails persistence detected, Axis Mundi data store location defaulting to /home/amnesia/Persistent folder"
                 app.appdir = app.homedir + '/Persistent/.dnmng'  # This is the default appdir location
         # we want to encrypt the secret with throw keys
-        app.gpg = gnupg.GPG(gnupghome=app.homedir + '/.gnupg', options={
+        app.gpg = axismundi_client.gnupg.GPG(gnupghome=app.homedir + '/.gnupg', options={
                             '--throw-keyids', '--no-emit-version', '--trust-model=always'})
     app.connection_status = "Off-line"
     app.current_broker = None
@@ -1586,13 +1583,13 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
     # By default try to start the status gui in the system tray
     if not option_nogui:
         if use_wx:
-        # USe wxpython for gui
-            import trayicon_gui
+            # USe wxpython for gui
+            import axismundi_client.trayicon_gui, axismundi_client.gnupg
             import wx
             try:
                 gui = wx.App()
                 frame = wx.Frame(None)  # empty frame
-                trayicon_gui.TaskBarIcon()
+                axismundi_client.trayicon_gui.TaskBarIcon()
             except:  # If that fails assume nogui mode
                 print "No display detected, disabling status gui"
                 option_nogui = True

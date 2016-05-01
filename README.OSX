@@ -1,0 +1,33 @@
+Axis Mundi will run on OSX without modification although at present there is no binary executable. A binary will be available from release 0.1 onwards.
+
+To run Axis Mundi from source on OSX it it necessary to install the Homebrew package and some dependencies as shown below:
+
+1) Install Homebrew
+  $ ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+  $ export PATH=/usr/local/bin:/usr/local/sbin:$PATH
+
+2) Install system dependencies
+ $ brew install python
+ $ brew install wxpython
+ $ brew install gpg
+ $ brew install wget
+
+3) Get Axis Mundi latest source
+ $ wget https://github.com/six-pack/Axis-Mundi/archive/master.zip
+ $ unzip master.zip
+ $ cd Axis-Mundi-Master
+
+4) Get Axis Mundi python requirements
+ $ pip install -r requirements.txt
+
+5) Now you're done - just execute Axis Mundi
+ $ ./axismundi.py
+
+6) If you want to create a working binary executable then install pyinstaller and execute the supplied config file
+ $ pip install pyinstaller
+ $ pyinstaller -c axismundi_pyinst.spec
+
+7) Your single file Axis Mundi binary is now available in the dist directory - copy it to wherever you want to and in future just double click axismundi to run.
+
+
+

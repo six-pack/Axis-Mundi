@@ -1,11 +1,12 @@
-import gnupg
 import json
-from utilities import current_time, got_pgpkey, json_from_clearsigned
-import textwrap
 import random
 import string
-from constants import *
+import textwrap
 from platform import system as get_os
+
+import gnupg
+from constants import *
+from utilities import current_time, got_pgpkey, json_from_clearsigned
 
 
 class Contract_seed(object):
@@ -93,7 +94,7 @@ class Messaging():
             # TODO - account for filenames with spaces on windows
         else:
             keyring = app_dir + '/pubkeys.gpg'
-        self.gpg = gnupg.GPG(gnupghome=pgp_dir, options={'--primary-keyring=' + keyring,'--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
+        self.gpg = gnupg.GPG(gnupghome=pgp_dir, options={'--primary-keyring=' + keyring, '--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
                                                          '--keyserver-options=auto-key-retrieve=yes,http-proxy=', '--primary-keyring="' + keyring + '"'})  # removed '--auto-key-locate=keyserver',
         self.pgp_passphrase = pgppassphrase
 #       self.gpg.options = "--no-emit-version"

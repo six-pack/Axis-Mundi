@@ -1,14 +1,13 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Boolean, DECIMAL, DateTime, insert
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy import Column, ForeignKey, Integer, String, Boolean, DateTime
 from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+
 #import pycountry
-import time
 from os.path import isfile
 import paginate
 from platform import system as get_os
-import constants
 from utilities import current_time
 from datetime import datetime
 

@@ -1,5 +1,5 @@
 # -*- mode: python -*-
-a = Analysis(['client.py'],
+a = Analysis(['axismundi.py'],
              pathex=[''],
              hiddenimports=[],
              hookspath=None,

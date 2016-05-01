@@ -47,7 +47,7 @@ Then the following steps are necessary
     sudo chmod -R o+r,o+X /usr/local/lib/python2.7/dist-packages
 
 3) You can now start Axis Mundi from your axis-mundi directory
-    python client.py
+    python axismundi.py
 
     Axis Mundi requires a change to the firewall rules (to permit localhost to localhost traffic) and also a proxy exclusion for localhost in Torbrowser. Axis Mundi will prompt you at start up if you are running on Tails and will offer to make these changes for you, although you are welcome to make them manually if you prefer.
 

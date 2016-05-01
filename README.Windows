@@ -15,7 +15,7 @@ Extract Axis Mundi to a folder. Now go back to a command prompt and change to th
 c:\python27\python -m pip install -r requirements.txt
 
 Once this has completed you can run Axis Mundi using:
-c:\python27\python client.py
+c:\python27\python axismundi.py
 
 If you want to build a binary executable the following extra steps are required:
 

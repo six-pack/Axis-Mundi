@@ -1,5 +1,3 @@
-import threading
-import Queue
 import time
 from datetime import datetime, timedelta
 #import paho.mqtt.client as mqtt
@@ -9,21 +7,15 @@ from mqtt_client import Client as mqtt
 from storage import Storage
 import gnupg
 from messaging import Message, Messaging, Contact
-from utilities import queue_task, current_time, got_pgpkey, parse_user_name, full_name, Listing, get_age, json_from_clearsigned
-import json
-import socks
-import socket
+from utilities import current_time, got_pgpkey, parse_user_name, Listing, json_from_clearsigned
 from calendar import timegm
 from time import gmtime
-import random
 import re
 from collections import defaultdict
-from pprint import pprint
 import string
 from platform import system as get_os
 import textwrap
 from constants import *
-import pybitcointools as btc
 from btc_utils import *
 from btc_exchange_rate import *
 
@@ -52,7 +44,7 @@ class messaging_loop(threading.Thread):
         self.i2p_brokers = []
         self.clearnet_brokers = []
         # TODO - account for filenames with spaces on windows
-        self.gpg = gnupg.GPG(gnupghome=self.pgpdir, options={ '--primary-keyring=' + self.appdir + '/pubkeys.gpg',
+        self.gpg = gnupg.GPG(gnupghome=self.pgpdir, options={'--primary-keyring=' + self.appdir + '/pubkeys.gpg',
                                                               '--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
                                                               '--keyserver-options=auto-key-retrieve=yes,http-proxy='
                                                              })
