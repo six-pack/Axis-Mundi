@@ -21,7 +21,7 @@ Build Your Own - Quick Start Instructions (The quick and easy way)
 
 1) Boot Tails making sure to select 'More Options' during start-up and setting an administrative password.
 2) Open a terminal then copy and paste the following line in and hit enter:
-    wget https://raw.githubusercontent.com/six-pack/Axis-Mundi/master/build_tails.sh; sh build_tails.sh
+    wget https://raw.githubusercontent.com/six-pack/Axis-Mundi/master/build/build_tails.sh; sh build_tails.sh
 3) Enter your administrative password when prompted (5 or 6 times) and select Y(es) when prompted
 
 Once complete, Axis Mundi should now be built and a copy should hve been placed in your Persistence folder.
@@ -56,7 +56,7 @@ Then the following steps are necessary
     sudo chmod -R o+r,o+X /usr/local/lib/python2.7/dist-packages
 
 Now that Pyinstaller is installed simply execute the following command from your Axis Mundi directory:
-    pyinstaller axismundi_pyinst.spec
+    pyinstaller build/axismundi_pyinst.spec
 
 The binary will be built and placed into the dist directory. Keep a copy of it on a persistent volume for easy use:
     cp dist/axismundi ~/Persistent
