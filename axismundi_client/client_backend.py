@@ -298,6 +298,7 @@ class messaging_loop(threading.Thread):
                         try:
                             order_stage = (json.loads(current_stage_verified))
                             order_stage['signing_key_id'] = current_stage_sig_check.key_id
+                            order_stage['raw'] = current_stage_signed # raw and unverified
                         except:
                             print "Error unable to decode json order stage message " + current_stage_verified
                             return False
@@ -1204,10 +1205,15 @@ class messaging_loop(threading.Thread):
         print "process_order_chain()"
         if not order_stages:
             return False
+        #print order_stages[0]
         item = str(order_stages[0]['item'])
         item_id = str(order_stages[0]['id'])
         item_seller = str(order_stages[0]['seller_key'])
         last_msg_stage = str(order_stages[-1]['order_status'])
+        if len(order_stages) > 1:
+            order_buyer = str(order_stages[1]['signing_key_id'])
+            order_id = str(order_stages[1]['id'])
+
         print "Order message indicates "+ last_msg_stage +" and concerns " + item + "(" + item_id + ") from " + item_seller
         session = self.storageDB.DBSession()
         # TODO: Implement further actions for notary, arbiter, escrow/multi-sig stages
@@ -1217,8 +1223,8 @@ class messaging_loop(threading.Thread):
             print "This order message chain concerns an item I am selling"
             if last_msg_stage=='submitted':
                 # This appears to be new order for something we are (or were) selling - see if we already know about it
-                order_id = str(order_stages[1]['id'])
-                order_buyer = str(order_stages[1]['signing_key_id'])
+             #   order_id = str(order_stages[1]['id'])
+             #   order_buyer = str(order_stages[1]['signing_key_id'])
                 res=session.query(self.storageDB.Orders).filter_by(id=order_id,buyer_key=order_buyer).first()
                 if res:
                     print "Warning: Existing order id found in database for this received order, dropping order message...."
@@ -1249,7 +1255,7 @@ class messaging_loop(threading.Thread):
                                                     shipping_options = order_stages[0]['shipping_options'],
                                                     image_base64 = order_stages[0]['image'],
                                                     publish_date = datetime.strptime(order_stages[0]['publish_date'],"%Y-%m-%d %H:%M:%S"),
-                                             #       raw_item = None,
+                                                    raw_item = order_stages[1]['raw'], # this must contain the whole chain
                                                     raw_seed = order_stages[1]['parent_contract_block'],
                                                     quantity = order_stages[1]['quantity'],
                                                     shipping = order_stages[1]['shipping_option'],
@@ -1261,10 +1267,18 @@ class messaging_loop(threading.Thread):
                 session.commit()
                 print "================== Done writing new order to DB"
                 print "You have received a new order!"
+            #TODO - Other notifications that seller will receive
 
-        else:
-            # I am not the seller
-            print "This order message chain concerns an item that another user is selling"
+#        else:  # TODO - uncomment this else and re-indent the following block
+        # I am not the seller
+        print "This order message chain concerns an item that another user is selling"
+        # Am I the buyer perhaps?
+        if order_buyer == self.mypgpkeyid:
+            print "This order message chain concerns an item I am buying"
+        # TODO - Am I the notary
+        # TODO - Am I the arbiter?
+        # END OF BLOCK TO BE RE-INDENTED
+
         return True
 
     def update_currency_rates(self,rates):
