@@ -716,7 +716,7 @@ class messaging_loop(threading.Thread):
         # check the balance of a btc address
         tmp_msg = {'address': address}
         tmp_task = queue_task(1,'btc_balance_check',tmp_msg)
-        self.btc_processor_thread.request_queue.put(tmp_task)
+        self.btc_req_q.put(tmp_task)
 
 
     def btc_update_balance(self,address,confirmed,unconfirmed):
