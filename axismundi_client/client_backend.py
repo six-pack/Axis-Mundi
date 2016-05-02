@@ -312,7 +312,7 @@ class messaging_loop(threading.Thread):
                             current_stage_signed = ''
     #                    current_stage_signed = re.sub('(?m)^- ',"",current_stage_signed) # pgp wont do this for us
                         print "Verifying nested signature"
-                        print current_stage_signed
+                        #print current_stage_signed
                         current_stage_sig_check = self.gpg.verify(current_stage_signed)
 
                     order_stages.reverse()
@@ -320,9 +320,10 @@ class messaging_loop(threading.Thread):
                     for stage in order_stages:
                         print "-------------------------------------------------------------------------------"
                         try:
-                            print 'Order Stage: ' + stage['order_status'] +' '+ str(stage)
+                            print 'Order Stage: ' + stage['order_status'] #+' '+ str(stage)
                         except:
-                            print 'Item: ' + str(stage)
+                            print 'Seed Contract'
+                    print "-------------------------------------------------------------------------------"
                     if self.process_order_chain(order_stages):
                         print "Processed order message & chain"
                     else:
@@ -917,7 +918,7 @@ class messaging_loop(threading.Thread):
                 try:
                     # TODO: Additional input validation required here
                     verified_item = json.loads(stripped_item)
-                    print verified_item
+                    print 'Info: Extracted item ' + verified_item['item'] + 'from listings'
                     # TODO: Additional input validation required here
                     if verified_item['seller_key']==key_id:
                         item_shipping_options = json.loads(
@@ -1225,7 +1226,7 @@ class messaging_loop(threading.Thread):
                 # This appears to be new order for something we are (or were) selling - see if we already know about it
              #   order_id = str(order_stages[1]['id'])
              #   order_buyer = str(order_stages[1]['signing_key_id'])
-                res=session.query(self.storageDB.Orders).filter_by(id=order_id,buyer_key=order_buyer).first()
+                res=session.query(self.storageDB.Orders).filter_by(orderid=order_id,buyer_key=order_buyer).first()
                 if res:
                     print "Warning: Existing order id found in database for this received order, dropping order message...."
                     return False
@@ -1267,16 +1268,41 @@ class messaging_loop(threading.Thread):
                 session.commit()
                 print "================== Done writing new order to DB"
                 print "You have received a new order!"
+
+            else:
+                res=session.query(self.storageDB.Orders).filter_by(orderid=order_id,buyer_key=order_buyer).first()
+                if res:
+                    print "Existing order found..."
+                    if (order_buyer == res.buyer_key) and (order_id == res.orderid):
+                        if last_msg_stage=='finalized' and res.order_status =='shipped':
+                            res.order_status ='finalized'
+                            session.commit()
+                            return True
             #TODO - Other notifications that seller will receive
 
-#        else:  # TODO - uncomment this else and re-indent the following block
-        # I am not the seller
-        print "This order message chain concerns an item that another user is selling"
-        # Am I the buyer perhaps?
-        if order_buyer == self.mypgpkeyid:
-            print "This order message chain concerns an item I am buying"
-        # TODO - Am I the notary
-        # TODO - Am I the arbiter?
+        else:  # TODO - uncomment this else and re-indent the following block
+            # I am not the seller
+            print "This order message chain concerns an item that another user is selling"
+            # Am I the buyer perhaps?
+            if order_buyer == self.mypgpkeyid:
+                print "This order message chain concerns an item I am buying"
+                res=session.query(self.storageDB.Orders).filter_by(orderid=order_id,buyer_key=order_buyer).first()
+                if res:
+                    print "Existing order found..."
+                    if (item_seller == res.seller_key) and (order_id == res.orderid):
+                        if last_msg_stage=='shipped' and res.order_status =='submitted':
+                            res.order_status ='shipped'
+                            session.commit()
+                            return True
+                        elif last_msg_stage=='processing' and res.order_status =='submitted':
+                            res.order_status ='processing'
+                            session.commit()
+                            return True
+                else:
+                    print "Warning: Could not find an existing buy order. Dropping order update message."
+                    return False
+            # TODO - Am I the notary
+            # TODO - Am I the arbiter?
         # END OF BLOCK TO BE RE-INDENTED
 
         return True
