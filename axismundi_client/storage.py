@@ -28,8 +28,8 @@ class memory_cache(): # In-memory cache db to hold a potentially large user dire
     class cacheFullDirectory(Base): # This table  contains the aggregate of all user publihed lists and notary lists subscribed to
         __tablename__ = 'cachefulldirectory'
         key_id = Column(String(16), primary_key=True, nullable=False)
-        updated = Column(DateTime, nullable=False)
-        display_name = Column(String())
+        updated = Column(DateTime, nullable=False, index=True)
+        display_name = Column(String(), index=True)
         is_active_user = Column(Boolean)
         is_seller = Column(Boolean)
         is_notary = Column(Boolean)
@@ -127,17 +127,17 @@ class Storage(): # Main, persistent, encrypted local database
     class Config(Base):
         __tablename__ = 'config'
         id = Column(Integer, primary_key=True)
-        name = Column(String(250), nullable=False)
+        name = Column(String(250), nullable=False, index=True)
         value = Column(String(2048), nullable=False)
         displayname = Column(String(250), nullable=False)
 
     class PrivateMessaging(Base):
         __tablename__ = 'privatemessaging'
         id = Column(Integer, primary_key=True)
-        message_id = Column(String(32), nullable=False)
-        sender_key = Column(String(16), nullable=False)
+        message_id = Column(String(32), nullable=False, index=True)
+        sender_key = Column(String(16), nullable=False, index=True)
         sender_name = Column(String(64))
-        recipient_key = Column(String(16), nullable=False)
+        recipient_key = Column(String(16), nullable=False, index=True)
         recipient_name = Column(String(64))
         message_date = Column(DateTime)
         # Make sure we enforce a purge date
@@ -172,7 +172,7 @@ class Storage(): # Main, persistent, encrypted local database
 
     class Listings(Base):
         __tablename__ = 'listings'
-        id = Column(Integer, primary_key=True)
+        id = Column(Integer, primary_key=True, index=True)
         title = Column(String(80), nullable=False)
         category = Column(String(255), nullable=False)
         description = Column(String(4096), nullable=False)
@@ -193,9 +193,9 @@ class Storage(): # Main, persistent, encrypted local database
     class Orders(Base):
         __tablename__ = 'orders'
         id = Column(Integer, primary_key=True)
-        orderid = Column(String(32), nullable=False)
-        seller_key = Column(String(16), nullable=False)
-        buyer_key = Column(String(16), nullable=False)
+        orderid = Column(String(32), nullable=False, index=True)
+        seller_key = Column(String(16), nullable=False, index=True)
+        buyer_key = Column(String(16), nullable=False, index=True)
         notary_key = Column(String(16))
         order_date = Column(DateTime, nullable=False)
         order_status = Column(String(64), nullable=False)
@@ -204,8 +204,10 @@ class Storage(): # Main, persistent, encrypted local database
         order_type = Column(String(16), nullable=False)
         buyer_ephemeral_btc_seed = Column(String(256))
         buyer_btc_pub_key = Column(String(256))
-        payment_btc_address = Column(String(80))
-        payment_status = Column(String(64))
+        payment_btc_address = Column(String(80), index=True)
+        payment_status = Column(String(64), index=True)
+        payment_btc_balance_confirmed = Column(String(20))
+        payment_btc_balance_unconfirmed = Column(String(20))
         seller_btc_stealth = Column(String(80))
         item_id = Column(String(16), nullable=False)
         title = Column(String(80), nullable=False)
@@ -234,7 +236,7 @@ class Storage(): # Main, persistent, encrypted local database
 
     class currencies(Base):
         __tablename__ = 'currencies'
-        code = Column(String(4), primary_key=True, nullable=False)
+        code = Column(String(4), primary_key=True, nullable=False, index=True)
         name = Column(String(40), nullable=False)
         exchange_rate = Column(String(10), nullable=False)
         last_update = Column(DateTime) # if blank means never
@@ -242,8 +244,8 @@ class Storage(): # Main, persistent, encrypted local database
     class Cart(Base):
         __tablename__ = 'shopping_cart'
         id = Column(Integer, primary_key=True)
-        seller_key_id = Column(String(16), nullable=False)
-        item_id = Column(String(16), nullable=False)
+        seller_key_id = Column(String(16), nullable=False, index=True)
+        item_id = Column(String(16), nullable=False, index=True)
         title = Column(String(80), nullable=False)
         qty_available = Column(Integer)
         order_max_qty = Column(Integer)
@@ -264,14 +266,14 @@ class Storage(): # Main, persistent, encrypted local database
     class cachePGPKeys(Base):
         __tablename__ = 'cachepgpkeys'
         id = Column(Integer, primary_key=True)
-        key_id = Column(String(16), nullable=False)
+        key_id = Column(String(16), nullable=False, index=True)
         updated = Column(DateTime, nullable=False)
         keyblock = Column(String(8192))
 
     class cacheDirectory(Base):
         __tablename__ = 'cachedirectory'
         id = Column(Integer, primary_key=True)
-        key_id = Column(String(16), nullable=False)
+        key_id = Column(String(16), nullable=False, index=True)
         updated = Column(DateTime, nullable=False)
         display_name = Column(String())
         is_seller = Column(Boolean)
@@ -291,8 +293,8 @@ class Storage(): # Main, persistent, encrypted local database
     class cacheItems(Base):
         __tablename__ = 'cacheitems'
         t_id = Column(Integer, primary_key=True)
-        id = Column(Integer, nullable=False) # Item id
-        key_id = Column(String(16), nullable=False)
+        id = Column(Integer, nullable=False, index=True) # Item id
+        key_id = Column(String(16), nullable=False, index=True)
         updated = Column(DateTime, nullable=False)
         listings_block = Column(String())
         title = Column(String(80), nullable=False)
@@ -311,8 +313,8 @@ class Storage(): # Main, persistent, encrypted local database
     class cacheProfiles(Base):
         __tablename__ = 'cacheprofiles'
         id = Column(Integer, primary_key=True)
-        key_id = Column(String(16), nullable=False)
-        updated = Column(DateTime, nullable=False)
+        key_id = Column(String(16), nullable=False, index=True)
+        updated = Column(DateTime, nullable=False, index=True)
         display_name = Column(String(80))
         profile_text = Column(String(4096))
         avatar_base64 = Column(String())  # this does not seem efficient
