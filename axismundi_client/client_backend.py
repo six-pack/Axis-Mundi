@@ -1,4 +1,5 @@
 import time
+import Queue
 from datetime import datetime, timedelta
 #import paho.mqtt.client as mqtt
 #from paho.mqtt.client import MQTT_ERR_SUCCESS, mqtt_cs_connected
@@ -17,6 +18,7 @@ from platform import system as get_os
 import textwrap
 from constants import *
 from btc_utils import *
+from btc_processor import *
 from btc_exchange_rate import *
 
 class messaging_loop(threading.Thread):
@@ -31,6 +33,7 @@ class messaging_loop(threading.Thread):
         self.mypgpkeyid = pgpkeyid
         self.q = q  # queue for client (incoming queue_task requests)
         self.q_res = q_res  # results queue for client (outgoing)
+        self.btc_req_q = Queue.Queue()
         self.database = database
         self.homedir = homedir
         if get_os() == 'Windows':
@@ -82,7 +85,6 @@ class messaging_loop(threading.Thread):
         self.is_arbiter = False # if true once dbconfig is read then arbiter screens and functions will be available
         # Non-published roles (these roles must not be exposed to Axis Mundi)
         self.is_broker_admin = False # if true once dbconfig is read then broker admin screens and functions will be available
-
         threading.Thread.__init__(self)
 
     # TODO: Check that these parameters are right, had to add "flags" which
@@ -710,6 +712,21 @@ class messaging_loop(threading.Thread):
         elif transport == 'tor':
             self.targetbroker = random.choice(self.onion_brokers)
 
+    def btc_check_balance(self,address):
+        # check the balance of a btc address
+        tmp_msg = {'address': address}
+        tmp_task = queue_task(1,'btc_balance_check',tmp_msg)
+        self.btc_processor_thread.request_queue.put(tmp_task)
+
+
+    def btc_update_balance(self,address,confirmed,unconfirmed):
+        # TODO : Implement order database btc address balance update
+        if confirmed == -1:
+            print "Warning: BTC balance update failed for " + str(address)
+        else:
+            print "Info: BTC balance update for " + str(address) + ' Confirmed: ' + str(confirmed) + ' Unconfirmed: ' + str(unconfirmed)
+
+
     def new_contact(self, contact):
         if contact.pgpkey != "":
             importedkey = self.gpg.import_keys(contact.pgpkey)
@@ -833,6 +850,8 @@ class messaging_loop(threading.Thread):
                 self.storageDB.Config.name == "i2p_proxy_port").first()
             brokers = session.query(self.storageDB.Config.value).filter(
                 self.storageDB.Config.name == "hubnodes").all()
+            stratum_servers = session.query(self.storageDB.Config.value).filter(
+                self.storageDB.Config.name == "stratum_servers").all()
             display_name = session.query(self.storageDB.Config.value).filter(
                 self.storageDB.Config.name == "displayname").first()
             publish_identity = session.query(self.storageDB.Config.value).filter(
@@ -876,6 +895,7 @@ class messaging_loop(threading.Thread):
         else:
             self.i2p_proxy_enabled = False
         self.brokers = brokers
+        self.stratum_servers = stratum_servers
         self.display_name = display_name.value
         if profile_text:
             self.profile_text = profile_text.value
@@ -1434,6 +1454,10 @@ class messaging_loop(threading.Thread):
         self.exchange_rate_thread = btc_exchange_rate(self.proxy,self.proxy_port,self.q)
         self.exchange_rate_thread.start()
 
+        # Start BTC processor thread
+        self.btc_processor_thread = btc_processor(self.proxy,self.proxy_port,self.stratum_servers,self.btc_req_q,self.q)
+        self.btc_processor_thread.start()
+
         while not self.shutdown:
             if not self.workoffline:
                 self.client.loop(0.05)  # deal with mqtt events
@@ -1677,6 +1701,9 @@ class messaging_loop(threading.Thread):
 
                 elif task.command == 'create_list':
                     self.create_upl(task.data)
+
+                elif task.command == 'btc_update_balance':
+                    self.btc_update_balance(task.data['address'],task.data['balance_confirmed'],task.data['balance_unconfirmed'])
 
                 elif task.command == 'shutdown':
                     self.shutdown = True
