@@ -727,6 +727,12 @@ class messaging_loop(threading.Thread):
             print "Info: BTC balance update for " + str(address) + ' Confirmed: ' + str(confirmed) + ' Unconfirmed: ' + str(unconfirmed)
 
 
+    def update_stratum_servers(self,peers):
+        # TODO : Implement automatic updating of stratum server list and saving to the config db
+        for peer in peers:
+            print "Info: Fresh stratum server peer obtained " + str(peer)
+
+
     def new_contact(self, contact):
         if contact.pgpkey != "":
             importedkey = self.gpg.import_keys(contact.pgpkey)
@@ -1704,6 +1710,10 @@ class messaging_loop(threading.Thread):
 
                 elif task.command == 'btc_update_balance':
                     self.btc_update_balance(task.data['address'],task.data['balance_confirmed'],task.data['balance_unconfirmed'])
+
+                elif task.command == 'btc_update_stratum_peers':
+                    # TODO: Make dynamic updates optional
+                    self.update_stratum_servers(task.data['peers'])
 
                 elif task.command == 'shutdown':
                     self.shutdown = True
