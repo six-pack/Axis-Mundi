@@ -59,7 +59,7 @@ class btc_exchange_rate(threading.Thread):
                 sleep(600 + random.randint(0, 1200)) # refresh every 10 - 30 minutes - randomize period
             except:
                 print "Warning: Failed to retrieve current exchange rates from " + source
-                if source_index < len(sources):
+                if source_index < len(sources)-1:
                     source_index += 1
                 else:
                     source_index = 0
