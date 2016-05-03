@@ -1,5 +1,5 @@
 import threading
-from utilities import queue_task
+from utilities import queue_task, get_age, current_time
 import json
 from time import sleep
 import socks
@@ -8,6 +8,7 @@ import random
 from stratum_rpc import JSONRPCProxy
 from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
+from datetime import datetime, timedelta
 
 class btc_processor(threading.Thread):
     # Thread to handle BTC operations. Queries multiple stratum servers in case of failure

@@ -725,6 +725,19 @@ class messaging_loop(threading.Thread):
             print "Warning: BTC balance update failed for " + str(address)
         else:
             print "Info: BTC balance update for " + str(address) + ' Confirmed: ' + str(confirmed) + ' Unconfirmed: ' + str(unconfirmed)
+            lconf = float(confirmed) / 100000000
+            lunconf = float(unconfirmed) / 100000000
+            session = self.storageDB.DBSession()
+            order = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.payment_btc_address == str(address)).first()
+            if order:
+                if order.payment_btc_balance_confirmed <> str(lconf) or order.payment_btc_balance_unconfirmed <> str(lunconf):
+                    print "Info: A potential balance change has been detected for a payment BTC address " + str(address)
+                    order.payment_btc_balance_confirmed = str(lconf)
+                    order.payment_btc_balance_unconfirmed = str(lunconf)
+                    if float(lconf) >= float(order.line_total_btc_price):
+                        print "Info: An order has been paid to " + str(address)
+                        order.payment_status = 'paid'
+                    session.commit()
 
 
     def update_stratum_servers(self,peers):
@@ -1079,6 +1092,8 @@ class messaging_loop(threading.Thread):
                                                 buyer_ephemeral_btc_seed = transient_seed,
                                                 buyer_btc_pub_key = transient_pubkey,
                                                 payment_btc_address = payment_address,
+                                                payment_btc_balance_confirmed = '0.0',
+                                                payment_btc_balance_unconfirmed = '0.0',
                                                 payment_status = 'unpaid', # unpaid/escrow/paid/refunded
                                                 order_date = datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
                                                 order_status = 'created', # created/submitted/cancelled/rejected/processing/shipped/dispute/finalized
@@ -1226,6 +1241,20 @@ class messaging_loop(threading.Thread):
             else:
                 print "Error: Unknown order state in order " + order.orderid + "=" + order.order_status
 
+
+    def scrape_unpaid_btc_addresses(self):
+        # scrape orders for any unpaid addresses and request a balance update - will be called every 5 minutes
+        session = self.storageDB.DBSession()
+        orders = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.payment_status == 'unpaid').all()
+        addresses = []
+        for order in orders:
+            if order.order_status != 'cancelled':
+                print order.payment_btc_address
+                addresses.append(order.payment_btc_address)
+        btc_update_request = queue_task(0,'btc_balance_check',{'address':addresses})
+        self.btc_req_q.put(btc_update_request)
+
+
     def process_order_chain(self,order_stages):
         # Process an incoming order message and the assocated chain, return true if we can process this order message
         # We may get messages if we are a buyer, seller, notary or arbiter
@@ -1265,6 +1294,8 @@ class messaging_loop(threading.Thread):
                                                     buyer_ephemeral_btc_seed = 0,
                                                     buyer_btc_pub_key = order_stages[1]['buyer_btc_pub_key'],
                                                     payment_btc_address = order_stages[1]['payment_address'],
+                                                    payment_btc_balance_confirmed = '0.0',
+                                                    payment_btc_balance_unconfirmed = '0.0',
                                                     payment_status = 'unpaid', # unpaid/escrow/paid/refunded
                                                     order_date = datetime.strptime(order_stages[1]['order_date'],"%Y-%m-%d %H:%M:%S"),
                                                     #order_date = datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"), # TODO get this from the order stage
@@ -1330,8 +1361,8 @@ class messaging_loop(threading.Thread):
             # TODO - Am I the notary
             # TODO - Am I the arbiter?
         # END OF BLOCK TO BE RE-INDENTED
-
         return True
+
 
     def update_currency_rates(self,rates):
         session = self.storageDB.DBSession()
@@ -1463,6 +1494,9 @@ class messaging_loop(threading.Thread):
         # Start BTC processor thread
         self.btc_processor_thread = btc_processor(self.proxy,self.proxy_port,self.stratum_servers,self.btc_req_q,self.q)
         self.btc_processor_thread.start()
+
+        btc_scrape_time = datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S")
+        self.scrape_unpaid_btc_addresses()
 
         while not self.shutdown:
             if not self.workoffline:
@@ -1715,8 +1749,19 @@ class messaging_loop(threading.Thread):
                     # TODO: Make dynamic updates optional
                     self.update_stratum_servers(task.data['peers'])
 
+
                 elif task.command == 'shutdown':
                     self.shutdown = True
+
+                ############## TIMERS #################
+
+                btc_scrape_age = get_age(btc_scrape_time)
+                if btc_scrape_age > 300:
+                    print "Info: Sweeping orders for unpaid BTC addresses..."
+                    self.scrape_unpaid_btc_addresses()
+                    btc_scrape_time = datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S")
+
+
         try:
             self.client
         except NameError:
