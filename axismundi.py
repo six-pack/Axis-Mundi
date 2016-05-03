@@ -79,7 +79,7 @@ def generate_csrf_token():
 def looking_glass_session(): # this session cookie will be used for looking glass mode
     if session.get('lg') == '':
         session['lg']= ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16))
-        print "Setting new sessionid..."
+        print "Info: Setting new sessionid..."
 
 @app.before_request
 # return a dict with  the current exchange rates
@@ -150,7 +150,6 @@ def display_name(value):
         return
     dbsession = app.memory_cache.DBSession()
     filter = value
-    print value
     dname = dbsession.query(app.memory_cache.cacheFullDirectory).filter_by(key_id=filter).first()
 #    print dname.__dict__
     return (dname.display_name) # TODO - check the contacts list and also add status flags/verfication/trust status
@@ -235,22 +234,20 @@ def orders(view_type='buying', page=1):
         id = request.form.get('id')
         seller_key = request.form.get('seller_key')
         action = request.form.get('action')
-        print id
-        print action
         if action == 'mark_paid':
-            print "Front end marking as paid"
+            print "Info: Front end marking as paid"
             cmd_data = {"id": id,"command":"order_mark_paid", "sessionid": session.get('lg','')}
             task = queue_task(1, 'update_order', cmd_data)
             messageQueue.put(task)
             sleep(0.2)
         if action == 'order_shipped':
-            print "Front end marking as shipped"
+            print "Info: Front end marking as shipped"
             cmd_data = {"id": id,"command":"order_shipped", "sessionid": session.get('lg','')}
             task = queue_task(1, 'update_order', cmd_data)
             messageQueue.put(task)
             sleep(0.2)
         if action == 'order_finalize':
-            print "Front end marking as finalized"
+            print "Info: Front end marking as finalized"
             cmd_data = {"id": id,"command":"order_finalize", "sessionid": session.get('lg','')}
             task = queue_task(1, 'update_order', cmd_data)
             messageQueue.put(task)
@@ -424,7 +421,7 @@ def cart(action=''):
             flash("Item added to cart", category="message")
         elif action == 'remove':
             # delete sellers items from cart - remove them from database
-            print "Front end requesting to delete sellers items from cart"
+            print "Info: Front end requesting to delete sellers items from cart"
             seller_key = request.form['pgpkey_id']
             del_seller = {"key_id": seller_key, "sessionid": session.get('lg','')}
             task = queue_task(1, 'remove_from_cart', del_seller)
@@ -445,7 +442,7 @@ def cart(action=''):
             seller_key = request.form['pgpkey_id']
             transaction_type = str(action).split('|')[1]
             #transaction_type = request.form['data-value'] # TODO: check selected transaction type is allowed for each cart item
-            print "User is checking out from a cart from seller " + seller_key + " with a transaction type of " + transaction_type
+            print "Info: User is checking out from a cart from seller " + seller_key + " with a transaction type of " + transaction_type
             seller_cart_items = dbsession.query(app.roStorageDB.Cart).filter_by(seller_key_id = seller_key)
             cart_item_list = {}
             for seller_cart_item in seller_cart_items:
@@ -475,7 +472,7 @@ def cart(action=''):
                 # This query includes the lg sessionid because evem if lg is not enabled, it is necessary to track the user move from cart to order
                 orders = dbsession.query(app.roStorageDB.Orders).filter_by(session_id=session.get('lg','')).filter_by(seller_key=seller_key).order_by(app.roStorageDB.Orders.order_status.asc()) # one or more ordered items
             else:
-                print "Order not yet ready...waiting..."
+                print "Info: Order not yet ready...waiting..."
             return render_template('ordered.html', order=orders, seller_key=seller_key)
 
         # Now send the relevant cart_update message to backend and await
@@ -616,7 +613,7 @@ def profile(keyid=None):
         else:
             timer=int(request.args.get('wait')) + 1
             if timer > 20:
-                resp = make_response("Profile not found", 200)
+                resp = make_response("Warning: Profile not found", 200)
                 return resp
             else:
                 url=str(request).split()[1].strip("'")
@@ -624,11 +621,11 @@ def profile(keyid=None):
                 url = url + '?wait='+str(timer)
                 return render_template('wait.html',url=url) # return waiting page
     else:  # we have returned an existing profile from the cache
-        print "Existing entry found in profile cache..."
+        print "Info: Existing entry found in profile cache..."
         # how old is the cached data
         age = get_age(profile.updated)
         if age > CACHE_EXPIRY_LIMIT:
-            print 'Cached profile is too old, requesting latest copy'
+            print 'Info: Cached profile is too old, requesting latest copy'
             key = {"keyid": keyid}
             task = queue_task(1, 'get_profile', key)
             messageQueue.put(task)
@@ -833,7 +830,6 @@ def edit_listing(id=0):
         title = request.form['title']
         description = request.form['description']
         category = request.form['category']
-        print category
         price = request.form['price']
         currency_code = request.form['currency']
         qty_available = request.form['quantity']
@@ -857,7 +853,7 @@ def edit_listing(id=0):
         else:
             image = ''
 
-        print "Checking shipping options..."
+        print "Info: Checking shipping options..."
         # Now shipping options
         shipping = defaultdict()
         for x in range(1, 4):
@@ -870,7 +866,7 @@ def edit_listing(id=0):
 
         message = {"id": id, "category": category, "title": title, "description": description, "price": price, "currency": currency_code, "image": image, "is_public": is_public,
                    "quantity": qty_available, "max_order": max_order, "order_direct": order_direct, "order_escrow": order_escrow, "shipping_options": json.dumps(shipping)}
-        print "Update Listing message: " + message.__str__()
+        print "Info: Update Listing message: " + message.__str__()
         task = queue_task(1, 'update_listing', message)
         messageQueue.put(task)
         # it's better for the user to get a flashed message now rather than on
@@ -956,7 +952,7 @@ def loadidentity():
     if app.SetupDone:
         return redirect(url_for('home'))
     app.appdir = dirname(request.form['app_dir'])  # strip off the file-name
-    print app.appdir
+    print "Info: application directory is " + app.appdir
     if isfile(app.appdir + "/secret") and isfile(app.appdir + "/storage.db"):
         app.SetupDone = True  # TODO: A better check is needed here
     else:
@@ -1021,10 +1017,10 @@ def createidentity():                                               # This is a 
         app.appdir
         return redirect('/') # TODO - error page
     #dbsession.commit()
-    print "Created config database defaults. Rows created = " + str(dbsession.query(app.roStorageDB.Config).count())
+    print "Info: Created config database defaults. Rows created = " + str(dbsession.query(app.roStorageDB.Config).count())
     #print "Secret is " + app.dbsecretkey
     while dbsession.query(app.roStorageDB.Config).filter_by(name='proxy').count() == 0:
-        print "waiting for initial database to populate..."
+        print "Info: waiting for initial database to populate..."
         sleep(0.5)
     # Now set the proxy settings specified on the install page
     socks_proxy = dbsession.query(app.roStorageDB.Config).filter(
@@ -1392,16 +1388,16 @@ def pks_lookup():
         search_key = search_key_split[1]  # strip 0x
     # Query local key cache database for the key - we will request from the
     # broker if we don't have it
-    print "PKS Lookup for " + search_key
+    print "Info: PKS Lookup for " + search_key
     dbsession = app.roStorageDB.DBSession()
     key_block = dbsession.query(app.roStorageDB.cachePGPKeys).filter_by(
         key_id=search_key).first()
     if not key_block:
         key = {"keyid": "" + search_key + ""}
-        print "Keyblock not found in db, sending query key msg"
+        print "Info: Keyblock not found in db, sending query key msg"
         task = queue_task(1, 'get_key', key)
         messageQueue.put(task)
-        print "Sent message requesting key..."
+        print "Info: Sent message requesting key..."
         # now, we wait...
         sleep(0.1)
         timer = 0
@@ -1444,7 +1440,7 @@ def checkEvents():
             # TODO: This section of code should probably be locked
             app.memory_cache.update(results.data)
         elif results.command == 'resolved_key':
-            print "Backend resolved a key for front end " + results.data['keyid']
+            print "info: Backend resolved a key for front end " + results.data['keyid']
             app.pgpkeycache[results.data['keyid']] = results.data[
                 'key_block']  # add this key to the keycache
         else:
@@ -1454,7 +1450,7 @@ def checkEvents():
 
 
 def client_shutdown(sender, **extra):
-    print "Client_Shutdown called....exiting"
+    print "Info: Client_Shutdown called....exiting"
 
 
 def run():
@@ -1474,7 +1470,7 @@ def run():
     app.jinja_env.globals['csrf_token'] = generate_csrf_token
     app.template_folder = resource_path('templates')
     app.static_folder = resource_path('static')
-    print 'Execution path : ' + app.template_folder
+    print 'Info: Execution path : ' + app.template_folder
     app.SetupDone = False
     app.pgp_keyid = ""
     # path of the module/executable - should work for both source and binary
@@ -1494,7 +1490,7 @@ def run():
         if os_is_tails():
             # If TAILS is being used and persistence is enabled we will use it as the default location
             if isdir('/home/amnesia/Persistent'):
-                print "Tails persistence detected, Axis Mundi data store location defaulting to /home/amnesia/Persistent folder"
+                print "Info: Tails persistence detected, Axis Mundi data store location defaulting to /home/amnesia/Persistent folder"
                 app.appdir = app.homedir + '/Persistent/.dnmng'  # This is the default appdir location
         # we want to encrypt the secret with throw keys
         app.gpg = axismundi_client.gnupg.GPG(gnupghome=app.homedir + '/.gnupg', options={
@@ -1552,9 +1548,8 @@ class SendeventProcess(Process):
         self.start()
 
     def run(self):
-        print 'SendeventProcess'
         self.resultQueue.put((1, 2))
-        print 'SendeventProcess'
+
 
 
 if __name__ == '__main__':
@@ -1592,7 +1587,7 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
                 frame = wx.Frame(None)  # empty frame
                 axismundi_client.trayicon_gui.TaskBarIcon()
             except:  # If that fails assume nogui mode
-                print "No display detected, disabling status gui"
+                print "Info: No display detected, disabling status gui"
                 option_nogui = True
                 option_nobrowser = True
         else:
@@ -1602,7 +1597,7 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
             import appindicator
     # If this is Tails - prepare system for Axis Mundi
     if os_is_tails():
-        print "Tails OS detected "
+        print "Info: Tails OS detected "
         # TODO : Check to see if tor browser and firewall change are already made, if they are don't bother user with dialogs
         message = gtk.MessageDialog(type=gtk.MESSAGE_WARNING, buttons=gtk.BUTTONS_YES_NO)
         message.set_markup('TAILS OS has been detected\n\nIt is necessary to make two configuration changes for Axis Mundi to run.\n\nDo you want Axis Mundi to make the changes for you?')
@@ -1610,7 +1605,7 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
         res = message.run()
         message.destroy()
         if res == gtk.RESPONSE_YES:
-            print "Making changes to TAILS OS to support Axis Mundi..."
+            print "Info: Making changes to TAILS OS to support Axis Mundi..."
             message = gtk.MessageDialog(type=gtk.MESSAGE_WARNING, buttons=gtk.BUTTONS_OK)
             message.set_markup('Please make sure that Tor Browser is closed before continuing')
             message.set_title('Axis Mundi- Close Tor Browser')
@@ -1624,7 +1619,7 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
                 #
                     prefs_file.write('user_pref("network.proxy.no_proxies_on", "10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1");\n')
             except:
-                print "ERROR (Tails): Could not modify Tor Browser prefs with proxy exclusion for localhost "
+                print "ERROR: Could not modify Tor Browser prefs with proxy exclusion for localhost "
             # 2) Add firewall rule
 
             def get_text(parent, message, default=''):
@@ -1658,7 +1653,7 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
             command = '/sbin/iptables -I OUTPUT 2 -p tcp -s 127.0.0.1 -d 127.0.0.1 -m owner --uid-owner amnesia -j ACCEPT'
             p = os.system('echo %s|sudo -S %s' % (admin_pass, command))
             if not p==0:
-                print "ERROR (Tails): Could not modify firewall configuration to allow localhost to localhost traffic"
+                print "ERROR: Could not modify firewall configuration to allow localhost to localhost traffic"
             admin_pass = ''
         else:
 
@@ -1670,7 +1665,7 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
     # Start the front end thread of the client
     front_end = Process(target=run)
     front_end.start()
-    print "Axis Mundi local web-server now accessible on http://127.0.0.1:5000"
+    print "Info: Axis Mundi local web-server now accessible on http://127.0.0.1:5000"
     if not option_nobrowser:
         webbrowser.open_new_tab('http://127.0.0.1:5000/')
     # main loop
@@ -1706,7 +1701,7 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
                 running = False
         except KeyboardInterrupt:
             break
-    print "Axis Mundi shutting down..."
+    print "Info: Axis Mundi shutting down..."
     # TODO : give frontend and backend (if running) a chance to close down
     # gracefully
     front_end.terminate()
@@ -1715,4 +1710,4 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
         if use_wx:
             gui.Exit()
     # TODO - overwrite and then delete temp pubkeyring if used
-    print "Axis Mundi exiting..."
+    print "Info: Axis Mundi exiting..."

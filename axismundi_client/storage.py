@@ -67,7 +67,7 @@ class memory_cache(): # In-memory cache db to hold a potentially large user dire
 #        print "Updated front-end directory cache for user " + update_data['display_name']  + "("+update_data['key_id']+")"
 
     def rebuild(self):
-        print "Rebuilding front end in-memory cache db"
+        print "Info: Rebuilding front end in-memory cache db"
         session = self.DBSession()
         session.query(self.cacheFullDirectory).delete() # full rebuild so clear the table
         session.commit()
@@ -323,7 +323,7 @@ class Storage(): # Main, persistent, encrypted local database
         #engine = create_engine('sqlite+pysqlcipher://:PASSPHRASE@/storage.db?cipher=aes-256-cfb&kdf_iter=64000')
         # This next one works although a numeric passphrase must be given
         #        self.engine = create_engine('sqlite+pysqlcipher://:' + passphrase + '/' + dbfilepath)
-        print dbfilepath
+        print "Info: Initializing database " + dbfilepath
         # DATABASE ENCRYPTION CAN BE DISABLED/ENABLED HERE
         if get_os() == 'Windows':
             self.engine = create_engine(
@@ -341,7 +341,7 @@ class Storage(): # Main, persistent, encrypted local database
         try:
             self.Base.metadata.create_all(self.engine)
         except:
-            print "Error creating database"
+            print "ERROR: Error creating database"
             return False
         self.Base.metadata.bind = self.engine
         self.DBSession = sessionmaker(bind=self.engine)
@@ -358,18 +358,18 @@ class Storage(): # Main, persistent, encrypted local database
                 return True
             else:
                 if newstoragedb:
-                    print "Error creating storage database"
+                    print "ERROR: Error creating storage database"
                 else:
-                    print "Error accessing storage database"
+                    print "ERROR: Error accessing storage database"
                 return False
         else:
             if self.InitDB(self.passphrase, self.appdir + '/' + self.database):
                 return True
             else:
                 if newstoragedb:
-                    print "Error creating storage database"
+                    print "ERROR: Error creating storage database"
                 else:
-                    print "Error accessing storage database"
+                    print "ERROR: Error accessing storage database"
                 return False
 
     def Stop(self):
@@ -378,7 +378,7 @@ class Storage(): # Main, persistent, encrypted local database
             self.engine.remove()
             # TODO - compress database on exit using: self.engine.execute("VACUUM")
         except:
-            print "Error removing DB session"
+            print "Warning: Exception while removing DB session"
 
 """Enhances the paginate.Page class to work with SQLAlchemy objects"""
 

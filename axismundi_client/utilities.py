@@ -100,7 +100,7 @@ def parse_user_name(name):
         fullname.pgpkey_id = pgp_keyid
         return fullname
     else:
-        print "Unable to extract display name/key if from recipient"
+        print "Warning: Unable to extract display name/key if from recipient"
         return None
    # display_name =
 

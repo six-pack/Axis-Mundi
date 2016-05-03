@@ -20,7 +20,7 @@ class btc_exchange_rate(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        print "BTC Exchange rate thread started using SOCKS proxy " + self.socks_proxy + ":" + self.socks_port
+        print "Info: BTC Exchange rate thread started using SOCKS proxy " + self.socks_proxy + ":" + self.socks_port
         # Make the request look like it came from a browser TODO - define the browser headers elsewhere so they can be easily updated
         headers = [('User-Agent','Mozilla/5.0 (Windows NT 6.1; rv:31.0) Gecko/20100101 Firefox/31.0'),
                    ('Accept','text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'),
@@ -54,7 +54,7 @@ class btc_exchange_rate(threading.Thread):
                         data.append({'code': code,'rate':data_list[code]['24h_avg']})
 
                 task = queue_task(1, 'update_exchange_rates', data)
-                print "Exchange rates updated OK using " + source
+                print "Info: Exchange rates updated OK using " + source
                 self.queue.put(task)
                 sleep(600 + random.randint(0, 1200)) # refresh every 10 - 30 minutes - randomize period
             except:

@@ -78,7 +78,7 @@ class Message(object):
         try:
             self.__dict__ = json.loads(j)
         except:
-            print "Could not get JSON, dropping message"
+            print "Warning: Could not get JSON, dropping message"
             return False
         return True
 
@@ -121,15 +121,15 @@ class Messaging():
         if self.recipient:
             # TODO: encrypt to alternate pgp key if ephemeral pgp message keys
             # are enabled and we have one for this recipient
-            print "PrepareMessage: calling recv keys"
+            print "Info: PrepareMessage: calling recv keys"
             # We don't really want to do this every time but it will do for now
             self.gpg.recv_keys('hkp://127.0.0.1:5000', self.recipient)
-            print "PrepareMessage: calling encrypt"
+            print "Info: PrepareMessage: calling encrypt"
             final_message_raw = self.gpg.encrypt(
                 final_clear_message, self.recipient, passphrase=self.pgp_passphrase, always_trust=True)
             if final_message_raw == False:
                 # Encryption did not succeed - stop now
-                print ("Encryption failed")
+                print "ERROR: Message encryption failed"
                 return False
             else:
                 final_message = str(final_message_raw)
@@ -153,7 +153,7 @@ class Messaging():
             decrypt_msg = self.gpg.decrypt(
                 lrawmessage, passphrase=self.pgp_passphrase)
             if not str(decrypt_msg):
-                print "Unable to decrypt received message, dropping message"
+                print "Warning: Unable to decrypt received message, dropping message"
                 return False
             else:
                 clear_lrawmessage = str(decrypt_msg)
@@ -173,14 +173,14 @@ class Messaging():
                 tmp_message.raw_message = rawmessage
                 tmp_message.topic = topic
             except:
-                print "Failed to parse json response and extract sender key id"
+                print "Warning: Failed to parse json response and extract sender key id"
                 return False
             if tmp_key:
                 # check if this key needs to be retreived
                 if got_pgpkey(client_instance.storageDB, tmp_key):
-                    print "Already have the necessary key " + tmp_key  # we already have the key
+                    print "Info: Already have the necessary key " + tmp_key  # we already have the key
                 else:
-                    print "Need key " + tmp_key  # defer message processing until key is retrieved
+                    print "Info: Need key " + tmp_key  # defer message processing until key is retrieved
                     # assign a temporary random id
                     random_id = random.randrange(1, stop=999999999, step=1)
                     client_instance.task_state_pgpkeys[tmp_key][
@@ -192,7 +192,7 @@ class Messaging():
                     return MSG_STATE_KEY_REQUESTED
 
             else:
-                print "Sending keyid could not be extracted from message - unable to verify sender key - dropping message..."
+                print "Warning: Sending keyid could not be extracted from message - unable to verify sender key - dropping message..."
 #                print clear_lrawmessage
                 return False
 #        print clear_lrawmessage
@@ -212,7 +212,7 @@ class Messaging():
             else:
                 return False
         else:
-            print "WARNING: Unsigned message block identified..."
+            print "Warning: Unsigned message block identified..."
             if allow_unsigned:
                 clear_strippedlrawmessage = clear_lrawmessage
                 signed = False
@@ -223,12 +223,12 @@ class Messaging():
         #    '\n', '')  # strip out all those newlines we added pre-signing
         message = Message()
         if message.loadjson(clear_strippedlrawmessage) == False:
-            print "Could not decode JSON, dropping message. Message was " + clear_strippedlrawmessage
+            print "Warning: Could not decode JSON, dropping message. Message was " + clear_strippedlrawmessage
             return False
         else:
             # Finally make sure the sender keyid matches the signing keyid
             if signed and not (verify_signature.key_id == message.sender):
-                print "WARNING! Apparent spoofed message - claiming to be from " + message.sender
+                print "Warning: Apparent spoofed message!! - Claims to be from " + message.sender
                 return False
             if input_message_encrypted:
                 message.encrypted = True

@@ -35,10 +35,10 @@ class TaskBarIcon(wx.TaskBarIcon):
         menu.Destroy()
 
     def on_restart(self, event):
-        print 'Restart request from status GUI'
+        print 'Info: Restart request from status GUI'
 
     def on_exit(self, event):
-        print "Shutdown from gui"
+        print "Info: Shutdown from gui"
         wx.CallAfter(self.Destroy)
         wx.GetApp().Exit()
 #        wx.GetApp().ExitMainLoop()

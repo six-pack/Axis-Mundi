@@ -28,7 +28,7 @@ class messaging_loop(threading.Thread):
     # server to be no more than +/- 5 minutes fromcurrent server time
 
     def __init__(self, pgpkeyid, pgppassphrase, dbpassphrase, database, homedir, appdir, q, q_res, workoffline=False, looking_glass=False):
-        print "NOTICE: Backend Thread Init"
+        print "Info: Backend thread starting..."
         self.targetbroker = None
         self.mypgpkeyid = pgpkeyid
         self.q = q  # queue for client (incoming queue_task requests)
@@ -90,7 +90,7 @@ class messaging_loop(threading.Thread):
     # TODO: Check that these parameters are right, had to add "flags" which
     # may break "rc"
     def on_connect(self, client, userdata, flags, rc):
-        print "Connected"
+        print "Info: Broker connected"
         self.connected = True
         flash_msg = queue_task(0, 'flash_status', ('On-line',self.targetbroker))
         self.q_res.put(flash_msg)
@@ -102,7 +102,7 @@ class messaging_loop(threading.Thread):
         # transaction) - github issue #5
 
     def on_disconnect(self, client, userdata, rc):
-        print "MQTT on_disconnect..."
+        print "Info:Broker disconnected"
         self.connected = False
         flash_msg = queue_task(0, 'flash_status', ('Off-line',self.targetbroker))
         self.q_res.put(flash_msg)
@@ -117,14 +117,14 @@ class messaging_loop(threading.Thread):
             self.q_res.put(flash_msg)
             try:
                 #client._password = self.make_pgp_auth() # original token only valid for 3 minutes
-                print "Attempting to connect to another broker: " + self.targetbroker
+                print "Info: Attempting to connect to another broker: " + self.targetbroker
                 self.client.username_pw_set(self.mypgpkeyid, self.make_pgp_auth())
                 self.client.connect(self.targetbroker, 1883, 30)
                 #self.connected = True
                 #flash_msg = queue_task(0, 'flash_status', 'On-line')
                 #self.q_res.put(flash_msg)
             except:
-                print "Reconnection failure"
+                print "Warning: Reconnection failure"
                 self.connected = False
                 flash_msg = queue_task(0, 'flash_status', ('Off-line',self.targetbroker))
                 self.q_res.put(flash_msg)
@@ -135,17 +135,19 @@ class messaging_loop(threading.Thread):
     # TODO - make use of onpublish and onsubscribe callbacks instead of
     # checking status of call to publish or subscribe
     def on_publish(self, client, userdata, mid):
-        print "On publish for " + str(mid) + " " + str(userdata)
+#        print "Debug: On publish for " + str(mid) + " " + str(userdata)
+        pass
 
     def on_subscribe(self, client, userdata, mid, granted_qos):
-        print "On subscribe for " + str(mid) + " " + str(userdata)
+#        print "Debug: On subscribe for " + str(mid) + " " + str(userdata)
+        pass
 
     def on_message(self, client, userdata, msg):
         # Key blocks and directory entries are a special case because they are
         # not signed so we check for them first
         if re.match('mesh/(local|remote)/user\/[A-F0-9]{16}\/key', msg.topic):
             # Here is a key, store it and unsubscribe
-            print "Key Retrieved from " + str(msg.topic)
+            print "Info: Key Retrieved from " + str(msg.topic)
             client.unsubscribe(msg.topic)
             # TODO: Check we have really been sent a PGP key block and check if
             # it really is the same as the topic key
@@ -163,9 +165,9 @@ class messaging_loop(threading.Thread):
                 session.add(cachedkey)
                 session.commit()
                 self.task_state_pgpkeys[keyid]['state'] = KEY_LOOKUP_STATE_FOUND
-                print "Retrieved key committed"
+                print "Info: Retrieved key committed"
             else:
-                print "Dropping unexpected pgp key received for keyid: " + keyid
+                print "Warning: Dropping unexpected pgp key received for keyid: " + keyid
                 # TODO: Shall we just always allow keys to be received?
             return None
 # imp_res = self.gpg.import_keys(msg.payload) # we could import it here
@@ -175,14 +177,14 @@ class messaging_loop(threading.Thread):
             if not self.looking_glass:
                 client.unsubscribe(msg.topic)
             keyid = msg.topic[msg.topic.index('user/') + 5:msg.topic.rindex('/')]
-            print "Directory entry: " + msg.payload + " " + msg.topic
+            print "Info: Directory entry: " + msg.payload + " " + msg.topic
             # number of users in the directory
-            print "Adding directory entry "
+            print "Info: Adding directory entry "
             try:
                 display_dict = json.loads(msg.payload) # This is one of the few unsigned messages (the oother being /key (the pgp public key itself))
                 display_name = display_dict['display_name'] # This must always be present even if empty
             except:
-                print "Unable to decode directory message from " + keyid
+                print "Warning: Unable to decode directory message from " + keyid
                 return
 #            print display_dict['is_seller']
             try:
@@ -244,18 +246,18 @@ class messaging_loop(threading.Thread):
             msg.payload, self, msg.topic, allow_unsigned=self.allow_unsigned)
         # If this message was deferred lets stack it...
         if incoming_message == False:
-            print "Message received but not processed correctly so dropped..."
+            print "Warning: Message received but not processed correctly so dropped..."
             return
         elif incoming_message == MSG_STATE_KEY_REQUESTED:
             # getmessage should have already updated task_state_pgpkeys and
             # task_state_messages
-            print "Incoming message has been deferred while signing key is requested"
+            print "Info: Incoming message has been deferred while signing key is requested"
             return
 
         if re.match('mesh/(local|remote)/user\/' + self.mypgpkeyid + '\/inbox', msg.topic) and (self.allow_unsigned or incoming_message.signed):
             message = incoming_message
             if message == False:
-                print "Message was invalid"
+                print "Warning: Message was invalid"
             elif message.type == 'Private Message':
                 # Calculate purge date for this message
                 purgedate = datetime.now() + timedelta(days=self.message_retention)
@@ -302,7 +304,7 @@ class messaging_loop(threading.Thread):
                             order_stage['signing_key_id'] = current_stage_sig_check.key_id
                             order_stage['raw'] = current_stage_signed # raw and unverified
                         except:
-                            print "Error unable to decode json order stage message " + current_stage_verified
+                            print "Warning: Unable to decode json order stage message " + current_stage_verified
                             return False
                         order_stages.append(order_stage)
                         # see if there is a parent block
@@ -313,27 +315,25 @@ class messaging_loop(threading.Thread):
                             # or it could be some invalid crap to be dropped
                             current_stage_signed = ''
     #                    current_stage_signed = re.sub('(?m)^- ',"",current_stage_signed) # pgp wont do this for us
-                        print "Verifying nested signature"
+                        print "Info: Verifying nested signature"
                         #print current_stage_signed
                         current_stage_sig_check = self.gpg.verify(current_stage_signed)
 
                     order_stages.reverse()
-                    print "Order message contains a contract chain of " + str(len(order_stages)) + " blocks"
+                    print "Info: Order message contains a contract chain of " + str(len(order_stages)) + " blocks"
                     for stage in order_stages:
-                        print "-------------------------------------------------------------------------------"
                         try:
-                            print 'Order Stage: ' + stage['order_status'] #+' '+ str(stage)
+                            print '=== Order Stage: ' + stage['order_status'] #+' '+ str(stage)
                         except:
-                            print 'Seed Contract'
-                    print "-------------------------------------------------------------------------------"
+                            print '=== Seed Contract'
                     if self.process_order_chain(order_stages):
-                        print "Processed order message & chain"
+                        print "Info: Processed order message & chain"
                     else:
                         print "Warning: Unable to process incoming order message and associated chain - discarding"
                 except:
-                    print "Error during order decode...discarding order message"
+                    print "Warning: Exception during order decode...discarding order message"
                     raise # TODO - disable after debugging
-                print str(current_stage_signed)
+         #       print str(current_stage_signed)
                 #status = order_stages['order_status']# order_stages[0]['order_status']
                 flash_msg = queue_task(
                     0, 'flash_message', 'Order message received from ' + message.sender)
@@ -373,7 +373,7 @@ class messaging_loop(threading.Thread):
             profile_message = incoming_message
             if profile_message:
                 if not keyid == profile_message.sender:
-                    print "Profile was signed by a different key - discarding..."
+                    print "Warning: Profile was signed by a different key - discarding..."
                 else:
                     profile_text = profile_message.sub_messages['profile']
                     session = self.storageDB.DBSession()
@@ -401,11 +401,11 @@ class messaging_loop(threading.Thread):
 
                         session.commit()
                     else:
-                        print "Profile message did not contain mandatory fields"
+                        print "Warning: Profile message did not contain mandatory fields"
         # imp_res = self.gpg.import_keys(msg.payload) # we could import it here
         # but we use the local keyserver
             else:
-                print "No profile message found in profile returned from " + keyid
+                print "Warning: No profile message found in profile returned from " + keyid
         elif re.match('mesh/(local|remote)/user\/[A-F0-9]{16}\/items', msg.topic) and incoming_message.signed:
             # Here is a listings message, store it and unsubscribe
             if not self.looking_glass:
@@ -418,27 +418,27 @@ class messaging_loop(threading.Thread):
             if listings_message:
                 #                print listings_message
                 if not keyid == listings_message.sender:
-                    print "Listings were signed by a different key - discarding..."
+                    print "Warning: Listings were signed by a different key - discarding..."
                 else:
                     if listings_message.sub_messages:
                         listings = listings_message.sub_messages.__str__()
                     else:
                         # user has no listings
-                        print "User " + keyid + ' has no listings'
+                        print "Info: User " + keyid + ' has no listings'
                         listings = None
-                    print "Listings message received from " + keyid
+                    print "Info: Listings message received from " + keyid
                     # add this to the cachelistings table
                     session = self.storageDB.DBSession()
                     if listings_message.type == 'Listings Message':
                         # If it already exists then update
                         if session.query(self.storageDB.cacheListings).filter(self.storageDB.cacheListings.key_id == keyid).count() > 0:
-                            print "There appears to be an existing listings message in the db cache for user " + keyid
+                            print "Info: There appears to be an existing listings message in the db cache for user " + keyid
                             cachedlistings = session.query(self.storageDB.cacheListings).filter(self.storageDB.cacheListings.key_id == keyid).update({
                                 self.storageDB.cacheListings.updated: datetime.strptime(current_time(), "%Y-%m-%d %H:%M:%S"),
                                 self.storageDB.cacheListings.listings_block: listings
                             })
                         else:
-                            print "There is nothing in the listings cache for user, creating new cache entry"
+                            print "Info: There is nothing in the listings cache for user, creating new cache entry"
                             cachedlistings = self.storageDB.cacheListings(key_id=keyid,
                                                                           updated=datetime.strptime(
                                                                               current_time(), "%Y-%m-%d %H:%M:%S"),
@@ -446,7 +446,7 @@ class messaging_loop(threading.Thread):
                             session.add(cachedlistings)
                         session.commit()
 
-                        print "Trying to extract items from valid listings message..."
+                        print "Info: Trying to extract items from valid listings message..."
                         if listings:
                             verified_listings = self.get_items_from_listings(
                                 keyid, listings_message.sub_messages)
@@ -471,20 +471,20 @@ class messaging_loop(threading.Thread):
                                 session.add(cacheditem)
                             session.commit()
                         else:
-                            print "No items message found in listings returned from " + keyid
+                            print "Info: No items message found in listings returned from " + keyid
                             # TODO - should we remove existing items from the cache? some items may have been directly imported (sent from seller via email or pm)
                     else:
-                        print "Dropping incoming message because it is not a Listings Message"
+                        print "Warning: Dropping incoming message because it is not a Listings Message"
 
         else:
             if incoming_message.signed:
                 flash_msg = queue_task(
                     0, 'flash_error', 'Message received for non-inbox topic - ' + msg.topic)
-                print "Unsigned message recv: " + msg.payload
+                print "Warning: Unsigned message recv: " + msg.payload
             else:
                 flash_msg = queue_task(
                     0, 'flash_error', 'Unsigned message received for topic - ' + msg.topic)
-                print "Non PM message recv: " + msg.payload
+                print "Warning: Non PM message recv: " + msg.payload
             self.q_res.put(flash_msg)
 
     def setup_message_queues(self, client):
@@ -542,7 +542,7 @@ class messaging_loop(threading.Thread):
             directory_dict['is_upl'] = self.is_upl
             directory_dict['is_looking_glass'] = self.looking_glass
             str_directory = json.dumps(directory_dict)
-            print "Directory string to publish : " + str_directory
+            print "Info: Directory string to publish : " + str_directory
             # Our published items queue, qos=1, durable
             client.publish(self.pub_directory, str_directory, 1, True)
 
@@ -633,7 +633,7 @@ class messaging_loop(threading.Thread):
         session = self.storageDB.DBSession()
         if message.type == "Order Message":  # This is an outbound order message, update db order
             order = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.orderid==message.subject).filter(self.storageDB.Orders.is_synced == False).first()
-            print "Sent order id " + message.subject
+            print "Info: Sent order id " + message.subject
             order.is_synced = True
             session.commit()
 
@@ -822,7 +822,6 @@ class messaging_loop(threading.Thread):
         else:
             return False
         session = self.storageDB.DBSession()
-        print "UPDATE LISTING DB " + listing.shipping_options
         db_listing = session.query(
             self.storageDB.Listings).filter_by(id=listing.id).first()
         db_listing.id = listing.id
@@ -940,7 +939,7 @@ class messaging_loop(threading.Thread):
     def get_items_from_listings(self, key_id, listings_dict):
         verified_listings = []
         # print "get_items from listing: " + listings_dict.__str__()
-        print "get_items from listing from " + key_id
+        print "Info: get_items from listing from " + key_id
         for item in listings_dict:
             verify_item = self.gpg.verify(item)
             raw_item = item
@@ -952,7 +951,7 @@ class messaging_loop(threading.Thread):
 
                 except:
                     stripped_item = ''
-                    print "Error: item not extracted from signed sub-message"
+                    print "Warning: item not extracted from signed listings sub-message"
                     continue
                 try:
                     # TODO: Additional input validation required here
@@ -966,11 +965,11 @@ class messaging_loop(threading.Thread):
                         verified_item['raw_contract'] = str(raw_item)
                         verified_listings.append(verified_item)
                 except:
-                    print "Error: item json not extracted from signed sub-message"
+                    print "Warning: item json not extracted from signed sub-message"
                     print item
                     continue
             else:
-                print "Error: Item signture not verified for listing message held in cache db"
+                print "Warning: Item signture not verified for listing message held in cache db"
         return verified_listings
 
     def add_to_cart(self, item_id, key_id, sessionid):
@@ -983,7 +982,7 @@ class messaging_loop(threading.Thread):
             raw_msg = item.listings_block
             cart_res = item.__dict__
         else:
-            print "ERROR: item could not be added to cart because it is not cached- try viewing the item first..."
+            print "Warning: item could not be added to cart because it is not cached- try viewing the item first..."
             return False
 #        cart_res = dict(msg)
         # TODO : error handling and input validation on this json
@@ -991,7 +990,7 @@ class messaging_loop(threading.Thread):
         cart_db_res = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).filter(
             self.storageDB.Cart.item_id == cart_res['id']).count() > 0  # If it already exists then update
         if cart_db_res:
-            print "Updating existing cart entry with another add"
+            print "Info: Updating existing cart entry with another add"
             # TODO - since item is alrea in cart, we should add new quantity to
             # exsintng quantity  - for now we overwrite exisiting entry
             cart_entry = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).filter(
@@ -1015,7 +1014,7 @@ class messaging_loop(threading.Thread):
             # as it is
 
         else:
-            print "Adding new cart entry " + item.title
+            print "Info: Adding new cart entry " + item.title
             cart_entry = self.storageDB.Cart(seller_key_id=key_id,
                                              item_id=cart_res['id'],
                                              raw_item=raw_msg,
@@ -1051,7 +1050,7 @@ class messaging_loop(threading.Thread):
         # TODO error checking...
         session = self.storageDB.DBSession()
         for item in items:
-            print "Update_cart is updating " + str(item) + " with " + str(items[item])
+            print "Info: Update_cart is updating " + str(item) + " with " + str(items[item])
             #TODO: For looking glass we need to use the lg_sessionid in the below query
             cart_entry = session.query(self.storageDB.Cart).filter(
                 self.storageDB.Cart.seller_key_id == key_id).filter(self.storageDB.Cart.item_id == item).first()
@@ -1066,7 +1065,7 @@ class messaging_loop(threading.Thread):
 
     def create_order(self, key_id, buyer_address, buyer_note, sessionid):
         # TODO error checking...
-        print "Creating order to seller " + key_id
+        print "Info: Creating order to seller " + key_id
         session = self.storageDB.DBSession()
         cart_entries = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).all()
         for entry in cart_entries:
@@ -1079,11 +1078,11 @@ class messaging_loop(threading.Thread):
                 transient_pubkey = btc.privkey_to_pubkey(btc.bip32_extract_key(btc.bip32_ckd(transient_master, orderid)))
                 seller_pubkey = btc.b58check_to_hex(entry.seller_btc_stealth)
                 payment_address = sender_payee_address_from_stealth(transient_privkey,transient_pubkey)
-                print payment_address
+                print "Info: Payment address will be " + str(payment_address)
             elif entry.order_type == 'notarized':
-                print "Warning - unsupported order type"
+                print "Warning: Unsupported order type (notarized order support is not yet implemented)"
             elif entry.order_type == 'escrow':
-                print "Warning - unsupported order type"
+                print "Warning: Unsupported order type (escrow order support is not yet implemented)"
             new_order = self.storageDB.Orders ( orderid = orderid,
                                                 session_id = sessionid,
                                                 seller_key = key_id,
@@ -1125,7 +1124,7 @@ class messaging_loop(threading.Thread):
             cart_entries = session.query(self.storageDB.Cart).filter(self.storageDB.Cart.seller_key_id == key_id).delete()
             session.commit()
 
-        print "create_order finished..."
+        print "Info: create_order finished..."
 
     def update_order(self,command,id,sessionid):
         # TODO : COnsider state machine once flow is fully defined
@@ -1154,7 +1153,7 @@ class messaging_loop(threading.Thread):
             session.commit()
             self.sync_orders()
         elif command == 'order_finalize':
-            print "Processing finalize state change"
+            print "Info: Processing finalize state change"
             # this state will be transmitted from buyer back to seller
             # TODO update order message and transmit to buyer
             session = self.storageDB.DBSession()
@@ -1167,7 +1166,7 @@ class messaging_loop(threading.Thread):
             session.commit()
             self.sync_orders()
         else:
-            print "Error: Unknown order update type: " + command
+            print "Warning: Unknown order update type: " + command
 
     def sync_orders(self):
         # Send any order messages as necessary
@@ -1215,7 +1214,7 @@ class messaging_loop(threading.Thread):
                 session.commit()
                 self.sendMessage(self.client,order_msg)
             elif order.order_status in ['rejected','processing','shipped','finalized','dispute','cancelled']:
-                print "Order update message : " + order.order_status
+                print "Info: Order update message : " + order.order_status
                 order_msg = Message()
                 order_msg.type = 'Order Message'
                 order_msg.sender = self.mypgpkeyid
@@ -1239,7 +1238,7 @@ class messaging_loop(threading.Thread):
                 self.sendMessage(self.client,order_msg)
 
             else:
-                print "Error: Unknown order state in order " + order.orderid + "=" + order.order_status
+                print "Warning: Unknown order state in order " + order.orderid + "=" + order.order_status
 
 
     def scrape_unpaid_btc_addresses(self):
@@ -1249,7 +1248,7 @@ class messaging_loop(threading.Thread):
         addresses = []
         for order in orders:
             if order.order_status != 'cancelled':
-                print order.payment_btc_address
+                print "Info: Payment address appears to be still pending payment, checking again : "+ str(order.payment_btc_address)
                 addresses.append(order.payment_btc_address)
         btc_update_request = queue_task(0,'btc_balance_check',{'address':addresses})
         self.btc_req_q.put(btc_update_request)
@@ -1258,7 +1257,7 @@ class messaging_loop(threading.Thread):
     def process_order_chain(self,order_stages):
         # Process an incoming order message and the assocated chain, return true if we can process this order message
         # We may get messages if we are a buyer, seller, notary or arbiter
-        print "process_order_chain()"
+        print "Info: process_order_chain()"
         if not order_stages:
             return False
         #print order_stages[0]
@@ -1270,13 +1269,13 @@ class messaging_loop(threading.Thread):
             order_buyer = str(order_stages[1]['signing_key_id'])
             order_id = str(order_stages[1]['id'])
 
-        print "Order message indicates "+ last_msg_stage +" and concerns " + item + "(" + item_id + ") from " + item_seller
+        print "Info: Order message indicates "+ last_msg_stage +" and concerns " + item + "(" + item_id + ") from " + item_seller
         session = self.storageDB.DBSession()
         # TODO: Implement further actions for notary, arbiter, escrow/multi-sig stages
         # TODO: Rewrite whole section once order flow design is complete
         if item_seller == self.mypgpkeyid:
             # I am the seller
-            print "This order message chain concerns an item I am selling"
+            print "Info: This order message chain concerns an item I am selling"
             if last_msg_stage=='submitted':
                 # This appears to be new order for something we are (or were) selling - see if we already know about it
              #   order_id = str(order_stages[1]['id'])
@@ -1321,15 +1320,13 @@ class messaging_loop(threading.Thread):
                                                     line_total_btc_price = order_stages[1]['total_price_btc'] # self.price_to_btc(entry.line_total_price,entry.currency_code) #
                                                     )
                 session.add(new_order)
-                print "================== Committing new order to DB"
                 session.commit()
-                print "================== Done writing new order to DB"
-                print "You have received a new order!"
+                print "Info: You have received a new order!"
 
             else:
                 res=session.query(self.storageDB.Orders).filter_by(orderid=order_id,buyer_key=order_buyer).first()
                 if res:
-                    print "Existing order found..."
+                    print "Info: Existing order found..."
                     if (order_buyer == res.buyer_key) and (order_id == res.orderid):
                         if last_msg_stage=='finalized' and res.order_status =='shipped':
                             res.order_status ='finalized'
@@ -1339,13 +1336,13 @@ class messaging_loop(threading.Thread):
 
         else:  # TODO - uncomment this else and re-indent the following block
             # I am not the seller
-            print "This order message chain concerns an item that another user is selling"
+            print "Info: This order message chain concerns an item that another user is selling"
             # Am I the buyer perhaps?
             if order_buyer == self.mypgpkeyid:
-                print "This order message chain concerns an item I am buying"
+                print "Info: This order message chain concerns an item I am buying"
                 res=session.query(self.storageDB.Orders).filter_by(orderid=order_id,buyer_key=order_buyer).first()
                 if res:
-                    print "Existing order found..."
+                    print "Info: Existing order found..."
                     if (item_seller == res.seller_key) and (order_id == res.orderid):
                         if last_msg_stage=='shipped' and res.order_status =='submitted':
                             res.order_status ='shipped'
@@ -1368,7 +1365,7 @@ class messaging_loop(threading.Thread):
         session = self.storageDB.DBSession()
 #        session.query(self.storageDB.currencies).delete()
 #        session.commit()
-        print "Backend is updating exchange rates"
+        print "Info: Backend is updating exchange rates"
         for rate in rates:
             code = rate['code']
             fiat_value = rate['rate']
@@ -1381,10 +1378,10 @@ class messaging_loop(threading.Thread):
     def run(self):
         # TODO: Clean up this flow
         # make db connection
-        print "NOTICE: Backend Thread Started"
+        print "Info: Backend Thread Started"
         self.storageDB = Storage(self.dbsecretkey, "storage.db", self.appdir)
         if not self.storageDB.Start():
-            print "Error: Unable to start storage database"
+            print "ERROR: Unable to start storage database"
             # ' self.targetbroker)
             flash_msg = queue_task(
                 0, 'flash_error', 'Unable to start storage database ' + 'storage.db')
@@ -1402,21 +1399,21 @@ class messaging_loop(threading.Thread):
         # 2 - purge addresses (buyer & seller side) for address information related to finalized transactions
         # -------------------------
         if self.is_notary:
-            print "You are a notary"
+            print "Info: You are a notary"
         if self.is_arbiter:
-            print "You are an arbiter"
+            print "Info: You are an arbiter"
         # are we selling anything?
         session = self.storageDB.DBSession()
         listings = session.query(self.storageDB.Listings).filter(self.storageDB.Listings.public==True).all()
         if listings:
             self.is_seller = True
-            print "You are a seller"
+            print "Info: You are a seller"
         # are we publishing any lists ?
         session = self.storageDB.DBSession()
         lists = session.query(self.storageDB.UPL_lists).filter_by(author_key_id=self.mypgpkeyid).all()
         if lists:
             self.is_upl = True
-            print "You have UPL(s)"
+            print "Info: You have UPL(s)"
         # COnfirm proxy settings
         # sort the broker list into Tor, i2p and clearnet
         for broker in self.brokers:
@@ -1443,16 +1440,16 @@ class messaging_loop(threading.Thread):
             if self.targetbroker.endswith('.onion'):
                 self.client = mqtt(self.mypgpkeyid, False,
                               proxy=self.proxy, proxy_port=int(self.proxy_port))
-                print self.proxy
-                print self.proxy_port
+                print "Info: Using Tor socks proxy host: " + str(self.proxy)
+                print "Info: Using Tor socks proxy port: " + str(self.proxy_port)
                 flash_msg = queue_task(
                     0, 'flash_message', 'Connecting to Tor hidden service ' + self.targetbroker)
                 self.q_res.put(flash_msg)
             elif self.targetbroker.endswith('.b32.i2p'):
                 self.client = mqtt(self.mypgpkeyid, False, proxy=self.i2p_proxy,
                               proxy_port=int(self.i2p_proxy_port))
-                print self.i2p_proxy
-                print self.i2p_proxy_port
+                print "Info: Using i2p socks proxy host: " + str(self.i2p_proxy)
+                print "Info: Using i2p socks proxy port: " + str(self.i2p_proxy_port)
                 flash_msg = queue_task(
                     0, 'flash_message', 'Connecting to i2p hidden service ' + self.targetbroker)
                 self.q_res.put(flash_msg)
@@ -1530,7 +1527,7 @@ class messaging_loop(threading.Thread):
                     pending_message]['state']
                 # check pending message state
                 if pending_message_state == MSG_STATE_NEEDS_KEY:
-                    print "Need to request key " + pending_key
+                    print "Info: Need to request key " + pending_key
                     # create task request for a lookup
                     self.task_state_pgpkeys[pending_key][
                         'state'] = KEY_LOOKUP_STATE_INITIAL
@@ -1543,7 +1540,7 @@ class messaging_loop(threading.Thread):
                             'state'] = MSG_STATE_READY_TO_PROCESS
 #                        del self.task_state_pgpkeys[pending_key]
                 elif pending_message_state == MSG_STATE_QUEUED:
-                    print "Can we send queued message for " + pending_key
+                    print "Info: Can we send queued message for " + pending_key
                     if self.connected:
                         if outbound:  # this should always be true as incoming messages should never be set to MSG_STATE_QUEUED
                             self.sendMessage(self.client, self.task_state_messages[
@@ -1551,9 +1548,9 @@ class messaging_loop(threading.Thread):
                             self.task_state_messages[pending_message][
                                 'state'] = MSG_STATE_DONE
                 elif pending_message_state == MSG_STATE_READY_TO_PROCESS:
-                    print "Deferred message now ready"
+                    print "Info: Deferred message now ready"
                     if outbound:
-                        print "Sending deferred message"
+                        print "Info: Sending deferred message"
                         self.sendMessage(self.client, self.task_state_messages[
                                          pending_message]['message'])
                         self.task_state_messages[pending_message][
@@ -1561,7 +1558,7 @@ class messaging_loop(threading.Thread):
                     else:
                         # This is an inbound message - throw it back at
                         # getmessage()
-                        print "Re-processing received deferred message"
+                        print "Info: Re-processing received deferred message"
                         self.task_state_messages[pending_message][
                             'state'] = MSG_STATE_DONE
                         msg = MQTTMessage()
@@ -1587,15 +1584,15 @@ class messaging_loop(threading.Thread):
                     if res[0] == MQTT_ERR_SUCCESS:
                         self.task_state_pgpkeys[pgp_key][
                             'state'] = KEY_LOOKUP_STATE_REQUESTED
-                        print "Subscribing to requested PGP key topic " + key_topic + " ...Subscribe Done"
+                        print "Info: Subscribing to requested PGP key topic " + key_topic + " ...Subscribe Done"
                     else:
-                        print "Subscribing to requested PGP key topic " + key_topic + " ...Subscribe Failed"
+                        print "Info: Subscribing to requested PGP key topic " + key_topic + " ...Subscribe Failed"
 #                elif state == KEY_LOOKUP_STATE_REQUESTED:
 #                    print "Waiting for key..."
 #                elif state == KEY_LOOKUP_STATE_FOUND:
 #                    print "Got key."
                 elif state == KEY_LOOKUP_STATE_NOTFOUND:
-                    print "Could not find a key OR unable to retrieve key"
+                    print "Warning: Could not find a key OR unable to retrieve key"
 
             if not self.q.empty():
                 task = self.q.get()
@@ -1615,7 +1612,7 @@ class messaging_loop(threading.Thread):
                     message_read = task.data['id']
                     self.mark_as_read_pm(message_read)
                 elif task.command == 'get_key':  # fetch a key from a user
-                    print "Client Requesting key from backend"
+                    print "Info: Client Requesting key from backend"
                     self.task_state_pgpkeys[task.data['keyid']][
                         'state'] = KEY_LOOKUP_STATE_INITIAL  # create task request for a lookup
 #                    key_topic = 'user/' + task.data['keyid'] + '/key'
@@ -1624,19 +1621,19 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'get_profile':
                     key_topic = 'mesh/+/user/' + task.data['keyid'] + '/profile'
                     self.client.subscribe(str(key_topic), 1)
-                    print "Requesting profile for " + task.data['keyid']
+                    print "Info: Requesting profile for " + task.data['keyid']
                 elif task.command == 'get_listings':
                     item_id = task.data['id']
                     key_id = task.data['keyid']
                     key_topic = 'mesh/+/user/' + key_id + '/items'
                     self.client.subscribe(str(key_topic), 1)
-                    print "Requesting listings for " + key_id
+                    print "Info: Requesting listings for " + key_id
 
                 elif task.command == 'add_to_cart':
                     item_id = task.data['item_id']
                     key_id = task.data['key_id']
                     sessionid = task.data['sessionid']
-                    print "Backend received add to cart request for " + key_id + '/' + item_id + ' in lg session ' + sessionid
+                    print "Info: Backend received add to cart request for " + key_id + '/' + item_id + ' in lg session ' + sessionid
                     self.add_to_cart(item_id, key_id, sessionid)
 
                 elif task.command == 'update_cart':
@@ -1652,7 +1649,7 @@ class messaging_loop(threading.Thread):
                     sessionid = task.data['sessionid']
                     self.update_cart(key_id,items,sessionid,transaction_type=transaction_type) # first capture any updates made to the cart before processing checkout
 
-                    print "Backend handled checkout message"
+                    print "Info: Backend handled checkout message"
 #                    self.checkout_cart(key_id)
 
                 elif task.command == 'create_order':
@@ -1670,7 +1667,7 @@ class messaging_loop(threading.Thread):
 
                 elif task.command == 'remove_from_cart':
                     key_id = task.data['key_id']
-                    print "Backend received delete from cart request for items from seller " + key_id
+                    print "Info: Backend received delete from cart request for items from seller " + key_id
                     self.remove_from_cart(key_id)
 
                 elif task.command == 'publish_listings':
@@ -1687,7 +1684,7 @@ class messaging_loop(threading.Thread):
                         # Request list of all users
                     key_topic = 'mesh/+/user/+/directory'
                     self.client.subscribe(str(key_topic), 0)
-                    print "Requesting directory of users"
+                    print "Info: Requesting directory of users"
 
                 elif task.command == 'new_contact':
                     contact = Contact()
@@ -1698,7 +1695,7 @@ class messaging_loop(threading.Thread):
                     self.new_contact(contact)
 
                 elif task.command == 'new_listing':
-                    print "New listing: " + task.data['title']
+                    print "Info: New listing: " + task.data['title']
                     listing = Listing()
                     listing.title = task.data['title']
                     listing.categories = task.data['category']
@@ -1714,7 +1711,7 @@ class messaging_loop(threading.Thread):
                     self.new_listing(listing)
 
                 elif task.command == 'update_listing':
-                    print "Update listing: " + task.data['title']
+                    print "Info: Update listing: " + task.data['title']
                     listing = Listing()
                     # Since we are updating the generate id needs to be
                     # overwritten
@@ -1755,11 +1752,13 @@ class messaging_loop(threading.Thread):
 
                 ############## TIMERS #################
 
+                # Payment address balance updater
                 btc_scrape_age = get_age(btc_scrape_time)
-                if btc_scrape_age > 300:
+                if btc_scrape_age > 300:                                                        # Every 5 minutes
                     print "Info: Sweeping orders for unpaid BTC addresses..."
                     self.scrape_unpaid_btc_addresses()
                     btc_scrape_time = datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S")
+
 
 
         try:
@@ -1770,5 +1769,5 @@ class messaging_loop(threading.Thread):
             if self.client._state == mqtt_cs_connected:
                 self.client.disconnect()
         self.storageDB.DBSession.close_all()
-        print "client-backend exits"
+        print "Info: Client-backend has shut down"
         # Terminated

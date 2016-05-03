@@ -122,7 +122,7 @@ class btc_processor(threading.Thread):
                 self.response_queue.put(response_msg)
 
     def run(self):
-        print "BTC processor thread started using SOCKS proxy " + self.socks_proxy + ":" + self.socks_port + " attempting to refresh stratum peers"
+        print "Info: BTC processor thread started using SOCKS proxy " + self.socks_proxy + ":" + self.socks_port + " attempting to refresh stratum peers"
 
         self.pool.apply_async(self.get_stratum_peers, (),callback=self.cb_get_stratum_peers)
 
@@ -142,6 +142,6 @@ class btc_processor(threading.Thread):
                     print "Warning: BTC Processor thread received unknown BTC command"
             sleep (0.1) # rest
 
-        print "BTC Processor shutting down"
+        print "Info: BTC Processor shutting down"
         self.pool.close()
         self.pool.join()
