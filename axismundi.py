@@ -466,6 +466,7 @@ def cart(action=''):
             task = queue_task(1, 'create_order', order_details)
             messageQueue.put(task)
             # order is submitted to backend - order must be built, wallet addresses generated, order message created, order committed to db
+            # TODO - when in looking glass mode ensure that a lack of lg/session cookie does not result in all placed orders displayed
             orders = dbsession.query(app.roStorageDB.Orders).filter_by(session_id=session.get('lg','')).filter_by(seller_key=seller_key).order_by(app.roStorageDB.Orders.order_status.asc())
             if orders:
                 sleep(0.5)
