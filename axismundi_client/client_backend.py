@@ -78,6 +78,8 @@ class messaging_loop(threading.Thread):
 #        self.memcache_listing_items = defaultdict(defaultdict)
         self.publish_identity = True
         self.btc_master_key = ''
+        self.btc_confirmed_funds = 0
+        self.btc_unconfirmed_funds = 0
         # Published Roles
         self.is_seller = False
         self.is_upl = False
@@ -730,10 +732,12 @@ class messaging_loop(threading.Thread):
             session = self.storageDB.DBSession()
             order = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.payment_btc_address == str(address)).first()
             if order:
-                if order.payment_btc_balance_confirmed <> str(lconf) or order.payment_btc_balance_unconfirmed <> str(lunconf):
+                if order.payment_btc_balance_confirmed <> str(lconf) or order.payment_btc_balance_unconfirmed <> str(lunconf) or 1==1:
                     print "Info: A potential balance change has been detected for a payment BTC address " + str(address)
                     order.payment_btc_balance_confirmed = str(lconf)
                     order.payment_btc_balance_unconfirmed = str(lunconf)
+                    print "Info: Checking if confirmed funds equal or exceed the order total value"
+                    print "Info: Confirmed funds :" + str(lconf) + " Unconfirmed funds :"+ str(lunconf)
                     if float(lconf) >= float(order.line_total_btc_price):
                         print "Info: An order has been paid to " + str(address)
                         order.payment_status = 'paid'

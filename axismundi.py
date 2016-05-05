@@ -947,6 +947,19 @@ def delete_message(id):
     return redirect(url_for('messages'))
 
 
+@app.route('/wallet', methods=['GET','POST'])
+@app.route('/wallet/<int:page>', methods=['GET','POST'])
+@login_required
+# TODO- Implement a simplistic bitcoin wallet...
+def wallet(page=1):
+    checkEvents()
+    dbsession = app.roStorageDB.DBSession()
+    addresses = dbsession.query(app.roStorageDB.Orders.payment_btc_address, app.roStorageDB.Orders.payment_btc_balance_confirmed, app.roStorageDB.Orders.payment_btc_balance_unconfirmed).filter((app.roStorageDB.Orders.payment_btc_balance_confirmed>0)|(app.roStorageDB.Orders.payment_btc_balance_unconfirmed>0))
+    page_results = SqlalchemyOrmPage(
+        addresses, page=page, items_per_page=pager_items)
+    return render_template('wallet.html', btc_confirmed_funds=app.btc_confirmed_funds, btc_unconfirmed_funds=app.btc_unconfirmed_funds, addresses=page_results)
+
+
 @app.route('/load-identity', methods=['POST'])
 # load existing app data from a non-default location
 def loadidentity():
@@ -1444,6 +1457,9 @@ def checkEvents():
             print "info: Backend resolved a key for front end " + results.data['keyid']
             app.pgpkeycache[results.data['keyid']] = results.data[
                 'key_block']  # add this key to the keycache
+        elif results.command == 'btc_wallet_balance':
+            app.btc_confirmed_funds = results.data['btc_confirmed_funds']
+            app.btc_unconfirmed_funds = results.data['btc_unconfirmed_funds']
         else:
             flash(
                 "Unknown command received from client thread results queue", category="error")
@@ -1479,6 +1495,8 @@ def run():
     app.publish_id = True
     app.roStorageDB = Storage
     app.display_name = ""
+    app.btc_confirmed_funds = 0
+    app.btc_unconfirmed_funds = 0
     app.pgp_passphrase = ""
     app.homedir = expanduser("~")
     if get_os() == 'Windows':

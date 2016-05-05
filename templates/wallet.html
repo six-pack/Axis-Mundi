@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+{% set active_page = "Trade" %}
+
+{% block content %}
+  <h2>Wallet</h2>
+    <div class="datagrid">
+ <p>Welcome to this basic but functional bitcoin wallet. At present it is possible to aggregate and send onwards any coins in any of your vendor wallet addresses. Please note that at present no attempt is made to obfuscate the aggregation.</p>
+    <div class="round_box" style="height:180px;width:47%;float:left;margin-top:0px;%">
+        <h3 >Total Funds: {{ btc_confirmed_funds + btc_unconfirmed_funds}} BTC</h3>
+        <h3 >Available Funds: {{ btc_confirmed_funds}} BTC</h3>
+    </div>
+    <div  style="height:180px;width:47%;margin-left:53%;margin-top:30px;">
+        <a class="btnblu" href="{{ url_for('wallet') }}">Withdraw Funds</a>
+    </div>
+
+    <br>
+    <br>
+    <table cellpadding="7" width="100%" class="stripetable" cellspacing=0>
+        <tr>
+        <th width="350px"><strong>Address</strong></th>
+        <th width="170px"><strong>Confirmed</strong></th>
+        <th width="170px"><strong>Unconfirmed</strong></th>
+        </tr>
+        {% for address in addresses %}
+        <tr>
+        <td>{{address[0]}}</td>
+        <td>{{address[1]}}</td>
+        <td>{{address[2]}}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+        <td align="left">
+        {% if addresses.previous_page %}
+            <a href="/wallet/{{wallet.previous_page}}"><b>&lt;Previous</b></a>
+        {% endif %}
+        </td>
+        <td colspan="1"></td></td>
+        <td align="right">
+        {% if addresses.next_page %}
+            <a href="/wallet/{{wallet.next_page}}"><b>Next&gt;</b></a>
+        {% endif %}
+        </td>
+        </tr>
+    </table>
+    </div>
+
+<br><br>
+
+{% endblock %}
