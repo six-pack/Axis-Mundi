@@ -739,15 +739,11 @@ class messaging_loop(threading.Thread):
             session = self.storageDB.DBSession()
             order = session.query(self.storageDB.Orders).filter(self.storageDB.Orders.payment_btc_address == str(address)).first()
             if order:
-                if order.payment_btc_balance_confirmed <> str(lconf) or order.payment_btc_balance_unconfirmed <> str(lunconf) or 1==1:
+                if order.payment_btc_balance_confirmed <> str(lconf) or order.payment_btc_balance_unconfirmed <> str(lunconf):
                     print "Info: A potential balance change has been detected for a payment BTC address " + str(address)
                     order.payment_btc_balance_confirmed = str(lconf)
                     order.payment_btc_balance_unconfirmed = str(lunconf)
-                    print "Info: Checking if confirmed funds equal or exceed the order total value"
-                    print "Info: Confirmed funds :" + str(lconf) + " Unconfirmed funds :"+ str(lunconf)
-                    tmp_msg = {'address': address}
-                    tmp_task = queue_task(1,'btc_get_unspent',tmp_msg)
-                    self.btc_req_q.put(tmp_task)
+                    print "Info: Checking if confirmed funds equal or exceed the order total value. Confirmed funds :" + str(lconf) + " Unconfirmed funds :"+ str(lunconf)
                     if float(lconf) >= float(order.line_total_btc_price):
                         print "Info: An order has been paid using " + str(address) + " - checking unspent outputs"
                         tmp_msg = {'address': address}
