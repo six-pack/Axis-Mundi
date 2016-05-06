@@ -954,7 +954,7 @@ def delete_message(id):
 def wallet(page=1):
     checkEvents()
     dbsession = app.roStorageDB.DBSession()
-    addresses = dbsession.query(app.roStorageDB.Orders.payment_btc_address, app.roStorageDB.Orders.payment_btc_balance_confirmed, app.roStorageDB.Orders.payment_btc_balance_unconfirmed).filter((app.roStorageDB.Orders.payment_btc_balance_confirmed>0)|(app.roStorageDB.Orders.payment_btc_balance_unconfirmed>0))
+    addresses = dbsession.query(app.roStorageDB.Orders.payment_btc_address, app.roStorageDB.Orders.payment_btc_balance_confirmed, app.roStorageDB.Orders.payment_btc_balance_unconfirmed).filter((app.roStorageDB.Orders.payment_btc_balance_confirmed<>'0.0')|(app.roStorageDB.Orders.payment_btc_balance_unconfirmed<>'0.0'))
     page_results = SqlalchemyOrmPage(
         addresses, page=page, items_per_page=pager_items)
     return render_template('wallet.html', btc_confirmed_funds=app.btc_confirmed_funds, btc_unconfirmed_funds=app.btc_unconfirmed_funds, addresses=page_results)

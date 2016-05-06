@@ -74,6 +74,7 @@ class btc_processor(threading.Thread):
         else:
             print "Warning: BTC processor unable to refresh list of stratum peers, giving up for now"
 
+
     def get_balance(self,addr):
         attempts = 0
         while attempts < 8:
@@ -121,6 +122,54 @@ class btc_processor(threading.Thread):
                     response_msg = queue_task(0,'btc_update_balance',{'address':address,'balance_confirmed':balance['confirmed'],'balance_unconfirmed':balance['unconfirmed']})
                 self.response_queue.put(response_msg)
 
+    def get_unspent(self,addr):
+        attempts = 0
+        while attempts < 8:
+            sleep(1)
+            (server,port,connectiontype) = self.get_random_server()
+            print "Info: Checking BTC unspent outputs for " + str(addr) + " via " + str(server)
+            try:
+                jsonrpc = JSONRPCProxy(str(server), int(port), socks_host=str(self.socks_proxy), socks_port=int(self.socks_port),connect_timeout=30)
+                if isinstance(addr,list):
+                    response = []
+                    for addr_item in addr:
+                        response.append((addr_item,jsonrpc.request('blockchain.address.listunspent',[addr_item],timeout=15)))
+                    return (response)
+                else:
+                    response = jsonrpc.request('blockchain.address.get_history',[addr],timeout=15)
+                    if not isinstance(response,list):
+                        print "History is not a list..."
+                        attempts+=1
+                        continue
+                    return (addr,response)
+            except:
+                attempts+=1
+                print "Warning: BTC processor could not query balance on stratum server " + str(server)
+                continue
+        return (addr,-1) # error , return -1
+
+
+    def cb_get_unspent(self,response):
+        # TODO - refactor this!
+        if not isinstance(response,list):
+            (address,unspent) = response
+            if unspent == -1:
+                print "Warning: BTC processor unable to get unspent outputs for address " + str(address) + ", giving up for now"
+                response_msg = queue_task(0,'btc_update_unspent',{'address':address,'unspent_outputs':-1})
+            else:
+                response_msg = queue_task(0,'btc_update_unspent',{'address':address,'unspent_outputs':unspent})
+            self.response_queue.put(response_msg)
+        else:
+            for response_item in response:
+                (address,unspent) = response_item
+                if unspent == -1:
+                    print "Warning: BTC processor unable to get unspent outputs for address " + str(address) + ", giving up for now"
+                    response_msg = queue_task(0,'btc_update_unspent',{'address':address,'unspent_outputs':-1})
+                else:
+                    response_msg = queue_task(0,'btc_update_unspent',{'address':address,'unspent_outputs':unspent})
+                self.response_queue.put(response_msg)
+
+
     def run(self):
         print "Info: BTC processor thread started using SOCKS proxy " + self.socks_proxy + ":" + self.socks_port + " attempting to refresh stratum peers"
 
@@ -133,6 +182,9 @@ class btc_processor(threading.Thread):
                 if task.command == 'btc_balance_check':
                     address = task.data['address'] # may be single address or list
                     self.pool.apply_async(self.get_balance, (address,),callback=self.cb_get_balance)
+                if task.command == 'btc_get_unspent':
+                    address = task.data['address'] # may be single address or list
+                    self.pool.apply_async(self.get_unspent, (address,),callback=self.cb_get_unspent)
                 elif task.command == 'btc_broadcast_txn':
                     txn = task.data['txn']
                     # TODO: Send txn

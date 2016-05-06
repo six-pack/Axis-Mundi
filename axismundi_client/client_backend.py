@@ -721,6 +721,13 @@ class messaging_loop(threading.Thread):
         self.btc_req_q.put(tmp_task)
 
 
+    def btc_update_unspent(self,address,unspent_outputs):
+        # TODO : Implement database
+        if unspent_outputs == -1:
+            print "Warning: BTC get unspent outputs failed for " + str(address)
+        else:
+            print "Info: BTC unspent outputs retrieved for " + str(address) + ' Outputs: ' + str(unspent_outputs)
+
     def btc_update_balance(self,address,confirmed,unconfirmed):
         # TODO : Implement order database btc address balance update
         if confirmed == -1:
@@ -738,9 +745,16 @@ class messaging_loop(threading.Thread):
                     order.payment_btc_balance_unconfirmed = str(lunconf)
                     print "Info: Checking if confirmed funds equal or exceed the order total value"
                     print "Info: Confirmed funds :" + str(lconf) + " Unconfirmed funds :"+ str(lunconf)
+                    tmp_msg = {'address': address}
+                    tmp_task = queue_task(1,'btc_get_unspent',tmp_msg)
+                    self.btc_req_q.put(tmp_task)
                     if float(lconf) >= float(order.line_total_btc_price):
-                        print "Info: An order has been paid to " + str(address)
+                        print "Info: An order has been paid using " + str(address) + " - checking unspent outputs"
+                        tmp_msg = {'address': address}
+                        tmp_task = queue_task(1,'btc_get_unspent',tmp_msg)
+                        self.btc_req_q.put(tmp_task)
                         order.payment_status = 'paid'
+
                     session.commit()
 
 
@@ -1502,7 +1516,18 @@ class messaging_loop(threading.Thread):
         while not self.shutdown:
             if not self.workoffline:
                 self.client.loop(0.05)  # deal with mqtt events
-            time.sleep(0.05)
+            else: time.sleep(0.01)
+
+            ############## TIMERS #################
+
+            # Payment address balance updater
+            btc_scrape_age = get_age(btc_scrape_time)
+            if btc_scrape_age > 300:                                                        # Every 5 minutes
+                print "Info: Sweeping orders for unpaid BTC addresses..."
+                self.scrape_unpaid_btc_addresses()
+                btc_scrape_time = datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S")
+
+
 #            if not self.connected and not self.workoffline and 1==0: # TODO - sort this!!
 #                try:
 #                    # create broker authentication request
@@ -1746,6 +1771,9 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'btc_update_balance':
                     self.btc_update_balance(task.data['address'],task.data['balance_confirmed'],task.data['balance_unconfirmed'])
 
+                elif task.command == 'btc_update_unspent':
+                    self.btc_update_unspent(task.data['address'],task.data['unspent_outputs'])
+
                 elif task.command == 'btc_update_stratum_peers':
                     # TODO: Make dynamic updates optional
                     self.update_stratum_servers(task.data['peers'])
@@ -1753,16 +1781,6 @@ class messaging_loop(threading.Thread):
 
                 elif task.command == 'shutdown':
                     self.shutdown = True
-
-                ############## TIMERS #################
-
-                # Payment address balance updater
-                btc_scrape_age = get_age(btc_scrape_time)
-                if btc_scrape_age > 300:                                                        # Every 5 minutes
-                    print "Info: Sweeping orders for unpaid BTC addresses..."
-                    self.scrape_unpaid_btc_addresses()
-                    btc_scrape_time = datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S")
-
 
 
         try:
