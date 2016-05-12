@@ -952,6 +952,8 @@ def delete_message(id):
 @login_required
 # TODO- Implement a simplistic bitcoin wallet...
 def wallet(page=1):
+    if request.method == "POST":
+            flash("Withdrawing funds to XXXX", category="message")
     checkEvents()
     dbsession = app.roStorageDB.DBSession()
     addresses = dbsession.query(app.roStorageDB.Orders.payment_btc_address, app.roStorageDB.Orders.payment_btc_balance_confirmed, app.roStorageDB.Orders.payment_btc_balance_unconfirmed).filter((app.roStorageDB.Orders.payment_btc_balance_confirmed<>'0.0')|(app.roStorageDB.Orders.payment_btc_balance_unconfirmed<>'0.0'))
