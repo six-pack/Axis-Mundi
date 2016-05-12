@@ -104,7 +104,7 @@ class messaging_loop(threading.Thread):
         # transaction) - github issue #5
 
     def on_disconnect(self, client, userdata, rc):
-        print "Info:Broker disconnected"
+        print "Info: Broker disconnected"
         self.connected = False
         flash_msg = queue_task(0, 'flash_status', ('Off-line',self.targetbroker))
         self.q_res.put(flash_msg)
@@ -752,6 +752,35 @@ class messaging_loop(threading.Thread):
                         order.payment_status = 'paid'
 
                     session.commit()
+                self.btc_update_balance_frontend()
+                # TODO: 1. This is not efficient 2. It should be in its own method
+                btc_confirmed = 0
+                btc_unconfirmed = 0
+                addresses = session.query(self.storageDB.Orders.payment_btc_address, self.storageDB.Orders.payment_btc_balance_confirmed, self.storageDB.Orders.payment_btc_balance_unconfirmed).filter((self.storageDB.Orders.payment_btc_balance_confirmed<>'0.0')|(self.storageDB.Orders.payment_btc_balance_unconfirmed<>'0.0'))
+                for address in addresses:
+                    btc_confirmed += float(address[1])
+                    btc_unconfirmed += float(address[2])
+                print "Current wallet balance: " + str(btc_confirmed) + " (" + str(btc_unconfirmed) + " unconfirmed)"
+                self.btc_confirmed_funds = float(btc_confirmed)
+                self.btc_unconfirmed_funds = float(btc_confirmed)
+                funds = {'btc_confirmed_funds':btc_confirmed,'btc_unconfirmed_funds':btc_unconfirmed}
+                msg = queue_task(1,'btc_wallet_balance',funds)
+                self.q_res.put(msg)
+
+
+    def btc_update_balance_frontend(self):
+        session = self.storageDB.DBSession()
+        btc_confirmed = 0
+        btc_unconfirmed = 0
+        addresses = session.query(self.storageDB.Orders.payment_btc_address, self.storageDB.Orders.payment_btc_balance_confirmed, self.storageDB.Orders.payment_btc_balance_unconfirmed).filter((self.storageDB.Orders.payment_btc_balance_confirmed<>'0.0')|(self.storageDB.Orders.payment_btc_balance_unconfirmed<>'0.0'))
+        for address in addresses:
+            btc_confirmed += float(address[1])
+            btc_unconfirmed += float(address[2])
+        self.btc_confirmed_funds = float(btc_confirmed)
+        self.btc_unconfirmed_funds = float(btc_confirmed)
+        funds = {'btc_confirmed_funds':btc_confirmed,'btc_unconfirmed_funds':btc_unconfirmed}
+        msg = queue_task(1,'btc_wallet_balance',funds)
+        self.q_res.put(msg)
 
 
     def update_stratum_servers(self,peers):
@@ -1512,7 +1541,7 @@ class messaging_loop(threading.Thread):
         while not self.shutdown:
             if not self.workoffline:
                 self.client.loop(0.05)  # deal with mqtt events
-            else: time.sleep(0.01)
+            time.sleep(0.01)
 
             ############## TIMERS #################
 

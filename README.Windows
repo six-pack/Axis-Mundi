@@ -6,11 +6,29 @@ However if you wish to run from source or build your own binary executables then
 
  - python2.7 - https://www.python.org/downloads/release/python-2710/
  - pywin32 - http://sourceforge.net/projects/pywin32/files/pywin32/
+        https://sourceforge.net/projects/pywin32/files/pywin32/Build%20220/pywin32-220.win32-py2.7.exe/download
  - wxpython3.0 - http://www.wxpython.org/download.php
+        https://sourceforge.net/projects/wxpython/files/wxPython/3.0.2.0/wxPython3.0-win32-3.0.2.0-py27.exe/download?use_mirror=tenet
  - GnuPG (unless you want gpg4win) ftp://ftp.gnupg.org/gcrypt/binary/gnupg-w32cli-1.4.19.exe
  - SQLite Windows DLL - https://www.sqlite.org/download.html
 Now download the latest release of the Axis Mundi source - https://github.com/six-pack/Axis-Mundi/archive/master.zip
 
+====
+Basically Pysqlcipher doesn't want to install properly (maybe just a tor problem) so install manually but need to do stuff first to build it:
+
+1)Need VC compiler for Python27
+  https://www.microsoft.com/en-us/download/confirmation.aspx?id=44266
+
+2)Need Win32 OpenSSL
+  http://slproweb.com/download/Win32OpenSSL-1_0_2h.exe
+
+3)Need pysqlcipher
+ git clone https://github.com/leapcode/pysqlcipher/
+ build it: wine32 c:\\python27\\python setup.py install
+
+The go do axis-mundi requiremnts.txt as normal
+
+====
 Extract Axis Mundi to a folder. Now go back to a command prompt and change to the directory containing Axis Mundi. Install Python requirements using pip by typing the following at the command prompt:
 c:\python27\python -m pip install -r requirements.txt
 
@@ -26,3 +44,5 @@ Extract pyinstaller and from a command prompt run "c:\python27\python setup.py i
 In the command prompt change back to the Axis Mundi directory and type the following:
 c:\python27\scripts\pyinstaller build\axismundi_w32.spec
 This should build axismundi.exe in the dist directory. Take a copy of the executable - you can now use it on any Windows system.
+
+set PATH=C:\windows\system32;C:\windows;C:\windows\system32\wbem;c:\program files\gnu\gnupg

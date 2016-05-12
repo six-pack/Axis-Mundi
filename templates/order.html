@@ -63,7 +63,7 @@
                 </tr>
                 <tr>
                     <td width="150px"><b>Order Type:</b></td>
-                    <td>{{ order.order_type }}</td>
+                    <td><div style="text-transform:capitalize;">{{ order.order_type }}</div></td>
                     <td width="150px"><b>Quantity:</b></td>
                     <td>{{ order.quantity }}</td>
                     <td width="120px"><b>Shipping:</b></td>
@@ -71,9 +71,17 @@
                 </tr>
                 <tr>
                     <td width="150px"><b>Order Status:</b></td>
-                    <td>{{ order.order_status }}</td>
+                    <td><div style="text-transform:capitalize;">{{ order.order_status }}</div></td>
                     <td width="150px"><b>Payment Status:</b></td>
-                    <td>{{ order.payment_status }}</td>
+                    <td><label style="color: #0000ff; text-decoration: underline; cursor: pointer; " class="a"
+                               {% if order.buyer_key == mykey %}
+                                    for="modal-buyer"
+                               {% else %}
+                                    for="modal-seller"
+                               {% endif %}
+                        ><div style="text-transform:capitalize;">{{ order.payment_status }}</div></label></td>
+
+
                     <td width="120px"><b>Total Price:</b></td>
                     <td>{{ order.line_total_price}} {{order.currency_code}} ({{order.line_total_btc_price}} BTC)</td> </tr>
 
@@ -136,5 +144,48 @@
     </div>
   </div>
 </div>
+
+<!-- Modal One -->
+<div class="modal">
+  <input class="modal-open" id="modal-seller" type="checkbox" hidden>
+  <div class="modal-wrap" aria-hidden="true" role="dialog">
+    <label class="modal-overlay" for="modal-seller"></label>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2>Payment Details</h2>
+        <label class="btn-close" for="modal-seller" aria-hidden="true">×</label>
+      </div>
+      <div class="modal-body">
+          <table cellpadding="5">
+            <tr><td><b>Total Amount Due :</b></td><td><b>{{order.line_total_btc_price}} BTC</b></td></tr>
+             <tr><td><b>Received (confirmed) :</b></td><td><b>{{order.payment_btc_balance_confirmed}} BTC</b></td></tr>
+             {% if order.payment_btc_balance_unconfirmed != "0.0"  %}<tr><td><b>Received (unconfirmed) :</b></td><td><b>{{order.payment_btc_balance_unconfirmed}} BTC</b></td></tr>{% endif %}
+            <tr><td><b>Payment Address :</b></td><td><b>{{order.payment_btc_address}}</b></td></tr>
+          </table>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal">
+  <input class="modal-open" id="modal-buyer" type="checkbox" hidden>
+  <div class="modal-wrap" aria-hidden="true" role="dialog">
+    <label class="modal-overlay" for="modal-buyer"></label>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2>Payment Details</h2>
+        <label class="btn-close" for="modal-buyer" aria-hidden="true">×</label>
+      </div>
+      <div class="modal-body">
+          <table cellpadding="5">
+            <tr><td><b>Total Amount Due :</b></td><td><b>{{order.line_total_btc_price}} BTC</b></td></tr>
+             <tr><td><b>Sent (confirmed) :</b></td><td><b>{{order.payment_btc_balance_confirmed}} BTC</b></td></tr>
+             {% if order.payment_btc_balance_unconfirmed != "0.0"  %}<tr><td><b>Sent (unconfirmed) :</b></td><td><b>{{order.payment_btc_balance_unconfirmed}} BTC</b></td></tr> {% endif %}
+            <tr><td><b>Payment Address :</b></td><td><b>{{order.payment_btc_address}}</b></td></tr>
+          </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 </form>
 {% endblock %}
