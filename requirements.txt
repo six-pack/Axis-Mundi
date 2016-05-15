@@ -10,3 +10,5 @@ pybitcointools
 pillow
 pysqlcipher
 json2html
+requests>=2.10.0
+urllib3>=1.15.0
