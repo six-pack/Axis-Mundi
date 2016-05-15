@@ -1528,10 +1528,12 @@ class messaging_loop(threading.Thread):
             except:  # TODO: Async connect now means this error code will need to go elsewhere
                 self.on_disconnect(self, self.client, None) # todo: bit lazy buttakes care of a single reconnection attempt to another broker
                                                             # ideally we want to keep trying for x attempts - rewrite this all at some point
+        print "Info: Spinning up exchange rate thread"
         # Get exchange rates
         self.exchange_rate_thread = btc_exchange_rate(self.proxy,self.proxy_port,self.q)
         self.exchange_rate_thread.start()
 
+        print "Info: Spinning up Bitcoin processor thread"
         # Start BTC processor thread
         self.btc_processor_thread = btc_processor(self.proxy,self.proxy_port,self.stratum_servers,self.btc_req_q,self.q)
         self.btc_processor_thread.start()
@@ -1539,6 +1541,7 @@ class messaging_loop(threading.Thread):
         btc_scrape_time = datetime.strptime(current_time(),"%Y-%m-%d %H:%M:%S")
         self.scrape_unpaid_btc_addresses()
 
+        print "Info: Client backend entering main loop"
         while not self.shutdown:
             if not self.workoffline:
                 self.client.loop(0.05)  # deal with mqtt events

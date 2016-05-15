@@ -229,6 +229,14 @@ class Storage(): # Main, persistent, encrypted local database
         session_id = Column(String(32)) # needed to support looking glass mode
         is_synced = Column(Boolean)
 
+    class Withdrawls(Base):
+        __tablename__ = 'withdrawals'
+        id = Column(Integer, primary_key=True)
+        date_created = Column(DateTime, nullable=False)
+        date_transmitted = Column(DateTime, nullable=False)
+        dest_btc_address = Column(String(40), nullable=False, index=True)
+        source_btc_addresses = Column(String(40), nullable=False, index=True)
+
     class Countries(Base):
         __tablename__ = 'countries'
         id = Column(Integer, primary_key=True)
