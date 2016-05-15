@@ -11,10 +11,13 @@ However if you wish to run from source or build your own binary executables then
         https://sourceforge.net/projects/wxpython/files/wxPython/3.0.2.0/wxPython3.0-win32-3.0.2.0-py27.exe/download?use_mirror=tenet
  - GnuPG (unless you want gpg4win) ftp://ftp.gnupg.org/gcrypt/binary/gnupg-w32cli-1.4.19.exe
  - SQLite Windows DLL - https://www.sqlite.org/download.html
+
 Now download the latest release of the Axis Mundi source - https://github.com/six-pack/Axis-Mundi/archive/master.zip
 
 ====
-Basically Pysqlcipher doesn't want to install properly (maybe just a tor problem) so install manually but need to do stuff first to build it:
+At the moment Pysqlcipher installer on Windows is somewhat broken due to the amalgamation source files being stored on a server with ssl certificates that will not validate on Windows Python
+
+A work around is to install Pysqlcipher manually as follows;
 
 1)Need VC compiler for Python27
   https://www.microsoft.com/en-us/download/confirmation.aspx?id=44266
@@ -29,6 +32,7 @@ Basically Pysqlcipher doesn't want to install properly (maybe just a tor problem
 The go do axis-mundi requiremnts.txt as normal
 
 ====
+
 Extract Axis Mundi to a folder. Now go back to a command prompt and change to the directory containing Axis Mundi. Install Python requirements using pip by typing the following at the command prompt:
 c:\python27\python -m pip install -r requirements.txt
 
@@ -42,7 +46,7 @@ Download and install latest development version of PyInstaller - https://github.
 Extract pyinstaller and from a command prompt run "c:\python27\python setup.py install" in the pyinstaller directory. This will install pyInstaller.
 
 In the command prompt change back to the Axis Mundi directory and type the following:
-c:\python27\scripts\pyinstaller build\axismundi_w32.spec
+c:\python27\scripts\pyinstaller axismundi_w32.spec
 This should build axismundi.exe in the dist directory. Take a copy of the executable - you can now use it on any Windows system.
 
-set PATH=C:\windows\system32;C:\windows;C:\windows\system32\wbem;c:\program files\gnu\gnupg
+All of the above is possible using Wine on Linux if you want to build the Windows binary on a Linux system.

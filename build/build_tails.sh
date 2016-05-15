@@ -21,7 +21,7 @@ echo "Setting Python library permissions"
 sudo chmod -R o+r,o+X /usr/local/lib/python2.7/dist-packages
 echo "############################################################################################################"
 echo "Building Axis Mundi executable file"
-pyinstaller axismundi_pyinst.spec
+pyinstaller pyinst.spec
 echo "############################################################################################################"
 echo "Copying Axis Mundi executable to your Persistence folder"
 cp dist/axismundi ~/Persistent

@@ -56,7 +56,7 @@ Then the following steps are necessary
     sudo chmod -R o+r,o+X /usr/local/lib/python2.7/dist-packages
 
 Now that Pyinstaller is installed simply execute the following command from your Axis Mundi directory:
-    pyinstaller build/axismundi_pyinst.spec
+    pyinstaller axismundi_pyinst.spec
 
 The binary will be built and placed into the dist directory. Keep a copy of it on a persistent volume for easy use:
     cp dist/axismundi ~/Persistent
