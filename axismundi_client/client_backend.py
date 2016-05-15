@@ -27,7 +27,7 @@ class messaging_loop(threading.Thread):
     # The date time shall not contain seconds and will be chekced on the
     # server to be no more than +/- 5 minutes fromcurrent server time
 
-    def __init__(self, pgpkeyid, pgppassphrase, dbpassphrase, database, homedir, appdir, q, q_res, workoffline=False, looking_glass=False):
+    def __init__(self, pgpkeyid, pgppassphrase, dbpassphrase, database, homedir, appdir, q, q_res, gpgbinary, workoffline=False, looking_glass=False):
         print "Info: Backend thread starting..."
         self.targetbroker = None
         self.mypgpkeyid = pgpkeyid
@@ -40,6 +40,7 @@ class messaging_loop(threading.Thread):
             self.pgpdir = homedir + '/application data/gnupg'
         else:
             self.pgpdir = homedir + '/.gnupg'
+        self.gpgbinary = gpgbinary
         self.appdir = appdir
         self.test_mode = False
         self.dbsecretkey = dbpassphrase
@@ -47,7 +48,7 @@ class messaging_loop(threading.Thread):
         self.i2p_brokers = []
         self.clearnet_brokers = []
         # TODO - account for filenames with spaces on windows
-        self.gpg = gnupg.GPG(gnupghome=self.pgpdir, options={'--primary-keyring=' + self.appdir + '/pubkeys.gpg',
+        self.gpg = gnupg.GPG(gpgbinary=self.gpgbinary,gnupghome=self.pgpdir, options={'--primary-keyring=' + self.appdir + '/pubkeys.gpg',
                                                               '--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
                                                               '--keyserver-options=auto-key-retrieve=yes,http-proxy='
                                                              })
@@ -56,7 +57,7 @@ class messaging_loop(threading.Thread):
         self.profile_text = ''
         self.display_name = None
         self.myMessaging = Messaging(
-            self.mypgpkeyid, self.pgp_passphrase, self.pgpdir, appdir)
+            self.mypgpkeyid, self.pgp_passphrase, self.pgpdir, appdir, self.gpgbinary)
         self.sub_inbox = str("mesh/+/user/" + self.mypgpkeyid + "/inbox")
         self.pub_profile = str("mesh/local/user/" + self.mypgpkeyid + "/profile")
         self.pub_key = str("mesh/local/user/" + self.mypgpkeyid + "/key")

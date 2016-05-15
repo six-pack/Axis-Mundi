@@ -24,7 +24,7 @@ from axismundi_client.storage import Storage, SqlalchemyOrmPage, memory_cache
 from axismundi_client.client_backend import messaging_loop
 from axismundi_client.constants import *
 from axismundi_client.defaults import create_defaults
-from axismundi_client.utilities import queue_task, encode_image, generate_seed, get_age, resource_path, os_is_tails
+from axismundi_client.utilities import queue_task, encode_image, generate_seed, get_age, resource_path, os_is_tails, find_gpg
 
 app = Flask(__name__)
 # (8Mb maximum upload to local webserver) - make sure we dont need to use the disk
@@ -1352,7 +1352,7 @@ def login():
         session['lg']= ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(16)) # give user a new session, why not?
         if app.connection_status == "Off-line":
             messageThread = messaging_loop(app.pgp_keyid, app.pgp_passphrase, app.dbsecretkey, "storage.db", app.homedir,
-                                           app.appdir, messageQueue, messageQueue_res, workoffline=app.workoffline, looking_glass=app.looking_glass)
+                                           app.appdir, messageQueue, messageQueue_res, app.gpg_binary, workoffline=app.workoffline, looking_glass=app.looking_glass)
             messageThread.start()
             # it's better for the user to get a flashed message now rather than
             # on the next page load so
@@ -1481,6 +1481,14 @@ def run():
     else:
         app.add_url_rule('/', 'home', lg_home)
 
+    app.gpg_binary = find_gpg()
+    if not app.gpg_binary:
+        print "Error: GPG not found, cannot continue. Please make sure that GnuPG or compatible PGP software is installed"
+        return
+
+    print "Info: GPG binary to use is " + app.gpg_binary
+
+
     app.pgpkeycache = {}
     app.dbsecretkey = ""
     app.workoffline = False
@@ -1504,7 +1512,7 @@ def run():
     if get_os() == 'Windows':
         # This is the default appdir location
         app.appdir = app.homedir + '\\application data\\.dnmng'
-        app.gpg = axismundi_client.gnupg.GPG(gnupghome=app.homedir + '/application data/gnupg', options={
+        app.gpg = axismundi_client.gnupg.GPG(gpgbinary=app.gpg_binary,gnupghome=app.homedir + '/application data/gnupg', options={
                             '--throw-keyids', '--no-emit-version', '--trust-model=always'})  # we want to encrypt the secret with throw keys
     else:
         app.appdir = app.homedir + '/.dnmng'  # This is the default appdir location
@@ -1514,7 +1522,7 @@ def run():
                 print "Info: Tails persistence detected, Axis Mundi data store location defaulting to /home/amnesia/Persistent folder"
                 app.appdir = app.homedir + '/Persistent/.dnmng'  # This is the default appdir location
         # we want to encrypt the secret with throw keys
-        app.gpg = axismundi_client.gnupg.GPG(gnupghome=app.homedir + '/.gnupg', options={
+        app.gpg = axismundi_client.gnupg.GPG(gpgbinary=app.gpg_binary,gnupghome=app.homedir + '/.gnupg', options={
                             '--throw-keyids', '--no-emit-version', '--trust-model=always'})
     app.connection_status = "Off-line"
     app.current_broker = None
@@ -1528,6 +1536,7 @@ def run():
     app.run(debug=True, threaded=True, use_reloader=False, port=5000)
  # use_reloader added to prevent initialization running twice when in flask
  # debug mode
+
 
 
 # Windows doess not support fork so we need to extend Multiprocessing on
@@ -1688,6 +1697,8 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
     front_end.start()
     print "Info: Axis Mundi local web-server now accessible on http://127.0.0.1:5000"
     if not option_nobrowser:
+        # Open system defaault webbrowser
+        sleep(0.5)
         webbrowser.open_new_tab('http://127.0.0.1:5000/')
     # main loop
     while running:
@@ -1732,3 +1743,6 @@ A  A X   X III SSSS   M   M  UUU  N   N DDD  III
             gui.Exit()
     # TODO - overwrite and then delete temp pubkeyring if used
     print "Info: Axis Mundi exiting..."
+
+
+

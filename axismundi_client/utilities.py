@@ -173,3 +173,54 @@ def json_from_clearsigned(clearsigned_rawmessage):
         return stripped_message
     else:
         return False
+
+def which(program):
+    def is_exe(fpath):
+        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+
+    def ext_candidates(fpath):
+        yield fpath
+        for ext in os.environ.get("PATHEXT", "").split(os.pathsep):
+            yield fpath + ext
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            for candidate in ext_candidates(exe_file):
+                if is_exe(candidate):
+                    return candidate
+
+    return None
+
+def find_gpg():
+    path = which('gpg')
+    if path == None:
+        if get_os() == 'Windows':
+            paths = ['c:\program files\gnu\gnupg\gpg.exe','c:\program files(x86)\gnu\gnupg\gpg.exe']
+            for path in paths:
+                if os.path.isfile(path):
+                    return path
+            # If we get here then no such file exists - use our packaged version if it is present
+            path = os.path.join(resource_path('binaries'),'gpg.exe')
+        elif get_os() == 'Darwin':
+            paths = ['/usr/local/bin/gpg','/usr/local/MacGPG2/bin/gpg2']
+            for path in paths:
+                if os.path.isfile(path):
+                    return path
+            # If we get here then no such file exists - use our packaged version if it is present
+            path = os.path.join(resource_path('binaries'),'gpg')
+
+        print "Info: Could not find GPG on the system - seeing if Axis Mundi bundled GPG in " + path
+        if os.path.isfile(path):
+            return path
+        else:
+            print "Error: Could not find GPG on the system - impossible to continue"
+            return None
+    else:
+        return path
+
+
