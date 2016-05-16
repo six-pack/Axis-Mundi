@@ -191,7 +191,7 @@ class btc_processor(threading.Thread):
                 elif task.command == 'shutdown':
                     self.running = False
                 else:
-                    print "Warning: BTC Processor thread received unknown BTC command"
+                    print "Warning: BTC Processor thread received unknown BTC command - " + task.command
             sleep (0.1) # rest
 
         print "Info: BTC Processor shutting down"

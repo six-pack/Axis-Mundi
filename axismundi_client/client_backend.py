@@ -8,7 +8,7 @@ from mqtt_client import Client as mqtt
 from storage import Storage
 import gnupg
 from messaging import Message, Messaging, Contact
-from utilities import current_time, got_pgpkey, parse_user_name, Listing, json_from_clearsigned
+from utilities import current_time, got_pgpkey, parse_user_name, Listing, json_from_clearsigned, resource_path
 from calendar import timegm
 from time import gmtime
 import re
@@ -48,7 +48,11 @@ class messaging_loop(threading.Thread):
         self.i2p_brokers = []
         self.clearnet_brokers = []
         # TODO - account for filenames with spaces on windows
-        self.gpg = gnupg.GPG(gpgbinary=self.gpgbinary,gnupghome=self.pgpdir, options={'--primary-keyring=' + self.appdir + '/pubkeys.gpg',
+        if os.path.dirname(self.gpgbinary) == resource_path('binaries'):
+            gpg_exec_dir = '--exec-path ' + resource_path('binaries') + ' ' # We are using the gpg binaries shipped with the Axis Mundi executable, make sure we set the helpers path
+        else:
+            gpg_exec_dir = ''
+        self.gpg = gnupg.GPG(gpgbinary=self.gpgbinary,gnupghome=self.pgpdir, options={gpg_exec_dir + '--primary-keyring=' + self.appdir + '/pubkeys.gpg',
                                                               '--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
                                                               '--keyserver-options=auto-key-retrieve=yes,http-proxy='
                                                              })

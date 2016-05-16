@@ -31,7 +31,8 @@ def extra_datas(mydir):
 ##### SHIP GPG WITH GENERATED EXE - Even though this sucks it is an easier start for users who don't have a gpg executable already installed
 # Below paths are for brew gpg
 a.datas += [('binaries/gpg','/usr/local/bin/gpg','DATA')]
-a.datas += [('binaries/libexec/gnupg/gpgkeys_hkp','/usr/local/Cellar/gnupg/1.4.20/libexec/gnupg/gpgkeys_hkp','DATA')]
+a.datas += [('binaries/gpgkeys_hkp','/usr/local/Cellar/gnupg/1.4.20/libexec/gnupg/gpgkeys_hkp','DATA')]
+a.datas += [('binaries/gpgkeys_curl','/usr/local/Cellar/gnupg/1.4.20/libexec/gnupg/gpgkeys_curl','DATA')]
 
 a.datas += [('icon.png','icon.png','DATA')]
 a.datas += [('words.txt','words.txt','DATA')]

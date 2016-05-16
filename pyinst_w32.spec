@@ -26,6 +26,7 @@ def extra_datas(mydir):
 ##### SHIP GPG WITH GENERATED EXE - Even though this sucks it is an easier start for users who don't have a gpg executable already installed
 a.datas += [('binaries\\gpg.exe','c:\Program Files\GNU\GnuPG\gpg.exe','DATA')]
 a.datas += [('binaries\\gpgkeys_hkp.exe','c:\Program Files\GNU\GnuPG\gpgkeys_hkp.exe','DATA')]
+a.datas += [('binaries\\gpgkeys_curl.exe','c:\Program Files\GNU\GnuPG\gpgkeys_curl.exe','DATA')]
 
 ## Pyinstaller on Windows needs us to explicitly define _sqlite.pyd to support pysqlcipher
 #a.datas += [('pysqlcipher\\_sqlite.pyd','_sqlite.pyd','DATA')]# This requires you to place a copy of _sqlite.py in your AM base folder - only do that if next line fails

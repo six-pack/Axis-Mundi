@@ -6,8 +6,8 @@ from platform import system as get_os
 
 import gnupg
 from constants import *
-from utilities import current_time, got_pgpkey, json_from_clearsigned
-
+from utilities import current_time, got_pgpkey, json_from_clearsigned, resource_path
+import os
 
 class Contract_seed(object):
 
@@ -94,7 +94,14 @@ class Messaging():
             # TODO - account for filenames with spaces on windows
         else:
             keyring = app_dir + '/pubkeys.gpg'
-        self.gpg = gnupg.GPG(gpgbinary=gpg_binary,gnupghome=pgp_dir, options={'--primary-keyring=' + keyring, '--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
+
+        if os.path.dirname(gpg_binary) == resource_path('binaries'):
+            gpg_exec_dir = '--exec-path ' + resource_path('binaries') + ' ' # We are using the gpg binaries shipped with the Axis Mundi executable, make sure we set the helpers path
+        else:
+            gpg_exec_dir = ''
+
+
+        self.gpg = gnupg.GPG(gpgbinary=gpg_binary,gnupghome=pgp_dir, options={gpg_exec_dir + '--primary-keyring=' + keyring, '--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
                                                          '--keyserver-options=auto-key-retrieve=yes,http-proxy=', '--primary-keyring="' + keyring + '"'})  # removed '--auto-key-locate=keyserver',
         self.pgp_passphrase = pgppassphrase
 #       self.gpg.options = "--no-emit-version"
