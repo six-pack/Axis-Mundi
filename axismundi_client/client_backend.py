@@ -49,10 +49,13 @@ class messaging_loop(threading.Thread):
         self.clearnet_brokers = []
         # TODO - account for filenames with spaces on windows
         if os.path.dirname(self.gpgbinary) == resource_path('binaries'):
-            gpg_exec_dir = '--exec-path ' + resource_path('binaries') + ' ' # We are using the gpg binaries shipped with the Axis Mundi executable, make sure we set the helpers path
+            gpg_exec_dir = '--exec-path ' + resource_path('binaries')  # We are using the gpg binaries shipped with the Axis Mundi executable, make sure we set the helpers path
+            self.gpg = gnupg.GPG(gpgbinary=self.gpgbinary,gnupghome=self.pgpdir, options={gpg_exec_dir,'--primary-keyring=' + self.appdir + '/pubkeys.gpg',
+                                                              '--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
+                                                              '--keyserver-options=auto-key-retrieve=yes,http-proxy='
+                                                             })
         else:
-            gpg_exec_dir = ''
-        self.gpg = gnupg.GPG(gpgbinary=self.gpgbinary,gnupghome=self.pgpdir, options={gpg_exec_dir + '--primary-keyring=' + self.appdir + '/pubkeys.gpg',
+            self.gpg = gnupg.GPG(gpgbinary=self.gpgbinary,gnupghome=self.pgpdir, options={'--primary-keyring=' + self.appdir + '/pubkeys.gpg',
                                                               '--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
                                                               '--keyserver-options=auto-key-retrieve=yes,http-proxy='
                                                              })

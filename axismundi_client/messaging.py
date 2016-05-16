@@ -96,12 +96,11 @@ class Messaging():
             keyring = app_dir + '/pubkeys.gpg'
 
         if os.path.dirname(gpg_binary) == resource_path('binaries'):
-            gpg_exec_dir = '--exec-path ' + resource_path('binaries') + ' ' # We are using the gpg binaries shipped with the Axis Mundi executable, make sure we set the helpers path
+            gpg_exec_dir = '--exec-path ' + resource_path('binaries')  # We are using the gpg binaries shipped with the Axis Mundi executable, make sure we set the helpers path
+            self.gpg = gnupg.GPG(gpgbinary=gpg_binary,gnupghome=pgp_dir, options={gpg_exec_dir,'--primary-keyring=' + keyring, '--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
+                                                         '--keyserver-options=auto-key-retrieve=yes,http-proxy=', '--primary-keyring="' + keyring + '"'})  # removed '--auto-key-locate=keyserver',
         else:
-            gpg_exec_dir = ''
-
-
-        self.gpg = gnupg.GPG(gpgbinary=gpg_binary,gnupghome=pgp_dir, options={gpg_exec_dir + '--primary-keyring=' + keyring, '--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
+            self.gpg = gnupg.GPG(gpgbinary=gpg_binary,gnupghome=pgp_dir, options={'--primary-keyring=' + keyring, '--no-emit-version', '--keyserver=hkp://127.0.0.1:5000',
                                                          '--keyserver-options=auto-key-retrieve=yes,http-proxy=', '--primary-keyring="' + keyring + '"'})  # removed '--auto-key-locate=keyserver',
         self.pgp_passphrase = pgppassphrase
 #       self.gpg.options = "--no-emit-version"

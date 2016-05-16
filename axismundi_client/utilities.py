@@ -207,7 +207,7 @@ def find_gpg():
             # If we get here then no such file exists - use our packaged version if it is present
             path = os.path.join(resource_path('binaries'),'gpg.exe')
         elif get_os() == 'Darwin':
-            paths = ['/usr/local/bin/gpg','/usr/local/MacGPG2/bin/gpg2']
+            paths = ['/usr/local/bin/gpg'] #,'/usr/local/MacGPG2/bin/gpg2'] # gpg2 shipping with macpgp is not compatible - need gpg (v1)
             for path in paths:
                 if os.path.isfile(path):
                     return path
