@@ -235,7 +235,15 @@ class Storage(): # Main, persistent, encrypted local database
         date_created = Column(DateTime, nullable=False)
         date_transmitted = Column(DateTime, nullable=False)
         dest_btc_address = Column(String(40), nullable=False, index=True)
+
+
+    class Outputs(Base): # will hold unspent outputs for each source address in a given withdrawal - for now only fully spending an output is supported
+        __tablename__ = 'outputs'
+        id = Column(Integer, primary_key=True)
+        withdrawl = Column(String, ForeignKey('withdrawals.id'))
         source_btc_addresses = Column(String(40), nullable=False, index=True)
+        unspent_txns =  Column(String())
+        date_checked = Column(DateTime)
 
     class Countries(Base):
         __tablename__ = 'countries'
