@@ -24,3 +24,10 @@ def receiver_payee_privkey_from_stealth(receiver_prikey, sender_pubkey):
     ss2 = btc.sha256(btc.encode_pubkey((ss1), 'bin_compressed'))
     key = btc.add_privkeys(receiver_prikey, ss2)
     return key
+
+### general btc utils
+
+def is_btc_address(bc):
+    # TODO: This check needs to be a little more effective...
+    return True
+

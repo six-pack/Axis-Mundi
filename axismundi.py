@@ -25,6 +25,7 @@ from axismundi_client.client_backend import messaging_loop
 from axismundi_client.constants import *
 from axismundi_client.defaults import create_defaults
 from axismundi_client.utilities import queue_task, encode_image, generate_seed, get_age, resource_path, os_is_tails, find_gpg
+from axismundi_client.btc_utils import is_btc_address
 
 app = Flask(__name__)
 # (8Mb maximum upload to local webserver) - make sure we dont need to use the disk
@@ -953,7 +954,15 @@ def delete_message(id):
 # TODO- Implement a simplistic bitcoin wallet...
 def wallet(page=1):
     if request.method == "POST":
-            flash("Withdrawing funds to XXXX", category="message")
+            # get btc_destination
+            btc_destination = request.form['btc_destination']
+            # TODO ; Check we have a valid BTC address
+            if not is_btc_address(btc_destination):
+                flash("You supplied an invalid withdrawal address - " + btc_destination, category="error")
+            else:
+                # Form message for backend
+                # TODO
+                flash("Withdrawing funds to " + btc_destination, category="message")
     checkEvents()
     dbsession = app.roStorageDB.DBSession()
     addresses = dbsession.query(app.roStorageDB.Orders.payment_btc_address, app.roStorageDB.Orders.payment_btc_balance_confirmed, app.roStorageDB.Orders.payment_btc_balance_unconfirmed).filter((app.roStorageDB.Orders.payment_btc_balance_confirmed<>'0.0')|(app.roStorageDB.Orders.payment_btc_balance_unconfirmed<>'0.0'))

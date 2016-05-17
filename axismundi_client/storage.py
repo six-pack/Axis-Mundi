@@ -235,7 +235,10 @@ class Storage(): # Main, persistent, encrypted local database
         date_created = Column(DateTime, nullable=False)
         date_transmitted = Column(DateTime, nullable=False)
         dest_btc_address = Column(String(40), nullable=False, index=True)
-
+        confirmations = (Integer)
+        network_fee = Column(String(20)) # the network fee to pay
+        total_output_available = Column(String(20)) # what is the total available in all unspect outputs
+        expected_withdrawal = Column(String(20)) # how many coin are we expected to withdraw
 
     class Outputs(Base): # will hold unspent outputs for each source address in a given withdrawal - for now only fully spending an output is supported
         __tablename__ = 'outputs'
