@@ -43,10 +43,21 @@ class full_name(object):
 
 class queue_task(object):   # Tasks passed from the front end to the main thread for processing
 
-    def __init__(self, id, command, data):
+    # msg_types
+    REQUEST = 0     # This is a request packet
+    REPLY = 1       # This is a reply packet
+    STATUS = 2      # This is a status packet (stateless)
+
+    # rc values
+    OK = 0
+    NOT_OK = 1
+
+    def __init__(self, id, command, data, msg_type=REQUEST, rc=0):
         self.id = id
+        self.msg_type = msg_type
         self.command = command
-        self.data = data
+        self.data = data # contains result when msg_type=REPLY
+        self.rc = 0
 
 
 def current_time():
