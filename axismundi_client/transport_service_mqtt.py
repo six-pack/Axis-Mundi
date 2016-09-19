@@ -51,8 +51,8 @@ class Transport_Service_MQTT (threading.Thread):
         self.broker_password = None
         self.pgp_key_id = pgp_key_id
 
-        self.in_queue = in_queue            # For receiving messages from messaging sub-system
-        self.out_queue = out_queue          # For sending messages to messaging sub-system
+        self.queue_to_message_transport_service = in_queue            # For receiving messages from messaging sub-system
+        self.queue_from_message_transport_service = out_queue          # For sending messages to messaging sub-system
 
         self.tor_socks_enabled = bool(self.tor_socks_host and self.tor_socks_port)
         self.i2p_socks_enabled = bool(self.i2p_socks_host and self.i2p_socks_port)
@@ -68,7 +68,7 @@ class Transport_Service_MQTT (threading.Thread):
 #        self.transport.message_callback_add('key/+', self.on_pgpkey) # TODO
         self.broker_connected = False
 
-        if not (isinstance(self.in_queue,Queue.Queue) and isinstance(self.out_queue,Queue.Queue)):
+        if not (isinstance(self.queue_to_message_transport_service, Queue.Queue) and isinstance(self.queue_from_message_transport_service, Queue.Queue)):
             logger.error('No valid queues defined. Disabling message transport service')
             raise ValueError('No queues defined')
 
@@ -140,7 +140,7 @@ class Transport_Service_MQTT (threading.Thread):
                                      command='inbound_message',
                                      data={'payload':msg.payload,'location':msg.topic},
                                      msg_type=queue_task.UPDATE)
-        self.out_queue.put(queue_update_msg)
+        self.queue_from_message_transport_service.put(queue_update_msg)
 
 
     def on_disconnect(self, client, userdata, rc):
@@ -171,7 +171,7 @@ class Transport_Service_MQTT (threading.Thread):
                                      data=None,
                                      rc=queue_task.OK,
                                      msg_type=queue_task.REPLY)
-        self.out_queue.put(queue_reply_msg)
+        self.queue_from_message_transport_service.put(queue_reply_msg)
 
 
     def on_subscribe(self, client, userdata, mid, granted_qos):
@@ -202,7 +202,7 @@ class Transport_Service_MQTT (threading.Thread):
                                          data=None,
                                          rc=queue_task.OK,
                                          msg_type=queue_task.REPLY)
-            self.out_queue.put(queue_reply_msg)
+            self.queue_from_message_transport_service.put(queue_reply_msg)
         except KeyError:
             logger.info('Unsubscribed from persistent connection (probably)')
 
@@ -219,7 +219,7 @@ class Transport_Service_MQTT (threading.Thread):
             queue_reply_msg = queue_task(id=queue_task_id,
                                          rc=queue_task.NOT_OK,
                                          msg_type=queue_task.REPLY)
-            self.out_queue.put(queue_reply_msg)
+            self.queue_from_message_transport_service.put(queue_reply_msg)
             logger.warning('Could not deliver MQTT message to %s requested by task queue ID %s',mqtt_topic,queue_task_id)
         else:
             self.mqtt_mid_queue_task_map[mid]=queue_task_id  # Store the returned MID and associate it with the queue message id
@@ -235,7 +235,7 @@ class Transport_Service_MQTT (threading.Thread):
             queue_reply_msg = queue_task(id=queue_task_id,
                                          rc=queue_task.NOT_OK,
                                          msg_type=queue_task.REPLY)
-            self.out_queue.put(queue_reply_msg)
+            self.queue_from_message_transport_service.put(queue_reply_msg)
             logger.warning('Could not subscribe to MQTT topic %s requested by task queue ID %s',mqtt_topic,queue_task_id)
         else:
             if not persistent:
@@ -247,9 +247,9 @@ class Transport_Service_MQTT (threading.Thread):
 
     def check_queues(self):
 
-        while not self.in_queue.empty():
+        while not self.queue_to_message_transport_service.empty():
 
-            queue_msg = self.in_queue.get()
+            queue_msg = self.queue_to_message_transport_service.get()
             if isinstance(queue_msg,queue_task):
                 logger.info('Incoming queue message %s(%s) ID: %s ', queue_msg.command,queue_msg.msg_type,queue_msg.id)
                 if queue_msg.msg_type == queue_task.REQUEST:
@@ -295,7 +295,7 @@ class Transport_Service_MQTT (threading.Thread):
         self.broker_password = None
         logger.info('Requesting authentication ticket from messaging service for broker %s', self.current_broker)
         auth_req_task = queue_task(id='mts_mqtt:1',command='make_mqtt_pgp_auth',data=broker,msg_type=queue_task.REQUEST)
-        self.out_queue.put (auth_req_task)
+        self.queue_from_message_transport_service.put (auth_req_task)
 
 
     def flush_unfinished_mqtt_operations(self):
@@ -306,7 +306,7 @@ class Transport_Service_MQTT (threading.Thread):
                              data=None,
                              rc=queue_task.NOT_OK,
                              msg_type=queue_task.REPLY)
-            self.out_queue.put(queue_reply_msg)
+            self.queue_from_message_transport_service.put(queue_reply_msg)
             logger.warning('Failing and purging incomplete MQTT task %s',task_id)
         self.mqtt_mid_queue_task_map.clear()
         self.mqtt_sub_topic_queue_task_map.clear()

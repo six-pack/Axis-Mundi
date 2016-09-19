@@ -41,12 +41,12 @@ class Message_Service (threading.Thread):
         self.pgp_key_id = pgp_key_id
         self.passphrase = passphrase
 
-        self.in_queue = in_queue            # For receiving messages from main sub-system
-        self.out_queue = out_queue          # For sending messages to main sub-system
+        self.queue_to_message_service = in_queue            # For receiving messages from main sub-system
+        self.queue_from_message_service = out_queue          # For sending messages to main sub-system
 
         self.mts = None
 
-        if not (isinstance(self.in_queue,Queue.Queue) and isinstance(self.out_queue,Queue.Queue)):
+        if not (isinstance(self.queue_to_message_service, Queue.Queue) and isinstance(self.queue_from_message_service, Queue.Queue)):
             logger.error('No valid queues defined. Disabling message service')
             raise ValueError('No queues defined')
 
@@ -118,9 +118,9 @@ class Message_Service (threading.Thread):
         while self.running:
 
             # Check queue for new tasks
-            while not self.in_queue.empty():
+            while not self.queue_to_message_service.empty():
 
-                queue_msg = self.in_queue.get()
+                queue_msg = self.queue_to_message_service.get()
                 if isinstance(queue_msg,queue_task):
                     print "Message Service got a task"
 

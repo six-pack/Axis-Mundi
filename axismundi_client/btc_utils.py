@@ -28,6 +28,6 @@ def receiver_payee_privkey_from_stealth(receiver_prikey, sender_pubkey):
 ### general btc utils
 
 def is_btc_address(bc):
-    # TODO: This check needs to be a little more effective...
+    # TODO: This check needs to be a little more effective... :)
     return True
 

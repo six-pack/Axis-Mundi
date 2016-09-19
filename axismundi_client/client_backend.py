@@ -145,11 +145,11 @@ class messaging_loop(threading.Thread):
     # TODO - make use of onpublish and onsubscribe callbacks instead of
     # checking status of call to publish or subscribe
     def on_publish(self, client, userdata, mid):
-#        print "Debug: On publish for " + str(mid) + " " + str(userdata)
+        print "Debug: On publish for " + str(mid) + " " + str(userdata)
         pass
 
     def on_subscribe(self, client, userdata, mid, granted_qos):
-#        print "Debug: On subscribe for " + str(mid) + " " + str(userdata)
+        print "Debug: On subscribe for " + str(mid) + " " + str(userdata)
         pass
 
     def on_message(self, client, userdata, msg):
@@ -774,6 +774,17 @@ class messaging_loop(threading.Thread):
                 funds = {'btc_confirmed_funds':btc_confirmed,'btc_unconfirmed_funds':btc_unconfirmed}
                 msg = queue_task(1,'btc_wallet_balance',funds)
                 self.q_res.put(msg)
+
+
+    def btc_withdrawal(self,btc_destination,btc_sources=None):
+        print "Info: Backend is processing a withdrawal request to address " + btc_destination
+        # TODO: Use only the btc addresses in the btc_sources list - for now empty all transaction addresses
+        session = self.storageDB.DBSession()
+        btc_sources = session.query(self.storageDB.Orders.payment_btc_address, self.storageDB.Orders.payment_btc_balance_confirmed, self.storageDB.Orders.payment_btc_balance_unconfirmed).filter((self.storageDB.Orders.payment_btc_balance_confirmed<>'0.0'))
+        for address in btc_sources:
+            tmp_msg = {'address': address}
+            tmp_task = queue_task(1,'btc_get_unspent',tmp_msg)
+            self.btc_req_q.put(tmp_task)
 
 
     def btc_update_balance_frontend(self):
@@ -1813,6 +1824,11 @@ class messaging_loop(threading.Thread):
                 elif task.command == 'btc_update_stratum_peers':
                     # TODO: Make dynamic updates optional
                     self.update_stratum_servers(task.data['peers'])
+
+                elif task.command == 'btc_withdrawal':
+                    btc_destination = task.data['btc_destination']
+                    btc_sources = task.data['btc_sources']
+                    self.btc_withdrawal(btc_destination,btc_sources=btc_sources)
 
 
                 elif task.command == 'shutdown':

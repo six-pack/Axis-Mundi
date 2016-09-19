@@ -379,7 +379,7 @@ class Client(object):
       MQTT_LOG_ERR, and MQTT_LOG_DEBUG. The message itself is in buf.
 
     """
-    def __init__(self, client_id="", clean_session=True, userdata=None, protocol=MQTTv31, proxy=None, proxy_port=None):
+    def __init__(self, client_id="", clean_session=True, userdata=None, protocol=MQTTv31, proxy=None, proxy_port=None, timeout=30):
         """client_id is the unique client id string used when connecting to the
         broker. If client_id is zero length or None, then one will be randomly
         generated. In this case, clean_session must be True. If this is not the
@@ -412,15 +412,13 @@ class Client(object):
         self._userdata = userdata
         self._proxy = proxy
         self._proxy_port = proxy_port
-        if proxy and proxy_port:
-            self._proxy_type = socks.PROXY_TYPE_SOCKS5
-        else:
-            self._proxy_type = None
+        self._proxy_type = socks.PROXY_TYPE_SOCKS5
         self._sock = None
         self._sockpairR, self._sockpairW = _socketpair_compat()
         self._keepalive = 60
         self._message_retry = 20
         self._last_retry_check = 0
+        self._timeout = timeout
         self._clean_session = clean_session
         if client_id == "" or client_id is None:
             self._client_id = "paho/" + "".join(random.choice("0123456789ADCDEF") for x in range(23-5))
@@ -582,13 +580,15 @@ class Client(object):
         self._messages_reconnect_reset()
         try:
             if (sys.version_info[0] == 2 and sys.version_info[1] < 7) or (sys.version_info[0] == 3 and sys.version_info[1] < 2):
-                sock = socks.create_connection((self._host, self._port),proxy_type=self._proxy_type,proxy_addr=self._proxy,proxy_port=self._proxy_port)
+                sock = socks.create_connection((self._host, self._port),proxy_type=self._proxy_type,proxy_addr=self._proxy,proxy_port=self._proxy_port, timeout=self._timeout)
             else:
-                sock = socks.create_connection((self._host, self._port),proxy_type=self._proxy_type,proxy_addr=self._proxy,proxy_port=self._proxy_port, source_address=(self._bind_address, 0))
-        except socket.error as err:
+                sock = socks.create_connection((self._host, self._port),proxy_type=self._proxy_type,proxy_addr=self._proxy,proxy_port=self._proxy_port, source_address=(self._bind_address, 0), timeout=self._timeout)
+        except (socket.error,socks.GeneralProxyError,socks.SOCKS5Error,socks.ProxyError) as err:
             if err.errno != errno.EINPROGRESS and err.errno != errno.EWOULDBLOCK and err.errno != EAGAIN:
                 raise
-
+        except socks.ProxyError as e:
+            print "AAAAAAAAAAAA"
+            print e
         self._sock = sock
         self._sock.setblocking(0)
 
@@ -1074,6 +1074,9 @@ class Client(object):
         run = True
 
         while run:
+            if self._thread_terminate is True:
+                break
+
             if self._state == mqtt_cs_connect_async:
                 try:
                     self.reconnect()
@@ -1082,6 +1085,13 @@ class Client(object):
                         raise
                     self._easy_log(MQTT_LOG_DEBUG, "Connection failed, retrying")
                     time.sleep(1)
+
+                except (socks.GeneralProxyError,socks.SOCKS5Error,socks.ProxyError) as e:
+                    if not retry_first_connection:
+                        raise
+                    self._easy_log(MQTT_LOG_DEBUG, "Proxied connection failed, retrying")
+                    time.sleep(1)
+
             else:
                 break
 
@@ -1118,7 +1128,7 @@ class Client(object):
                     self._state_mutex.release()
                     try:
                         self.reconnect()
-                    except socket.error as err:
+                    except (socket.error,socks.GeneralProxyError,socks.SOCKS5Error,socks.ProxyError) as err:
                         pass
 
         return rc
@@ -1307,10 +1317,9 @@ class Client(object):
 
         while self._current_out_packet:
             packet = self._current_out_packet
-
             try:
                 write_length = self._sock.send(packet['packet'][packet['pos']:])
-            except AttributeError:
+            except (AttributeError, ValueError):
                 self._current_out_packet_mutex.release()
                 return MQTT_ERR_SUCCESS
             except socket.error as err:
@@ -2078,14 +2087,7 @@ class Client(object):
         self._callback_mutex.release()
 
     def _thread_main(self):
-        self._state_mutex.acquire()
-        if self._state == mqtt_cs_connect_async:
-            self._state_mutex.release()
-            self.reconnect()
-        else:
-            self._state_mutex.release()
-
-        self.loop_forever()
+        self.loop_forever(retry_first_connection=True)
 
 # Compatibility class for easy porting from mosquitto.py.
 class Mosquitto(Client):

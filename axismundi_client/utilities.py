@@ -47,17 +47,21 @@ class queue_task(object):   # Tasks passed from the front end to the main thread
     REQUEST = 0     # This is a request packet
     REPLY = 1       # This is a reply packet
     STATUS = 2      # This is a status packet (stateless)
+    UPDATE = 3      # This is an update packet (stateless)
 
     # rc values
     OK = 0
     NOT_OK = 1
 
-    def __init__(self, id, command, data, msg_type=REQUEST, rc=0):
+    def __init__(self, id, command=None, data=None, msg_type=REQUEST, source=None, timeout=0, rc=0, res_q=None):
         self.id = id
-        self.msg_type = msg_type
         self.command = command
         self.data = data # contains result when msg_type=REPLY
-        self.rc = 0
+        self.msg_type = msg_type
+        self.timeout = 0
+        self.source = source
+        self.rc = rc
+        self.res_q = res_q   # queue to sned reply to
 
 
 def current_time():

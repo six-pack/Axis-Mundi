@@ -69,7 +69,7 @@ class Message(object):
         # to be set by users)
         self.signed = ''
         self.encrypted = ''
-        self.sub_messages = []  # Contracts etc.
+        self.sub_messages = []  # Contracts etc. # TODO - sign/verify sub-messages in the Messaging class rather than in multiple places - add properties for signing key and probably make signing optional for sent sub-messages
         self.raw_message = ''
         self.topic = ''
 

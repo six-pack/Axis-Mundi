@@ -956,12 +956,18 @@ def wallet(page=1):
     if request.method == "POST":
             # get btc_destination
             btc_destination = request.form['btc_destination']
+            # TODO : Allow user to select transaction addresses to include in the withdrawal - for now all transaction addresses will be emptied and paid to the user specified destination address
+            btc_sources = []
             # TODO ; Check we have a valid BTC address
             if not is_btc_address(btc_destination):
                 flash("You supplied an invalid withdrawal address - " + btc_destination, category="error")
             else:
                 # Form message for backend
                 # TODO
+                # message = {"btc_sources": btc_sources} # list of source addresses
+                message = {"btc_destination": btc_destination, "btc_sources": btc_sources} # list of source addresses
+                task = queue_task(1, 'btc_withdrawal', message)
+                messageQueue.put(task)
                 flash("Withdrawing funds to " + btc_destination, category="message")
     checkEvents()
     dbsession = app.roStorageDB.DBSession()
