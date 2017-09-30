@@ -18,17 +18,17 @@ def create_defaults(db, session, pgp_keyid, display_name, publish_id, btc_master
         # Network default settings
         new_conf_item = db.Config(name="hubnodes")
         # Hardcode in these seed entry points
-        new_conf_item.value = "lhzcqh5m7pem46gb.onion"
+        new_conf_item.value = "blackholeqbegvnt.onionn"
         new_conf_item.displayname = "Entry Points"
         session.add(new_conf_item)
         new_conf_item = db.Config(name="hubnodes")
         # Hardcode in these seed entry points
-        new_conf_item.value = "p5yzsirjhoqihhn7.onion"
+        new_conf_item.value = "blackholeqbegvnt.onion"
         new_conf_item.displayname = "Entry Points"
         session.add(new_conf_item)
         new_conf_item = db.Config(name="hubnodes")
         # Hardcode in these seed entry points
-        new_conf_item.value = "jbl6vf4h63vigyig.onion"
+        new_conf_item.value = "blackholeqbegvnt.onion"
         new_conf_item.displayname = "Entry Points"
         session.add(new_conf_item)
         new_conf_item = db.Config(name="hubnodes")
